@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Sample record obtained from Nonin Oximeter -->
+
+<record>
+	<attribute id="0x0000">
+		<uint32 value="0x00010030"/>
+	</attribute>
+	<attribute id="0x0001">
+		<sequence>
+			<uuid value="0x1401"/>
+		</sequence>
+	</attribute>
+	<attribute id="0x0004">
+		<sequence>
+			<sequence>
+				<uuid value="0x0100"/>
+				<uint16 value="0x1001"/>
+			</sequence>
+			<sequence>
+				<uuid value="0x001e"/>
+				<uint16 value="0x0100"/>
+			</sequence>
+		</sequence>
+	</attribute>
+	<attribute id="0x0006">
+		<sequence>
+			<uint16 value="0x656e"/>
+			<uint16 value="0x006a"/>
+			<uint16 value="0x0100"/>
+		</sequence>
+	</attribute>
+	<attribute id="0x0009">
+		<sequence>
+			<sequence>
+				<uuid value="0x1400"/>
+				<uint16 value="0x0100"/>
+			</sequence>
+		</sequence>
+	</attribute>
+	<attribute id="0x000d">
+		<sequence>
+			<sequence>
+				<sequence>
+					<uuid value="0x0100"/>
+					<uint16 value="0x1003"/>
+				</sequence>
+				<sequence>
+					<uuid value="0x001f"/>
+				</sequence>
+			</sequence>
+		</sequence>
+	</attribute>
+	<attribute id="0x0100">
+		<text value="Nonin Oximeter"/>
+	</attribute>
+	<attribute id="0x0200">
+		<sequence>
+			<sequence>
+				<uint8 value="0x01"/>
+				<uint16 value="0x1004"/>
+				<uint8 value="0x00"/>
+				<text value="Nonin Oximeter"/>
+			</sequence>
+		</sequence>
+	</attribute>
+	<attribute id="0x0301">
+		<uint8 value="0x01"/>
+	</attribute>
+	<attribute id="0x0302">
+		<uint8 value="0x18"/>
+	</attribute>
+</record>
