@@ -34,6 +34,16 @@ MCAP_MDL_ID_ALL				= 0xFFFF
 MCAP_MDEP_ID_INITIAL			= 0x00
 MCAP_MDEP_ID_FINAL			= 0x7F
 
+# Errors
+
+class InvalidMessageError( Exception ):
+
+	def __init__(self, value):
+		self.value = value
+
+	def __str__(self):
+		return repr(self.value)
+
 # General messages
 
 class MDLRequestMessage:
@@ -81,6 +91,12 @@ class DeleteMDLRequestMessage( MDLRequestMessage ):
 
 
 # Specific response messages
+
+
+class ErrorMDLResponseMessage( MDLResponseMessage ):
+
+        def __init__(self, _rspcode, _mdlid):
+                MDLResponseMessage.__init__(self, MCAP_ERROR_RSP, _rspcode, _mdlid)
 
 class CreateMDLResponseMessage( MDLResponseMessage ):
 
@@ -133,5 +149,80 @@ class DeleteMDLResponseMessage( MDLResponseMessage ):
                                     MCAP_RSP_INVALID_MDL, MCAP_RSP_MDL_BUSY,
 				    MCAP_RSP_INVALID_OPERATION, MCAP_RSP_UNSPECIFIED_ERROR, 
 				    MCAP_RSP_REQUEST_NOT_SUPPORTED]
+	
+class MessageParser:
 
+	def __init__(self):
+		pass
+
+	def get_op_code(self, _message):
+
+                # MCAP request/response packages do not have a fix lenght. 
+                # Op codes are on most significant byte
+
+                while(_message > 0):
+                        op_code = _message & 0xFF
+                        _message >>= 8
+
+                return op_code
+
+	def is_request_message(self, _opcode):
+		return _opcode in [MCAP_MD_CREATE_MDL_REQ, MCAP_MD_RECONNECT_MDL_REQ,
+				   MCAP_MD_ABORT_MDL_REQ, MCAP_MD_DELETE_MDL_REQ]	
+	
+	def is_response_message(self, _opcode):
+		return _opcode in [MCAP_ERROR_RSP, MCAP_MD_CREATE_MDL_RSP,
+                                   MCAP_MD_RECONNECT_MDL_RSP, MCAP_MD_ABORT_MDL_RSP,
+                                   MCAP_MD_DELETE_MDL_RSP]
+
+
+	def parse_request_message(self, _message):
+		opcode = self.get_op_code(_message)
+
+		if opcode == MCAP_MD_CREATE_MDL_REQ:
+			return self.parse_create_request_message(_message)
+		else:
+			return self.parse_non_create_request_message(_message)
+
+	def parse_response_message(self, _message):
+                opcode = self.get_op_code(_message)
+
+                if opcode == MCAP_MD_CREATE_MDL_RSP:
+                        return self.parse_create_response_message(_message)
+                else:
+                        return self.parse_non_create_response_message(_message)
+
+
+	def parse_create_request_message(self, _message):
+		configuration = _message & 0xFF
+		mdepid = (_message >> 8) & 0xFF 
+		mdlid =  (_message >> 16) & 0xFFFF
+		return CreateMDLRequestMessage(mdlid, mdepid, configuration)
+		
+	def parse_non_create_request_message(self, _message):
+		mdlid = _message & 0xFFFF
+		op_code = (_message >> 16) & 0xFF
+		return MDLRequestMessage(op_code, mdlid)
+
+	def parse_create_response_message(self, _message):
+		rsp_vars = _message & 0xFF
+		mdlid = (_message >> 8) & 0xFFFF
+		rsp_code = (_message >> 24) & 0xFF
+		return CreateMDLResponseMessage(rsp_code, mdlid, rsp_vars)
+				
+	def parse_non_create_response_message(self, _message):
+		mdlid = _message & 0xFFFF
+		rsp_code = (_message >> 16) & 0xFF
+		op_code = (_message >> 24) & 0xFF
+		return MDLResponseMessage(op_code, rsp_code, mdlid)
+
+	def parse_message(self, _message):
+                opcode = self.get_op_code(_message)
+
+                if self.is_request_message(opcode):
+                        return self.parse_request_message(_message)
+                elif self.is_response_message(opcode):
+                        return self.parse_response_message(_message)
+                else:
+                        raise InvalidMessageError(_message)
 

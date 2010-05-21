@@ -38,6 +38,16 @@ def generate_delete_mdl_rsp_message(rspcode, mdlid):
 	if DeleteMDLResponseMessage.is_valid_response(rspcode):
 		return DeleteMDLResponseMessage(rspcode, mdlid)
 
+# ERROR
+
+def generate_error_rsp_message(rspcode, mdlid):
+	return ErrorMDLResponseMessage(rspcode, mdlid)
+
+# Parser
+
+def parse_message(_message):
+	return MessageParser.parse_message(_message)
+
 def usage():
 	print "mcaptest - MCAP testing\n Usage:\n"
         print "\tmcaptest <mode> [options] [bdaddr]\n"
