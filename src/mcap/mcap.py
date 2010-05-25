@@ -1,6 +1,6 @@
 #!/usr/bin/env ptyhon
 
-import mcaptest_defs
+import mcap_defs
 
 MCAP_ROLE_ACCEPTOR		= 'ACCEPTOR'
 MCAP_ROLE_INITIATOR		= 'INITIATOR'  
@@ -51,7 +51,7 @@ class MCL:
 class MCAPImpl:
 
 	def __init__(self, _mcl):
-		self.messageParser = mcaptest_defs.MessageParser()
+		self.messageParser = mcap_defs.MessageParser()
 		self.state = MCAP_MCL_STATE_IDLE
 		self.mcl = _mcl
 
@@ -126,7 +126,7 @@ class MCAPImpl:
 		pass
 			
 	def receive_message(self, _message):
-                opcode = _message.get_op_code()
+                opcode = self.messageParser.get_op_code(_message)
 
                 if ( self.messageParser.is_request_message(opcode) ):
                         return self.receive_request(_message)
@@ -143,7 +143,7 @@ class MCAPImpl:
                         if (self.mcl.role == MCAP_MCL_ROLE_INITIATOR):
 				return False
                 
-		success = process_request(_request)
+		success = self.process_request(_request)
 		if (success):
 			self.state == MCAP_STATE_READY
 		return success
@@ -152,13 +152,14 @@ class MCAPImpl:
 		success = False
 		# if a response is received when no request is outstanding, just ignore
                 if (self.state == MCAP_STATE_WAITING):
-                        success = process_response(_response)
+                        success = self.process_response(_response)
 			if (success):
                 		self.state = MCAP_STATE_READY
 			
 		return success
 
 	def process_response(self, _response):
+		responseMessage = None
 		try:
 			responseMessage = self.messageParser.parse_response_message(_response)
 		except InvalidMessageError as error:
@@ -193,20 +194,21 @@ class MCAPImpl:
 
 
 	def process_request(self, _request):
+		requestMessage = None
 		try:
 			requestMessage = self.messageParser.parse_request_message(_request)
 		except InvalidMessageError as error:
                         return self.send_mdl_error_response()
 
-		isOpcodeSupported = self.is_opcode_req_supported( resquestMessage.opcode ) 
+		isOpcodeSupported = self.is_opcode_req_supported( requestMessage.opcode ) 
 		if ( isOpcodeSupported ):
-			if ( requestMessage.opcode == MCAP_MCL_MD_CREATE_REQ ):
-				print "Received CREATE_REQ" 		
-			elif ( requestMessage.opcode == MCAP_MCL_MD_RECONNECT_REQ ):
+			if ( requestMessage.opcode == mcap_defs.MCAP_MD_CREATE_MDL_REQ ):
+				print "Received CREATE_REQ"
+			elif ( requestMessage.opcode == mcap_defs.MCAP_MD_RECONNECT_MDL_REQ ):
 				print "Received RECONNECT_REQ"
-			elif ( requestMessage.opcode == MCAP_MCL_MD_DELETE_REQ ):
+			elif ( requestMessage.opcode == mcap_defs.MCAP_MD_DELETE_MDL_REQ ):
 				print "Received DELETE_REQ"
-			elif ( requestMessage.opcode == MCAP_MCL_MD_ABORT_REQ ):
+			elif ( requestMessage.opcode == mcap_defs.MCAP_MD_ABORT_MDL_REQ ):
 				print "Received ABORT_REQ"
 		else:
 			opcodeRsp = requestMessage.opcode + 1
@@ -214,30 +216,30 @@ class MCAPImpl:
 			return self.send_response( requestNotSupportedRsp )
 
 	def print_error_message(self, _error_rsp_code):
-		if ( _error_rsp_code ==  MCAP_RSP_INVALID_OP_CODE ):
+		if ( _error_rsp_code ==  mcap_defs.MCAP_RSP_INVALID_OP_CODE ):
 			print "Invalid Op Code"
-		elif ( _error_rsp_code ==  MCAP_RSP_INVALID_PARAMETER_VALUE ):
+		elif ( _error_rsp_code ==  mcap_defs.MCAP_RSP_INVALID_PARAMETER_VALUE ):
 			print "Invalid Parameter Value"
-		elif ( _error_rsp_code ==  MCAP_RSP_INVALID_MDEP ):
+		elif ( _error_rsp_code ==  mcap_defs.MCAP_RSP_INVALID_MDEP ):
 			print "Invalid MDEP"
-		elif ( _error_rsp_code ==  MCAP_RSP_MDEP_BUSY ):
+		elif ( _error_rsp_code ==  mcap_defs.MCAP_RSP_MDEP_BUSY ):
 			print "MDEP Busy"
-		elif ( _error_rsp_code ==  MCAP_RSP_INVALID_MDL ):
+		elif ( _error_rsp_code ==  mcap_defs.MCAP_RSP_INVALID_MDL ):
 			print "Invalid MDL"
-		elif ( _error_rsp_code ==  MCAP_RSP_MDL_BUSY ):
+		elif ( _error_rsp_code ==  mcap_defs.MCAP_RSP_MDL_BUSY ):
 			print "MDL Busy"
-		elif ( _error_rsp_code ==  MCAP_RSP_INVALID_OPERATION ):
+		elif ( _error_rsp_code ==  mcap_defs.MCAP_RSP_INVALID_OPERATION ):
 			print "Invalid Operation"
-		elif ( _error_rsp_code ==  MCAP_RSP_RESOURCE_UNAVAILABLE ):
+		elif ( _error_rsp_code ==  mcap_defs.MCAP_RSP_RESOURCE_UNAVAILABLE ):
 			print "Resource Unavailable"
-		elif ( _error_rsp_code ==  MCAP_RSP_INVALID_UNSPECIFIED_ERROR ):
+		elif ( _error_rsp_code ==  mcap_defs.MCAP_RSP_INVALID_UNSPECIFIED_ERROR ):
 			print "Unspecified Error"
-		elif ( _error_rsp_code ==  MCAP_RSP_REQUEST_NOT_SUPPORTED ):
+		elif ( _error_rsp_code ==  mcap_defs.MCAP_RSP_REQUEST_NOT_SUPPORTED ):
 			print "Request Not Supported"
-		elif ( _error_rsp_code ==  MCAP_RSP_CONFIGURATION_REJECTED ):
+		elif ( _error_rsp_code ==  mcap_defs.MCAP_RSP_CONFIGURATION_REJECTED ):
 			print "Configuration Rejected"
 
 	def is_opcode_req_supported(self, _opcode):
-		return _opcode in [MCAP_MD_CREATE_MDL_REQ, MCAP_MD_RECONNECT_MDL_REQ,
-                                   MCAP_MD_ABORT_MDL_REQ, MCAP_MD_DELETE_MDL_REQ]
+		return _opcode in [mcap_defs.MCAP_MD_CREATE_MDL_REQ, mcap_defs.MCAP_MD_RECONNECT_MDL_REQ,
+                                   mcap_defs.MCAP_MD_ABORT_MDL_REQ, mcap_defs.MCAP_MD_DELETE_MDL_REQ]
 
