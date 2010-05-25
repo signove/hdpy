@@ -90,18 +90,25 @@ assert(deleteRspPackage.rspcode == mcap_defs.MCAP_RSP_SUCCESS)
 # test state machine
 mcl = mcap.MCL(0x01)
 mcap_session = mcap.MCAPImpl(mcl)
-assert(mcap_session.state == mcap.MCAP_MCL_STATE_IDLE)
+assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_IDLE)
 
 # create control channel
 mcap_session.init_session()
-assert(mcap_session.state == mcap.MCAP_MCL_STATE_CONNECTED)
-# create mdls (data channels) MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC
+assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
+# receive a CREATE_MD_REQ with invalid MDLID == 0xFF00 (DO NOT ACCEPT)
+mcap_session.receive_message(0x01FF000ABC)
+assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
+# receive a CREATE_MD_REQ MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC
 mcap_session.receive_message(0x0100230ABC)
-# reconnect MDLID == 0x00AB
+assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+# send a CREATE_MD_REQ and waits for response
+#mcap_session.send_message(0x01002401EF)
+#assert(mcap_session.state == mcap.MCAP_MCL_STATE_PENDING)
+# receive a RECONNECT_MD_REQ MDLID == 0x00AB
 mcap_session.receive_message(0x0300AB)
-# delete MDLID == 0x00CC 
+# receive a DELETE_MD_REQ MDLID == 0x00CC 
 mcap_session.receive_message(0x0700CC)
-# abort MDLID == 0x00AB
+# receive a ABORT_MD_REQ MDLID == 0x00AB
 mcap_session.receive_message(0x0500AB)
 #assert(mcap_session.state == mcap.MCAP_MCL_STATE_PENDING)
 

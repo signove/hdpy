@@ -60,6 +60,9 @@ class MDLRequestMessage:
 		self.opcode = _opcode
 		self.mdlid = _mdlid
 
+	def __repr__(self):
+		return "0x%02X%04X" % (self.opcode,self.mdlid)  
+
 class MDLResponseMessage:
 
 	def __init__(self, _opcode, _rspcode, _mdlid):
@@ -67,8 +70,8 @@ class MDLResponseMessage:
 		self.rspcode = _rspcode
 		self.mdlid = _mdlid
 
-	def is_valid_response(self, _rspcode):
-		pass
+	def __repr__(self):
+		return "0x%02X%02X%04X" % (self.opcode,self.rspcode,self.mdlid)
 
 # Specific request messages
 
@@ -78,6 +81,9 @@ class CreateMDLRequestMessage( MDLRequestMessage ):
 		MDLRequestMessage.__init__(self, MCAP_MD_CREATE_MDL_REQ, _mdlid)
 		self.mdepid = _mdepid
 		self.conf = _conf
+
+	def __repr__(self):
+		return "0x%02X%04X%02X%02X" % (self.opcode,self.mdlid,self.mdepid,self.conf)
 
 
 class ReconnectMDLRequestMessage( MDLRequestMessage ):
@@ -112,6 +118,9 @@ class CreateMDLResponseMessage( MDLResponseMessage ):
                 MDLResponseMessage.__init__(self, MCAP_MD_CREATE_MDL_RSP, _rspcode, _mdlid)
                 self.params = _params
 	
+	def __repr__(self):
+		return "0x%02X%02X%04X%02X" % (self.opcode,self.rspcode,self.mdlid,self.params)
+
 	@staticmethod
 	def is_valid_response(_rspcode):
 		return _rspcode in [MCAP_RSP_SUCESS, MCAP_RSP_INVALID_PARAMETER_VALUE,
