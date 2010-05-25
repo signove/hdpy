@@ -12,7 +12,7 @@ MCAP_MD_DELETE_MDL_REQ			= 0x07
 MCAP_MD_DELETE_MDL_RSP			= 0x08
 
 # Response Codes
-MCAP_RSP_SUCESS				= 0x00
+MCAP_RSP_SUCCESS			= 0x00
 MCAP_RSP_INVALID_OP_CODE		= 0x01
 MCAP_RSP_INVALID_PARAMETER_VALUE	= 0x02
 MCAP_RSP_INVALID_MDEP			= 0x03
@@ -43,6 +43,14 @@ class InvalidMessageError( Exception ):
 
 	def __str__(self):
 		return repr(self.value)
+
+class InvalidOperationError( Exception ) :
+
+	def __init__(self, value):
+                self.value = value
+
+        def __str__(self):
+                return repr(self.value)
 
 # General messages
 
@@ -95,8 +103,8 @@ class DeleteMDLRequestMessage( MDLRequestMessage ):
 
 class ErrorMDLResponseMessage( MDLResponseMessage ):
 
-        def __init__(self, _rspcode, _mdlid):
-                MDLResponseMessage.__init__(self, MCAP_ERROR_RSP, _rspcode, _mdlid)
+        def __init__(self):
+                MDLResponseMessage.__init__(self, MCAP_ERROR_RSP, MCAP_RSP_INVALID_OP_CODE, 0x0000)
 
 class CreateMDLResponseMessage( MDLResponseMessage ):
 

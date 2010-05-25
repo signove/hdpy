@@ -2,6 +2,7 @@
 
 import mcaptest_defs
 import mcaptest
+import mcap
 
 createReq = mcaptest_defs.CreateMDLRequestMessage(0x01, 0x01, 0x0001)
 assert(createReq.mdlid == 0x01)
@@ -60,7 +61,7 @@ createRspMessage = 0x0200002307
 createRspPackage = messageParser.parse_message(createRspMessage)
 assert(createRspPackage.opcode == mcaptest_defs.MCAP_MD_CREATE_MDL_RSP)
 assert(createRspPackage.mdlid == 0x0023)
-assert(createRspPackage.rspcode == mcaptest_defs.MCAP_RSP_SUCESS)
+assert(createRspPackage.rspcode == mcaptest_defs.MCAP_RSP_SUCCESS)
 assert(createRspPackage.params == 0x07)
 
 
@@ -84,6 +85,13 @@ deleteRspMessage = 0x080000CC
 deleteRspPackage = messageParser.parse_message(deleteRspMessage)
 assert(deleteRspPackage.opcode == mcaptest_defs.MCAP_MD_DELETE_MDL_RSP)
 assert(deleteRspPackage.mdlid == 0x00CC)
-assert(deleteRspPackage.rspcode == mcaptest_defs.MCAP_RSP_SUCESS)
+assert(deleteRspPackage.rspcode == mcaptest_defs.MCAP_RSP_SUCCESS)
+
+# test state machine
+mcl = mcap.MCL(0x01)
+mcap_session = mcap.MCAPImpl(mcl)
+assert(mcap_session.state == mcap.MCAP_MCL_STATE_IDLE)
+mcap_session.init_session()
+assert(mcap_session.state == mcap.MCAP_MCL_STATE_CONNECTED)
 
 print 'TESTS OK' 
