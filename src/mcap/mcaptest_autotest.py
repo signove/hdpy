@@ -98,12 +98,15 @@ assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
 # receive a CREATE_MD_REQ with invalid MDLID == 0xFF00 (DO NOT ACCEPT)
 mcap_session.receive_message(0x01FF000ABC)
 assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
+assert(mcap_session.state == mcap.MCAP_STATE_READY)
 # receive a CREATE_MD_REQ MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC
 mcap_session.receive_message(0x0100230ABC)
 assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+assert(mcap_session.state == mcap.MCAP_STATE_READY)
 # send a CREATE_MD_REQ and waits for response
-#mcap_session.send_message(0x01002401EF)
-#assert(mcap_session.state == mcap.MCAP_MCL_STATE_PENDING)
+mcap_session.send_message(0x01002401EF)
+assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_PENDING)
+assert(mcap_session.state == mcap.MCAP_STATE_WAITING)
 # receive a RECONNECT_MD_REQ MDLID == 0x00AB
 mcap_session.receive_message(0x0300AB)
 # receive a DELETE_MD_REQ MDLID == 0x00CC 

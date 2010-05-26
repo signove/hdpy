@@ -176,7 +176,6 @@ class MessageParser:
 
                 # MCAP request/response packages do not have a fix lenght. 
                 # Op codes are on most significant byte
-
                 while(_message > 0):
                         op_code = _message & 0xFF
                         _message >>= 8
