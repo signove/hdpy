@@ -175,6 +175,7 @@ class MCAPImpl:
 	def process_create_response(self, _response):
 		
 		if ( _response.rspcode == mcap_defs.MCAP_RSP_SUCCESS ):
+			self.mcl.add_mdl( MDL(_response.mdlid, 0) )
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 		else:
 			if ( self.mcl.has_mdls() ):

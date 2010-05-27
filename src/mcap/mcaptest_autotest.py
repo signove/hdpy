@@ -120,7 +120,51 @@ assert(mcap_session_initiator.state == mcap.MCAP_STATE_READY)
 assert(mcap_session_acceptor.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
 assert(mcap_session_acceptor.state == mcap.MCAP_STATE_READY)
 
-# receive a CREATE_MD_REQ MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC
+#### receive a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC (ACCEPT) ####
+mcap_session_initiator.send_message(0x0100230ABC)
+assert(mcap_session_initiator.last_sent == 0x0100230ABC)
+assert(mcap_session_acceptor.last_received == 0x0100230ABC)
+# return a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
+assert(mcap_session_acceptor.last_sent == 0x02000023BC)
+assert(mcap_session_initiator.last_received == 0x02000023BC)
+
+assert(len(mcap_session_initiator.mcl.mdl_list) == 1)
+assert(len(mcap_session_acceptor.mcl.mdl_list) == 1)
+assert(mcap_session_initiator.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+assert(mcap_session_initiator.state == mcap.MCAP_STATE_READY)
+assert(mcap_session_acceptor.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+assert(mcap_session_acceptor.state == mcap.MCAP_STATE_READY)
+
+#### receive a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0024 CONF = 0xBC (ACCEPT) ####
+mcap_session_initiator.send_message(0x0100240ABC)
+assert(mcap_session_initiator.last_sent == 0x0100240ABC)
+assert(mcap_session_acceptor.last_received == 0x0100240ABC)
+# return a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
+assert(mcap_session_acceptor.last_sent == 0x02000024BC)
+assert(mcap_session_initiator.last_received == 0x02000024BC)
+
+assert(len(mcap_session_initiator.mcl.mdl_list) == 2)
+assert(len(mcap_session_acceptor.mcl.mdl_list) == 2)
+assert(mcap_session_initiator.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+assert(mcap_session_initiator.state == mcap.MCAP_STATE_READY)
+assert(mcap_session_acceptor.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+assert(mcap_session_acceptor.state == mcap.MCAP_STATE_READY)
+
+#### receive a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0027 CONF = 0xBC (ACCEPT) ####
+mcap_session_initiator.send_message(0x0100270ABC)
+assert(mcap_session_initiator.last_sent == 0x0100270ABC)
+assert(mcap_session_acceptor.last_received == 0x0100270ABC)
+# return a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
+assert(mcap_session_acceptor.last_sent == 0x02000027BC)
+assert(mcap_session_initiator.last_received == 0x02000027BC)
+
+assert(len(mcap_session_initiator.mcl.mdl_list) == 3)
+assert(len(mcap_session_acceptor.mcl.mdl_list) == 3)
+assert(mcap_session_initiator.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+assert(mcap_session_initiator.state == mcap.MCAP_STATE_READY)
+assert(mcap_session_acceptor.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+assert(mcap_session_acceptor.state == mcap.MCAP_STATE_READY)
+
 #mcap_session.receive_message(0x0100230ABC)
 #assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
 #assert(mcap_session.state == mcap.MCAP_STATE_READY)
