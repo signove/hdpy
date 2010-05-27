@@ -158,7 +158,7 @@ class AbortMDLResponseMessage( MDLResponseMessage ):
 class DeleteMDLResponseMessage( MDLResponseMessage ):
 
         def __init__(self, _rspcode, _mdlid):
-                MDLResponseMessage.__init__(self, MCAP_MD_ABORT_MDL_RSP, _rspcode, _mdlid)
+                MDLResponseMessage.__init__(self, MCAP_MD_DELETE_MDL_RSP, _rspcode, _mdlid)
 
 	@staticmethod
         def is_valid_response(_rspcode):

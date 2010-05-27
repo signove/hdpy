@@ -20,7 +20,7 @@ class MDL:
 		self.mdepid = _mdepid
 
 	def __eq__(self, _mdl):
-		return (self.mdlid == _mdl.mdlid) and (self.mdepid == _mdl.mdepid)
+		return self.mdlid == _mdl.mdlid
 
 	def __cmp__(self, _mdl):
 		if ( self.mdlid < _mdl.mdlid ):
@@ -43,6 +43,9 @@ class MCL:
 
 	def has_mdls(self):
 		return len(self.mdl_list) > 0
+
+	def contains_mdl(self, _mdl):
+		return _mdl in self.mdl_list 
 
 	def add_mdl(self, _mdl):
 		self.mdl_list.append(_mdl)
@@ -192,16 +195,16 @@ class MCAPImpl:
 	def process_delete_response(self, _response):		
 		if ( _response.rspcode == mcap_defs.MCAP_RSP_SUCCESS ):
 
-			mdlid = responseMessage.mdlid
-			if ( mdlid == MCAP_MDL_ID_ALL ):
+			mdlid = _response.mdlid
+			if ( mdlid == mcap_defs.MCAP_MDL_ID_ALL ):
 				self.mcl.delete_all_mdls()
 			else:
-				self.mcl.delete_mdl(_response.mdlid)
+				self.mcl.delete_mdl( MDL(_response.mdlid,0) )
 			
 			if ( not self.mcl.has_mdls() ):
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
 			else:
-				self.mcl.state = MCAP_MCL_STATE_ACTIVATE
+				self.mcl.state = MCAP_MCL_STATE_ACTIVE
 
 		return True
 			
@@ -210,7 +213,7 @@ class MCAPImpl:
 			if ( not self.mcl.has_mdls() ):
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
 			else:
-				self.mcl.state = MCAP_MCL_STATE_ACTIVATE		
+				self.mcl.state = MCAP_MCL_STATE_ACTIVE		
 		else:
 			self.print_error_message( _response.rspcode )
 
@@ -245,7 +248,7 @@ class MCAPImpl:
 
 	#	if ( not _request.has_valid_length() )
 	#		rspcode = mcap_defs.MCAP_RSP_INVALID_PARAMETER_VALUE
-		if ( not self.is_valid_mdlid(_request.mdlid) ):
+		if ( not self.is_valid_mdlid(_request.mdlid, False) ):
 			rspcode = mcap_defs.MCAP_RSP_INVALID_MDL
 		elif ( not self.support_more_mdls() ):
 			rspcode = mcap_defs.MCAP_RSP_MDL_BUSY
@@ -267,7 +270,7 @@ class MCAPImpl:
 		success = self.send_response( createResponse )
 
 		if ( success and (rspcode == mcap_defs.MCAP_RSP_SUCCESS ) ):
-			self.mcl.add_mdl(_request.mdlid)
+			self.mcl.add_mdl( MDL(_request.mdlid,0) )
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 		
 		return success
@@ -278,7 +281,7 @@ class MCAPImpl:
 
         #       if ( not _request.has_valid_length() )
         #               rspcode = mcap_defs.MCAP_RSP_INVALID_PARAMETER_VALUE
-                if ( not self.is_valid_mdlid(_request.mdlid) ):
+                if ( not self.is_valid_mdlid(_request.mdlid, False) ):
                         rspcode = mcap_defs.MCAP_RSP_INVALID_MDL
                 elif ( not self.support_more_mdls() ):
                         rspcode = mcap_defs.MCAP_RSP_MDL_BUSY
@@ -291,7 +294,7 @@ class MCAPImpl:
                 success = self.send_response( reconnectResponse )
 
                 if ( success and (rspcode == mcap_defs.MCAP_RSP_SUCCESS ) ):
-                        self.mcl.add_mdl(_request.mdlid)
+                        self.mcl.add_mdl( MDL(_request.mdlid,0) )
                         self.mcl.state = MCAP_MCL_STATE_ACTIVE
 
                 return success
@@ -302,7 +305,8 @@ class MCAPImpl:
 
         #       if ( not _request.has_valid_length() )
         #               rspcode = mcap_defs.MCAP_RSP_INVALID_PARAMETER_VALUE
-                if ( not self.is_valid_mdlid(_request.mdlid) ):
+                if ( (not self.is_valid_mdlid(_request.mdlid, True)) or 
+			( not self.contains_mdl_id(_request.mdlid) ) ):
                         rspcode = mcap_defs.MCAP_RSP_INVALID_MDL
                 elif ( not self.support_more_mdls() ):
                         rspcode = mcap_defs.MCAP_RSP_MDL_BUSY
@@ -316,7 +320,7 @@ class MCAPImpl:
 			if ( _request.mdlid == mcap_defs.MCAP_MDL_ID_ALL ):
 				self.mcl.delete_all_mdls()
 			else:
-				self.mcl.delete_mdl(_request.mdlid)
+				self.mcl.delete_mdl( MDL(_request.mdlid, 0) )
 
 			if ( not self.mcl.has_mdls() ):
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED	
@@ -327,7 +331,7 @@ class MCAPImpl:
 
         #       if ( not _request.has_valid_length() )
         #               rspcode = mcap_defs.MCAP_RSP_INVALID_PARAMETER_VALUE
-                if ( not self.is_valid_mdlid(_request.mdlid) ):
+                if ( not self.is_valid_mdlid(_request.mdlid, False) ):
                         rspcode = mcap_defs.MCAP_RSP_INVALID_MDL
 		elif ( self.state != MCAP_MCL_STATE_PENDING ):
 			rspcode = mcap_defs.MCAP_RSP_INVALID_OPERATION
@@ -341,12 +345,18 @@ class MCAPImpl:
 			else:
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
 
-	def is_valid_mdlid(self, _mdlid):
+	def contains_mdl_id(self, _mdlid):
+		if (_mdlid == mcap_defs.MCAP_MDL_ID_ALL):
+			return True
+		
+		return self.mcl.contains_mdl( MDL(_mdlid, 0) )
+
+	def is_valid_mdlid(self, _mdlid, _accept_all):
 		# has 16 bits
 		if ( (_mdlid & 0x0000) != 0 ):
 			return False					
 	
-		if ( _mdlid == mcap_defs.MCAP_MDL_ID_ALL):
+		if ( (_mdlid == mcap_defs.MCAP_MDL_ID_ALL) and _accept_all):
 			return True
 
 		if (_mdlid < mcap_defs.MCAP_MDL_ID_INITIAL or _mdlid > mcap_defs.MCAP_MDL_ID_FINAL):
