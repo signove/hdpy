@@ -107,6 +107,20 @@ mcap_session_acceptor.init_session()
 assert(mcap_session_initiator.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
 assert(mcap_session_initiator.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
 
+#### send an invalid message (Op Code does not exist) ####
+#mcap_session_initiator.send_message(0x0AFF000ABC)
+#assert(mcap_session_initiator.last_sent == 0x0AFF000ABC)
+#assert(mcap_session_acceptor.last_received == 0x0AFF000ABC)
+# return a ERROR_RSP (0x00) with RSP Invalid OP (0x01)
+#assert(mcap_session_acceptor.last_sent == 0x00010000)
+#assert(mcap_session_initiator.last_received == 0x00010000)
+
+#assert(mcap_session_initiator.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
+#assert(mcap_session_initiator.state == mcap.MCAP_STATE_READY)
+#assert(mcap_session_acceptor.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
+#assert(mcap_session_acceptor.state == mcap.MCAP_STATE_READY)
+
+
 #### receive a CREATE_MD_REQ (0x01) with invalid MDLID == 0xFF00 (DO NOT ACCEPT) ####
 mcap_session_initiator.send_message(0x01FF000ABC)
 assert(mcap_session_initiator.last_sent == 0x01FF000ABC)

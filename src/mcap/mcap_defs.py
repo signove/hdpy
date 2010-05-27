@@ -187,9 +187,8 @@ class MessageParser:
 				   MCAP_MD_ABORT_MDL_REQ, MCAP_MD_DELETE_MDL_REQ]	
 	
 	def is_response_message(self, _opcode):
-		return _opcode in [MCAP_ERROR_RSP, MCAP_MD_CREATE_MDL_RSP,
-                                   MCAP_MD_RECONNECT_MDL_RSP, MCAP_MD_ABORT_MDL_RSP,
-                                   MCAP_MD_DELETE_MDL_RSP]
+		return _opcode in [MCAP_ERROR_RSP, MCAP_MD_CREATE_MDL_RSP, MCAP_MD_RECONNECT_MDL_RSP, 
+				   MCAP_MD_ABORT_MDL_RSP, MCAP_MD_DELETE_MDL_RSP]
 
 
 	def parse_request_message(self, _message):
@@ -240,5 +239,5 @@ class MessageParser:
                 elif self.is_response_message(opcode):
                         return self.parse_response_message(_message)
                 else:
-                        raise InvalidMessageError(_message)
+                        return None
 
