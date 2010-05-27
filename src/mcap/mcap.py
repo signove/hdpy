@@ -32,11 +32,12 @@ class MDL:
 
 class MCL:
 	
-	def __init__(self, _id):
-		self.id = _id
+	def __init__(self, _btaddr):
+		self.btaddr = _btaddr
 		self.state = MCAP_MCL_STATE_IDLE
 		self.role = MCAP_MCL_ROLE_INITIATOR
 		self.last_mdlid = mcap_defs.MCAP_MDL_ID_INITIAL
+		self.remote = None
 		self.mdl_list = []
 		self.is_control_channel_open = False
 
@@ -97,45 +98,44 @@ class MCAPImpl:
 		opcode = self.messageParser.get_op_code(_message)		
 		messagePkg = self.messageParser.parse_message(_message)
 		if ( self.messageParser.is_request_message(opcode) ):
-			success = self.send_request(messagePkg)
+			return self.send_request(messagePkg)
 		elif ( self.messageParser.is_response_message(opcode) ):
-			success = self.send_response(messagePkg)
+			return self.send_response(messagePkg)
 		else:
 			raise InvalidOperationError('Invalid sent message')
-
-		if ( success ):
-			self.state = MCAP_STATE_WAITING
 
 	def send_request(self, _request):
 		if (self.state == MCAP_STATE_WAITING):
 			raise InvalidOperationError('Still waiting for response')
 		else:
-			success = self.send_mcap_command(_request)
-
-			if ( success ):
-				if ( (_request.opcode == mcap_defs.MCAP_MD_CREATE_MDL_REQ) or
-					(_request.opcode == mcap_defs.MCAP_MD_RECONNECT_MDL_REQ) ):
-					self.mcl.state = MCAP_MCL_STATE_PENDING
-
-			return success
+			if ( (_request.opcode == mcap_defs.MCAP_MD_CREATE_MDL_REQ) or
+                                        (_request.opcode == mcap_defs.MCAP_MD_RECONNECT_MDL_REQ) ):
+                        	self.mcl.state = MCAP_MCL_STATE_PENDING
+			self.state = MCAP_STATE_WAITING		
+	
+			return self.send_mcap_command(_request)
 	
 	def send_response(self, _response):
 		success = self.send_mcap_command(_response)
 		return success
 
-	def send_mcap_command(self, _command):
+	def send_mcap_command(self, _message):
 		# convert __command to raw representation
 		# use CC to send command
-		print _command
+		print _message
+		package = int(_message.__repr__(),16)
+		self.last_sent = package
+		self.remote.receive_message( package )
 		return True
 			
 	def receive_message(self, _message):
                 opcode = self.messageParser.get_op_code(_message)
 
+		self.last_received = _message
                 if ( self.messageParser.is_request_message(opcode) ):
                         return self.receive_request(_message)
                 elif ( self.messageParser.is_response_message(opcode) ):
-                        return self.reveive_response(_message)
+                        return self.receive_response(_message)
                 else:
                         raise InvalidOperationError('Invalid received message')
 
@@ -143,16 +143,13 @@ class MCAPImpl:
 	def receive_request(self, _request):
 		# if a request is received when a response is expected, only process if 
 		# it is received by the Acceptor; otherwise, just ignore
-                if (self.state == MCAP_STATE_WAITING):
+		if (self.state == MCAP_STATE_WAITING):
                         if (self.mcl.role == MCAP_MCL_ROLE_INITIATOR):
 				return False
 			else:
 				return self.process_request(_request)
 		else:
-                	success = self.process_request(_request)
-			if (success):
-				self.state == MCAP_STATE_WAITING
-			return success
+                	return self.process_request(_request)
 
         def receive_response(self, _response):
 		# if a response is received when no request is outstanding, just ignore
@@ -164,39 +161,59 @@ class MCAPImpl:
 	def process_response(self, _response):
 		responseMessage = self.messageParser.parse_response_message(_response)
 
-		if ( responseMessage.rspcode == mcap_defs.MCAP_RSP_SUCCESS ):
-
-			# if received a create or reconnect operation response
-			if ( responseMessage.opcode == mcap_defs.MCAP_MD_CREATE_MDL_RSP or
-				responseMessage.opcode == mcap_defs.MCAP_MD_RECONNECT_MDL_RSP ):
-				self.mcl.state = MCAP_MCL_STATE_ACTIVE	
-
-			# if received a delete operation response
-			elif ( responseMessage.opcode == mcap_defs.MCAP_MD_DELETE_MDL_RSP ):
-				mdlid = responseMessage.mdlid
-				if ( mdlid == MCAP_MDL_ID_ALL ):
-					self.mcl.delete_all_mdls()
-				else:
-					self.mcl.delete_mdl(responseMesage.mdlid)
-				
-				if ( not self.mcl.has_mdls() ):
-					self.mcl.state = MCAP_MCL_STATE_CONNECTED
-				else:
-					self.mcl.state = MCAP_MCL_STATE_ACTIVATE
-			
-			#if received a abort operation response
-			elif ( responseMessage.opcode == MCAP_MD_ABORT_MDL_RSP ):
-				if ( not self.mcl.has_mdls() ):
-					self.mcl.state = MCAP_MCL_STATE_CONNECTED
-				else:
-					self.mcl.state = MCAP_MCL_STATE_ACTIVATE
-
-		
-		else:
-			self.print_error_message( responseMessage.rspcode )
-
 		self.state = MCAP_STATE_READY
 
+		if ( responseMessage.opcode == mcap_defs.MCAP_MD_CREATE_MDL_RSP ):
+			return self.process_create_response(responseMessage)
+                elif ( responseMessage.opcode == mcap_defs.MCAP_MD_RECONNECT_MDL_RSP ):
+                        return self.process_reconnect_response(responseMessage)
+                elif ( responseMessage.opcode == mcap_defs.MCAP_MD_DELETE_MDL_RSP ):
+                        return self.process_delete_response(responseMessage)
+                elif ( responseMessage.opcode == mcap_defs.MCAP_MD_ABORT_MDL_RSP ):
+                        return self.process_abort_response(responseMessage)
+
+	def process_create_response(self, _response):
+		
+		if ( _response.rspcode == mcap_defs.MCAP_RSP_SUCCESS ):
+			self.mcl.state = MCAP_MCL_STATE_ACTIVE
+		else:
+			if ( self.mcl.has_mdls() ):
+				self.mcl.state = MCAP_MCL_STATE_ACTIVE
+			else:
+				self.mcl.state = MCAP_MCL_STATE_CONNECTED
+			self.print_error_message(_response.rspcode)
+			
+		return True			
+	
+	def process_reconnect_response(self, _response):
+		return self.process_create_response(_response)
+
+	def process_delete_response(self, _response):		
+		if ( _response.rspcode == mcap_defs.MCAP_RSP_SUCCESS ):
+
+			mdlid = responseMessage.mdlid
+			if ( mdlid == MCAP_MDL_ID_ALL ):
+				self.mcl.delete_all_mdls()
+			else:
+				self.mcl.delete_mdl(_response.mdlid)
+			
+			if ( not self.mcl.has_mdls() ):
+				self.mcl.state = MCAP_MCL_STATE_CONNECTED
+			else:
+				self.mcl.state = MCAP_MCL_STATE_ACTIVATE
+
+		return True
+			
+	def process_abort_response(self, _response):	
+		if ( _response.rspcode == mcap_defs.MCAP_RSP_SUCCESS ):
+			if ( not self.mcl.has_mdls() ):
+				self.mcl.state = MCAP_MCL_STATE_CONNECTED
+			else:
+				self.mcl.state = MCAP_MCL_STATE_ACTIVATE		
+		else:
+			self.print_error_message( _response.rspcode )
+
+		return True
 
 	def process_request(self, _request):
 		requestMessage = None
@@ -240,8 +257,9 @@ class MCAPImpl:
 		elif ( not self.is_valid_configuration(_request.conf) ):
 			rspcode = mcap_defs.MCAP_RSP_CONFIGURATION_REJECTED
 
+		# TODO - not sure about which value we should return - see page 26
 		rsp_params = 0x00
-		if ( rspcode == mcap_defs.MCAP_RSP_SUCCESS ):
+		if ( rspcode != mcap_defs.MCAP_RSP_CONFIGURATION_REJECTED ):
 			rsp_params = _request.conf
 
 		createResponse = mcap_defs.CreateMDLResponseMessage(rspcode, _request.mdlid, rsp_params)

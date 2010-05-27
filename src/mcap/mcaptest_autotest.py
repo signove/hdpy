@@ -88,31 +88,52 @@ assert(deleteRspPackage.mdlid == 0x00CC)
 assert(deleteRspPackage.rspcode == mcap_defs.MCAP_RSP_SUCCESS)
 
 # test state machine
-mcl = mcap.MCL(0x01)
-mcap_session = mcap.MCAPImpl(mcl)
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_IDLE)
+mcl_init = mcap.MCL("00:21:FE:A0:EC:49")
+mcl_acep = mcap.MCL("00:1D:D9:EE:C5:78")
+
+mcap_session_initiator = mcap.MCAPImpl(mcl_init)
+mcap_session_acceptor = mcap.MCAPImpl(mcl_acep)
+mcap_session_acceptor.role = mcap.MCAP_MCL_ROLE_ACCEPTOR
+
+assert(mcap_session_initiator.mcl.state == mcap.MCAP_MCL_STATE_IDLE)
+assert(mcap_session_acceptor.mcl.state == mcap.MCAP_MCL_STATE_IDLE)
+
+mcap_session_initiator.remote = mcap_session_acceptor
+mcap_session_acceptor.remote = mcap_session_initiator
 
 # create control channel
-mcap_session.init_session()
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
-# receive a CREATE_MD_REQ with invalid MDLID == 0xFF00 (DO NOT ACCEPT)
-mcap_session.receive_message(0x01FF000ABC)
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
-assert(mcap_session.state == mcap.MCAP_STATE_READY)
+mcap_session_initiator.init_session()
+mcap_session_acceptor.init_session()
+assert(mcap_session_initiator.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
+assert(mcap_session_initiator.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
+
+#### receive a CREATE_MD_REQ (0x01) with invalid MDLID == 0xFF00 (DO NOT ACCEPT) ####
+mcap_session_initiator.send_message(0x01FF000ABC)
+assert(mcap_session_initiator.last_sent == 0x01FF000ABC)
+assert(mcap_session_acceptor.last_received == 0x01FF000ABC)
+# return a CREATE_MD_RSP (0x02) with RSP Invalid MDL (0x05)
+assert(mcap_session_acceptor.last_sent == 0x0205FF00BC)
+assert(mcap_session_initiator.last_received == 0x0205FF00BC)
+
+assert(mcap_session_initiator.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
+assert(mcap_session_initiator.state == mcap.MCAP_STATE_READY)
+assert(mcap_session_acceptor.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
+assert(mcap_session_acceptor.state == mcap.MCAP_STATE_READY)
+
 # receive a CREATE_MD_REQ MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC
-mcap_session.receive_message(0x0100230ABC)
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
-assert(mcap_session.state == mcap.MCAP_STATE_READY)
+#mcap_session.receive_message(0x0100230ABC)
+#assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+#assert(mcap_session.state == mcap.MCAP_STATE_READY)
 # send a CREATE_MD_REQ and waits for response
-mcap_session.send_message(0x01002401EF)
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_PENDING)
-assert(mcap_session.state == mcap.MCAP_STATE_WAITING)
+#mcap_session.send_message(0x01002401EF)
+#assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_PENDING)
+#assert(mcap_session.state == mcap.MCAP_STATE_WAITING)
 # receive a RECONNECT_MD_REQ MDLID == 0x00AB
-mcap_session.receive_message(0x0300AB)
+#mcap_session.receive_message(0x0300AB)
 # receive a DELETE_MD_REQ MDLID == 0x00CC 
-mcap_session.receive_message(0x0700CC)
+#mcap_session.receive_message(0x0700CC)
 # receive a ABORT_MD_REQ MDLID == 0x00AB
-mcap_session.receive_message(0x0500AB)
+#mcap_session.receive_message(0x0500AB)
 #assert(mcap_session.state == mcap.MCAP_MCL_STATE_PENDING)
 
 print 'TESTS OK' 
