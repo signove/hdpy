@@ -1,6 +1,7 @@
 #!/usr/bin/env ptyhon
 
 import mcap_defs
+from threading import Thread
 
 MCAP_MCL_ROLE_ACCEPTOR		= 'ACCEPTOR'
 MCAP_MCL_ROLE_INITIATOR		= 'INITIATOR'  
@@ -13,11 +14,15 @@ MCAP_MCL_STATE_CONNECTED	= 'CONNECTED'
 MCAP_MCL_STATE_PENDING		= 'PENDING'
 MCAP_MCL_STATE_ACTIVE		= 'ACTIVE'
 
+MCAP_MDL_STATE_ACTIVE		= 'ACTIVE'
+MCAP_MDL_STATE_DELETED		= 'DELETED'
+
 class MDL:
 
 	def __init__(self, _mdlid = 0, _mdepid = 0):
 		self.mdlid = _mdlid
 		self.mdepid = _mdepid
+		self.state = MCAP_MDL_STATE_ACTIVE
 
 	def __eq__(self, _mdl):
 		return self.mdlid == _mdl.mdlid
@@ -41,20 +46,50 @@ class MCL:
 		self.mdl_list = []
 		self.is_control_channel_open = False
 
+	def count_mdls(self):
+		counter = 0 
+		for value in self.mdl_list:
+			if ( value.state != MCAP_MDL_STATE_DELETED ):
+				counter = counter + 1		
+		return counter
+
 	def has_mdls(self):
-		return len(self.mdl_list) > 0
+		return self.count_mdls() > 0
 
 	def contains_mdl(self, _mdl):
-		return _mdl in self.mdl_list 
+		try:
+                        mdl_index = self.mdl_list.index(_mdl)
+                except ValueError:
+                        mdl_index = -1
+
+                if (mdl_index < 0):
+                        return False
+                else:
+                        item = self.mdl_list[mdl_index]
+                        return ( item.state != MCAP_MDL_STATE_DELETED )
 
 	def add_mdl(self, _mdl):
 		self.mdl_list.append(_mdl)
 
 	def delete_mdl(self, _mdl):
-		self.mdl_list.remove(_mdl)
+		try:
+			mdl_index = self.mdl_list.index(_mdl)
+		except ValueError:
+			mdl_index = -1
+
+		if (mdl_index < 0):
+			return False
+		else:
+			item = self.mdl_list[mdl_index]
+			if (item.state == MCAP_MDL_STATE_DELETED):
+				return False
+			else:
+				item.state = MCAP_MDL_STATE_DELETED
+				return True
 	
 	def delete_all_mdls(self):
-		del self.mdl_list[:]
+		for mdl in self.mdl_list:
+			mdl.state = MCAP_MDL_STATE_DELETED
 
 	def create_mdlid():
 		mdlid = self.last_mdlid
@@ -70,7 +105,7 @@ class MCL:
 	def close_control_channel(self):
 		self.is_control_channel_open = False
 		return True
-		
+
 class MCAPImpl:
 
 	def __init__(self, _mcl):
