@@ -50,7 +50,7 @@ class MCL:
 		counter = 0 
 		for value in self.mdl_list:
 			if ( value.state != MCAP_MDL_STATE_DELETED ):
-				counter = counter + 1		
+				counter += 1		
 		return counter
 
 	def has_mdls(self):
@@ -214,7 +214,7 @@ class MCAPImpl:
                 elif ( responseMessage.opcode == mcap_defs.MCAP_MD_ABORT_MDL_RSP ):
                         return self.process_abort_response(responseMessage)
 		elif ( responseMessage.opcode == mcap_defs.MCAP_ERROR_RSP ):
-			print_error_message( responseMessage.rspcode )
+			self.print_error_message( responseMessage.rspcode )
 			 
 
 	def process_create_response(self, _response):

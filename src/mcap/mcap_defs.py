@@ -173,12 +173,19 @@ class MessageParser:
 		pass
 
 	def get_op_code(self, _message):
+		temp = _message
 
                 # MCAP request/response packages do not have a fix lenght. 
                 # Op codes are on most significant byte
-                while(_message > 0):
-                        op_code = _message & 0xFF
-                        _message >>= 8
+                while(temp > 0):
+                        op_code = temp & 0xFF
+                        temp >>= 8
+
+		# check if is ERROR_RSP - special case
+		# it stops at RSP_CODE, which, in ERROR_RSP is always 0x01
+		if ( op_code == 0x01 ):
+			if ( ( _message & 0xFFFFFFFF) == 0x00010000 ):
+				return MCAP_ERROR_RSP 
 
                 return op_code
 
