@@ -3,6 +3,7 @@
 import mcap_defs
 import socket
 import thread
+import time
 from threading import Thread, RLock
 
 MCAP_MCL_ROLE_ACCEPTOR		= 'ACCEPTOR'
@@ -119,6 +120,9 @@ class MCL:
 		self.state = MCAP_MCL_STATE_IDLE
 		self.role = MCAP_MCL_ROLE_INITIATOR
 		self.last_mdlid = mcap_defs.MCAP_MDL_ID_INITIAL
+		self.csp_base_time = time.time()
+		self.csp_base_counter = 0
+		self.remote = None
 		self.mdl_list = []
 		self.is_channel_open = False
 
@@ -204,7 +208,19 @@ class MCL:
 
 		return True
 
-class MCAPImpl (Thread):
+	def get_csp_timestamp(self):
+		now = time.time()
+		offset = now - self.csp_base_time
+		offset = int(1000000 * offset) # convert to microseconds
+		return self.csp_base_counter + offset
+
+	def set_csp_timestamp(self, counter):
+		# Reset counter to value provided by CSP-Master
+		self.csp_base_time = time.time()
+		self.csp_base_counter = counter
+
+
+class MCAPImpl( Thread ):
 
 	def __init__(self, _mcl):
 		Thread.__init__(self)
