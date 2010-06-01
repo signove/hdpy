@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import struct
+
 # Op Codes
 MCAP_ERROR_RSP				= 0x00
 MCAP_MD_CREATE_MDL_REQ			= 0x01
@@ -143,12 +145,13 @@ class CSPSetRequestMessage( CSPRequestMessage ):
 
 	def __init__(self, _update, _btclock, _timestamp):
 		CSPRequestMessage.__init__(self, MCAP_MD_SYNC_SET_REQ)
+		self.update = _update
 		self.btclock = _btclock
 		self.timestamp = _timestamp
 
 	def __repr__(self):
-		return "0x%02X %d %d" % (self.opcode, self.btclock,
-			self.timestamp)
+		return "0x%02X %d %d %d" % (self.opcode, self.update,
+			self.btclock, self.timestamp)
 
 
 class CSPSyncInfoIndication( CSPRequestMessage ):
@@ -162,6 +165,12 @@ class CSPSyncInfoIndication( CSPRequestMessage ):
 	def __repr__(self):
 		return "0x%02X %d %d %d" % (self.opcode, self.btclock,
 			self.timestamp, self.accuracy)
+
+
+def debug(msg, data):
+	data = ["0x%02x" % ord(c) for c in data]
+	data = " ".join(data)
+	print msg, data
 
 
 # Specific response messages
@@ -320,7 +329,6 @@ class MessageParser:
                 else:
                         return self.parse_non_create_response_message(_message)
 
-
 	def parse_create_request_message(self, _message):
 		configuration = _message & 0xFF
 		mdepid = (_message >> 8) & 0xFF 
@@ -331,6 +339,27 @@ class MessageParser:
 		mdlid = _message & 0xFFFF
 		op_code = (_message >> 16) & 0xFF
 		return MDLRequestMessage(op_code, mdlid)
+
+	def parse_csp_capabilities_request(self, _message):
+		if len(_message) != 3:
+			debug("Bad CSP cap req", _message)
+			return None
+		accuracy = struct.unpack(">xH", _message)
+		return CSPCapabilitiesRequestMessage(accuracy)
+
+	def parse_csp_set_request(self, _message):
+		if len(_message) != 14:
+			debug("Bad CSP set req", _message)
+			return None
+		update, btclock, timestamp = struct.unpack(">xBIQ", _message)
+		return CSPSetRequestMessage(update, btclock, timestamp)
+
+	def parse_csp_info_indication(self, _message):
+		if len(_message) != 15:
+			debug("Bad CSP info indication", _message)
+			return None
+		btclock, timestamp, accuracy = struct.unpack(">xIQH", _message)
+		return CSPSyncInfoIndication(btclock, timestamp, accuracy)
 
 	def parse_create_response_message(self, _message):
 		rsp_vars = _message & 0xFF
@@ -343,6 +372,24 @@ class MessageParser:
 		rsp_code = (_message >> 16) & 0xFF
 		op_code = (_message >> 24) & 0xFF
 		return MDLResponseMessage(op_code, rsp_code, mdlid)
+
+	def parse_csp_capabilities_response(self, _message):
+		if len(_message) != 9:
+			debug("Bad CSP cap rsp", _message)
+			return None
+		response, btclockres, synclead, tmstampres, tmstampacc = \
+			struct.unpack(">xBBHHH", _message)
+		return CSPCapabilitiesResponseMessage(response, btclockres,
+			synclead, tmstampres, tmstampacc)
+
+	def parse_csp_set_response(self, _message):
+		if len(_message) != 16:
+			debug("Bad CSP set rsp", _message)
+			return None
+		response, btclock, timestamp, tmstampacc = \
+			struct.unpack(">xBIQH", _message)
+		return CSPSetResponseMessage(response, btclock, timestamp,
+			tmstampacc)
 
 	def parse_message(self, _message):
                 opcode = self.get_op_code(_message)
