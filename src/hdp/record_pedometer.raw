@@ -1,0 +1,44 @@
+Sequence
+	Attribute 0x0000 - ServiceRecordHandle
+		UINT32 0x00010001
+	Attribute 0x0001 - ServiceClassIDList
+		Sequence
+			UUID16 0x1401 - MDPSource
+	Attribute 0x0004 - ProtocolDescriptorList
+		Sequence
+			Sequence
+				UUID16 0x0100 - L2CAP
+				UINT16 0x1001
+			Sequence
+				UUID16 0x001e
+				UINT16 0x0100
+	Attribute 0x0006 - LanguageBaseAttributeIDList
+		Sequence
+			UINT16 0x656e
+			UINT16 0x006a
+			UINT16 0x0100
+	Attribute 0x0009 - BluetoothProfileDescriptorList
+		Sequence
+			Sequence
+				UUID16 0x1400 - MDP
+				UINT16 0x0100
+	Attribute 0x000d - AdditionalProtocolDescriptorLists
+		Sequence
+			Sequence
+				Sequence
+					UUID16 0x0100 - L2CAP
+					UINT16 0x1003
+				Sequence
+					UUID16 0x001f
+	Attribute 0x0100
+		Data 48 48 58 2d 49 54 31 00 00
+	Attribute 0x0200
+		Sequence
+			Sequence
+				UINT8 0x03
+				UINT16 0x1029
+				UINT8 0x00
+	Attribute 0x0301
+		UINT8 0x01
+	Attribute 0x0302
+		UINT8 0x06
