@@ -2,6 +2,7 @@
 
 import mcap_defs
 from threading import Thread
+import time
 
 MCAP_MCL_ROLE_ACCEPTOR		= 'ACCEPTOR'
 MCAP_MCL_ROLE_INITIATOR		= 'INITIATOR'  
@@ -42,6 +43,8 @@ class MCL:
 		self.state = MCAP_MCL_STATE_IDLE
 		self.role = MCAP_MCL_ROLE_INITIATOR
 		self.last_mdlid = mcap_defs.MCAP_MDL_ID_INITIAL
+		self.csp_base_time = time.time()
+		self.csp_base_counter = 0
 		self.remote = None
 		self.mdl_list = []
 		self.is_control_channel_open = False
@@ -105,6 +108,18 @@ class MCL:
 	def close_control_channel(self):
 		self.is_control_channel_open = False
 		return True
+
+	def get_csp_timestamp(self):
+		now = time.time()
+		offset = now - self.csp_base_time
+		offset = int(1000000 * offset) # convert to microseconds
+		return self.csp_base_counter + offset
+
+	def set_csp_timestamp(self, counter):
+		# Reset counter to value provided by CSP-Master
+		self.csp_base_time = time.time()
+		self.csp_base_counter = counter
+
 
 class MCAPImpl:
 

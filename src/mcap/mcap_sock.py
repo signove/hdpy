@@ -1,8 +1,11 @@
 import time
 from bluetooth import *
+import bluetooth._bluetooth as bz
 
 L2CAP_MODE_ERTM = 0x03
 L2CAP_MODE_STREAMING = 0x04
+
+bz.OCF_READ_CLOCK = 0x07
 
 
 # We handle options here because PyBluez has incomplete and buggy support
@@ -98,7 +101,42 @@ def create_data_listening_socket(btaddr, reliable, mtu):
 	return (s, psm)
 
 
+def hci_open_dev(dev_id):
+	return bz.hci_open_dev(dev_id)
+
+
+def hci_read_clock(sock):
+	old_filter = sock.getsockopt(bz.SOL_HCI, bz.HCI_FILTER, 14)
+
+	opcode = bz.cmd_opcode_pack(bz.OGF_STATUS_PARAM,
+			bz.OCF_READ_CLOCK)
+	flt = bz.hci_filter_new()
+	bz.hci_filter_set_ptype(flt, bz.HCI_EVENT_PKT)
+	bz.hci_filter_set_event(flt, bz.EVT_CMD_COMPLETE);
+	bz.hci_filter_set_opcode(flt, opcode)
+	sock.setsockopt( bz.SOL_HCI, bz.HCI_FILTER, flt )
+	pkt = struct.pack("BBB", 0, 0, 0)
+	bz.hci_send_cmd(sock, bz.OGF_STATUS_PARAM, bz.OCF_READ_CLOCK, pkt)
+
+	pkt = sock.recv(255)
+
+	sock.setsockopt(bz.SOL_HCI, bz.HCI_FILTER, old_filter)
+	
+	# HCI is little-endian
+	status, handle, clock, accuracy = struct.unpack("<xxxxxxBHIH", pkt)
+	return (clock, accuracy)
+
+
 def test():
+	raw = hci_open_dev(0)
+	clock1, accuracy1 = hci_read_clock(raw)
+	time.sleep(0.1)
+	clock2, accuracy2 = hci_read_clock(raw)
+	print "Clocks: %s %s" % (clock1, clock2)
+	print "Accuracies: %s %s" % (accuracy1, accuracy2)
+	print "Difference: %fs (should be near 0.1)" % ((clock2 - clock1) * 312.5 / 1000000.0)
+	print
+
 	s, psm = create_control_listening_socket("00:00:00:00:00:00")
 	print "Listening control socket at PSM %d" % psm
 	print "Options", get_options(s)
