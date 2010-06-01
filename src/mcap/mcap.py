@@ -1,7 +1,9 @@
 #!/usr/bin/env ptyhon
 
 import mcap_defs
-from threading import Thread
+import socket
+import thread
+from threading import Thread, RLock
 
 MCAP_MCL_ROLE_ACCEPTOR		= 'ACCEPTOR'
 MCAP_MCL_ROLE_INITIATOR		= 'INITIATOR'  
@@ -16,6 +18,72 @@ MCAP_MCL_STATE_ACTIVE		= 'ACTIVE'
 
 MCAP_MDL_STATE_ACTIVE		= 'ACTIVE'
 MCAP_MDL_STATE_DELETED		= 'DELETED'
+
+
+class VirtualChannel( Thread ):
+
+	def __init__(self, _local_channel):
+		Thread.__init__(self)
+		self.lock = thread.allocate_lock()
+
+		self.host = _local_channel[0]
+		self.port = _local_channel[1]
+		self.num_conn = 1
+		self.socket = None
+		self.connection = None
+		self.is_open = False
+		self.is_connected = False
+
+	def open(self):
+		self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		self.socket.bind((self.host, self.port))
+		self.socket.listen(self.num_conn)
+		self.is_open = True
+	
+	def connect(self, remote_addr):
+		if (self.is_open):
+			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			s.connect(remote_addr)
+			self.connection = s
+			self.is_connected = True
+
+	def run(self):
+		try:
+			if (self.is_open):
+				_connection, _conn_addr = self.socket.accept()
+				self.is_connected = True
+				self.connection = _connection
+				self.conn_addr = _conn_addr
+		except socket.error, msg:
+			pass
+		
+
+	def close(self):
+		try:
+			self.lock.acquire()
+			if (self.is_open):
+				self.connection.shutdown(2)
+				self.socket.shutdown(2)
+				self.connection.close()
+				self.socket.close()
+				self.is_connected = False
+				self.is_open = False
+		except socket.error, msg:
+			print msg
+		finally:
+			self.lock.release()
+
+	def read(self):
+		if (self.is_connected):
+			message = self.connection.recv(1024)
+			return int(message)
+		return ''
+
+	def write(self, data):
+		if (self.is_connected):
+			self.connection.send(str(data))
+
 
 class MDL:
 
@@ -37,14 +105,22 @@ class MDL:
 
 class MCL:
 	
-	def __init__(self, _btaddr):
-		self.btaddr = _btaddr
+	def __init__(self, _addr):
+		self.addr = _addr
+		self.virtual_channel = None
+		self.create_channel()
+		
+		self.initialize_mcl()
+
+	def create_channel(self):
+		self.virtual_channel = VirtualChannel(self.addr)
+
+	def initialize_mcl(self):
 		self.state = MCAP_MCL_STATE_IDLE
 		self.role = MCAP_MCL_ROLE_INITIATOR
 		self.last_mdlid = mcap_defs.MCAP_MDL_ID_INITIAL
-		self.remote = None
 		self.mdl_list = []
-		self.is_control_channel_open = False
+		self.is_channel_open = False
 
 	def count_mdls(self):
 		counter = 0 
@@ -98,32 +174,68 @@ class MCL:
 		self.last_mdlid += 1
 		return mdlid
 
-	def open_control_channel(self):
-		self.is_control_channel_open = True
+	def open_channel(self):
+                if ( self.virtual_channel.is_open ):
+                        return False
+
+		try:
+			self.virtual_channel.open()
+		except socket.error:
+			print 'ERROR ' + msg
+			return False
+
+		self.is_channel_open = True
+
+		self.virtual_channel.start()
+
 		return True
 	
-	def close_control_channel(self):
-		self.is_control_channel_open = False
+	def close_channel(self):
+		if ( not self.virtual_channel.is_open ):
+			return False
+
+		try:
+			self.virtual_channel.close()
+		except socket.error, msg:
+			print 'ERROR ' + msg
+			return False
+
+		self.is_channel_open = False
+
 		return True
 
-class MCAPImpl:
+class MCAPImpl (Thread):
 
 	def __init__(self, _mcl):
+		Thread.__init__(self)
+		self.lock = RLock()
 		self.messageParser = mcap_defs.MessageParser()
 		self.state = MCAP_STATE_READY
 		self.mcl = _mcl
 
 	def init_session(self):
-		if ( not self.mcl.is_control_channel_open ):
-			success = self.mcl.open_control_channel()
+		if ( not self.mcl.is_channel_open ):
+			success = self.mcl.open_channel()
 			if (success):
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
 
 	def close_session(self):
 		self.mcl.delete_all_mdls()
-		success = self.mcl.close_control_channel()
+		success = self.mcl.close_channel()
 		if (success):
-			self.state.mcl = MCAP_MCL_STATE_IDLE
+			self.mcl.state = MCAP_MCL_STATE_IDLE
+
+	def run(self):
+		try:
+			while (self.mcl.is_channel_open):
+				message = self.mcl.virtual_channel.read()
+				if (message != ''):
+					# do whatever you want
+					self.receive_message(message)
+		except Exception as inst:
+			pass
+
+		print 'FINISH...' 
 
 ## SEND METHODS
 
@@ -163,14 +275,19 @@ class MCAPImpl:
 		# convert __command to raw representation
 		# use CC to send command
 		self.last_sent = _message
-		self.remote.receive_message( _message )
-		return True
+		try:
+			# do whatever you want
+			self.mcl.virtual_channel.write(_message)
+			return True
+		except socket.error, msg:
+			print msg
+			return False
 			
 ## RECEIVE METHODS
 
 	def receive_message(self, _message):
                 opcode = self.messageParser.get_op_code(_message)
-
+		
 		self.last_received = _message
 
                 if ( self.messageParser.is_request_message(opcode) ):

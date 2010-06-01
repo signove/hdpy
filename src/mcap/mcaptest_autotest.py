@@ -3,6 +3,7 @@
 import mcap_defs
 import mcaptest
 import mcap
+import time
 
 createReq = mcap_defs.CreateMDLRequestMessage(0x01, 0x01, 0x0001)
 assert(createReq.mdlid == 0x01)
@@ -88,27 +89,38 @@ assert(deleteRspPackage.mdlid == 0x00CC)
 assert(deleteRspPackage.rspcode == mcap_defs.MCAP_RSP_SUCCESS)
 
 # test state machine
-mcl_init = mcap.MCL("00:21:FE:A0:EC:49")
-mcl_acep = mcap.MCL("00:1D:D9:EE:C5:78")
+device_a_addr = ("127.0.0.1", 5000)
+device_b_addr = ("127.0.0.1", 5001)
+
+mcl_init = mcap.MCL(device_a_addr)
+mcl_acep = mcap.MCL(device_b_addr)
 
 mcap_session_initiator = mcap.MCAPImpl(mcl_init)
 mcap_session_acceptor = mcap.MCAPImpl(mcl_acep)
+
 mcap_session_acceptor.role = mcap.MCAP_MCL_ROLE_ACCEPTOR
 
 assert(mcap_session_initiator.mcl.state == mcap.MCAP_MCL_STATE_IDLE)
 assert(mcap_session_acceptor.mcl.state == mcap.MCAP_MCL_STATE_IDLE)
 
-mcap_session_initiator.remote = mcap_session_acceptor
-mcap_session_acceptor.remote = mcap_session_initiator
-
 # create control channel
 mcap_session_initiator.init_session()
 mcap_session_acceptor.init_session()
+
+time.sleep(1)
+
+if ( not mcl_init.virtual_channel.is_connected ):
+	mcl_init.virtual_channel.connect(device_b_addr)
+
 assert(mcap_session_initiator.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
 assert(mcap_session_initiator.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
 
+mcap_session_initiator.start()
+mcap_session_acceptor.start()
+
 #### send an invalid message (Op Code does not exist) ####
 mcap_session_initiator.send_message(0x0AFF000ABC)
+time.sleep(1)
 assert(mcap_session_initiator.last_sent == 0x0AFF000ABC)
 assert(mcap_session_acceptor.last_received == 0x0AFF000ABC)
 # return a ERROR_RSP (0x00) with RSP Invalid OP (0x01)
@@ -122,6 +134,7 @@ assert(mcap_session_acceptor.state == mcap.MCAP_STATE_READY)
 
 #### receive a CREATE_MD_REQ (0x01) with invalid MDLID == 0xFF00 (DO NOT ACCEPT) ####
 mcap_session_initiator.send_message(0x01FF000ABC)
+time.sleep(1)
 assert(mcap_session_initiator.last_sent == 0x01FF000ABC)
 assert(mcap_session_acceptor.last_received == 0x01FF000ABC)
 # return a CREATE_MD_RSP (0x02) with RSP Invalid MDL (0x05)
@@ -135,6 +148,7 @@ assert(mcap_session_acceptor.state == mcap.MCAP_STATE_READY)
 
 #### receive a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC (ACCEPT) ####
 mcap_session_initiator.send_message(0x0100230ABC)
+time.sleep(1)
 assert(mcap_session_initiator.last_sent == 0x0100230ABC)
 assert(mcap_session_acceptor.last_received == 0x0100230ABC)
 # return a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
@@ -150,6 +164,7 @@ assert(mcap_session_acceptor.state == mcap.MCAP_STATE_READY)
 
 #### receive a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0024 CONF = 0xBC (ACCEPT) ####
 mcap_session_initiator.send_message(0x0100240ABC)
+time.sleep(1)
 assert(mcap_session_initiator.last_sent == 0x0100240ABC)
 assert(mcap_session_acceptor.last_received == 0x0100240ABC)
 # return a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
@@ -165,6 +180,7 @@ assert(mcap_session_acceptor.state == mcap.MCAP_STATE_READY)
 
 #### receive a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0027 CONF = 0xBC (ACCEPT) ####
 mcap_session_initiator.send_message(0x0100270ABC)
+time.sleep(1)
 assert(mcap_session_initiator.last_sent == 0x0100270ABC)
 assert(mcap_session_acceptor.last_received == 0x0100270ABC)
 # return a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
@@ -180,6 +196,7 @@ assert(mcap_session_acceptor.state == mcap.MCAP_STATE_READY)
 
 #### send an invalid ABORT_MD_REQ (0x05) MDLID == 0x0027 (DO NOT ACCEPT - not on PENDING state)
 mcap_session_initiator.send_message(0x050027)
+time.sleep(1)
 assert(mcap_session_initiator.last_sent == 0x050027)
 assert(mcap_session_acceptor.last_received == 0x050027)
 # return a ABORT_MD_RSP (0x06) with RSP Invalid Operation (0x07)
@@ -195,6 +212,7 @@ assert(mcap_session_acceptor.state == mcap.MCAP_STATE_READY)
 
 #### send an invalid DELETE_MD_REQ (0x07) MDLID == 0x0030 (DO NOT ACCEPT - MDLID do not exist)
 mcap_session_initiator.send_message(0x070030)
+time.sleep(1)
 assert(mcap_session_initiator.last_sent == 0x070030)
 assert(mcap_session_acceptor.last_received == 0x070030)
 # return a DELETE_MD_RSP (0x08) with RSP Invalid MDL (0x05)
@@ -210,6 +228,7 @@ assert(mcap_session_acceptor.state == mcap.MCAP_STATE_READY)
 
 #### send a valid DELETE_MD_REQ (0x07) MDLID == 0x0027
 mcap_session_initiator.send_message(0x070027)
+time.sleep(1)
 assert(mcap_session_initiator.last_sent == 0x070027)
 assert(mcap_session_acceptor.last_received == 0x070027)
 # return a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
@@ -225,6 +244,7 @@ assert(mcap_session_acceptor.state == mcap.MCAP_STATE_READY)
 
 #### send a valid DELETE_MD_REQ (0x07) MDLID == MDL_ID_ALL (0XFFFF)
 mcap_session_initiator.send_message(0x07FFFF)
+time.sleep(1)
 assert(mcap_session_initiator.last_sent == 0x07FFFF)
 assert(mcap_session_acceptor.last_received == 0x07FFFF)
 # return a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
@@ -237,5 +257,8 @@ assert(mcap_session_initiator.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
 assert(mcap_session_initiator.state == mcap.MCAP_STATE_READY)
 assert(mcap_session_acceptor.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
 assert(mcap_session_acceptor.state == mcap.MCAP_STATE_READY)
+
+mcap_session_initiator.close_session()
+mcap_session_acceptor.close_session()
 
 print 'TESTS OK' 
