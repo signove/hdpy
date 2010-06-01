@@ -11,6 +11,14 @@ MCAP_MD_ABORT_MDL_RSP			= 0x06
 MCAP_MD_DELETE_MDL_REQ			= 0x07
 MCAP_MD_DELETE_MDL_RSP			= 0x08
 
+# CSP Op Coodes
+
+MCAP_MD_SYNC_CAP_REQ			= 0x11
+MCAP_MD_SYNC_CAP_RSP			= 0x12
+MCAP_MD_SYNC_SET_REQ			= 0x13
+MCAP_MD_SYNC_SET_RSP			= 0x14
+MCAP_MD_SYNC_INFO_IND			= 0x15
+
 # Response Codes
 MCAP_RSP_SUCCESS			= 0x00
 MCAP_RSP_INVALID_OP_CODE		= 0x01
@@ -73,6 +81,23 @@ class MDLResponseMessage:
 	def __repr__(self):
 		return "0x%02X%02X%04X" % (self.opcode,self.rspcode,self.mdlid)
 
+class CSPRequestMessage:
+
+	def __init__(self, _opcode):
+		self.opcode = _opcode
+
+	def __repr__(self):
+		return "0x%02x" % (self.opcode)  
+
+class CSPResponseMessage:
+
+	def __init__(self, _opcode, _rspcode):
+		self.opcode = _opcode
+		self.rspcode = _rspcode
+
+	def __repr__(self):
+		return "0x%02X%02X" % (self.opcode, self.rspcode)
+
 # Specific request messages
 
 class CreateMDLRequestMessage( MDLRequestMessage ):
@@ -102,6 +127,41 @@ class DeleteMDLRequestMessage( MDLRequestMessage ):
 
 	def __init__(self, _mdlid):
                 MDLRequestMessage.__init__(self, MCAP_MD_DELETE_MDL_REQ, _mdlid)
+
+
+class CSPCapabilitiesRequestMessage( CSPRequestMessage ):
+
+	def __init__(self, _reqaccuracy):
+		CSPRequestMessage.__init__(self, MCAP_MD_SYNC_CAP_REQ)
+		self.reqaccuracy = _reqaccuracy
+
+	def __repr__(self):
+		return "0x%02X %d" % (self.opcode, self.reqaccuracy)
+
+
+class CSPSetRequestMessage( CSPRequestMessage ):
+
+	def __init__(self, _update, _btclock, _timestamp):
+		CSPRequestMessage.__init__(self, MCAP_MD_SYNC_SET_REQ)
+		self.btclock = _btclock
+		self.timestamp = _timestamp
+
+	def __repr__(self):
+		return "0x%02X %d %d" % (self.opcode, self.btclock,
+			self.timestamp)
+
+
+class CSPSyncInfoIndication( CSPRequestMessage ):
+
+	def __init__(self, _update, _btclock, _timestamp, _accuracy):
+		CSPRequestMessage.__init__(self, MCAP_MD_SYNC_INFO_IND)
+		self.btclock = _btclock
+		self.timestamp = _timestamp
+		self.accuracy = _accuracy # us
+
+	def __repr__(self):
+		return "0x%02X %d %d %d" % (self.opcode, self.btclock,
+			self.timestamp, self.accuracy)
 
 
 # Specific response messages
@@ -166,6 +226,36 @@ class DeleteMDLResponseMessage( MDLResponseMessage ):
                                     MCAP_RSP_INVALID_MDL, MCAP_RSP_MDL_BUSY,
 				    MCAP_RSP_INVALID_OPERATION, MCAP_RSP_UNSPECIFIED_ERROR, 
 				    MCAP_RSP_REQUEST_NOT_SUPPORTED]
+
+
+class CSPCapabilitiesResponseMessage( CSPResponseMessage ):
+
+	def __init__(self, _rspcode, _btclockres, _synclead, _tmstampres,
+			_tmstampacc):
+		CSPResponseMessage.__init__(self, MCAP_MD_SYNC_CAP_REQ, _rspcode)
+		self.btclockres = _btclockres # BT clock ticks
+		self.synclead = _synclead # delay, ms
+		self.tmstampres = _tmstampres # resolution, us
+		self.tmstampacc = _tmstampacc # accuracy, parts per million
+
+	def __repr__(self):
+		return "0x%02X%02X %d %d %d %d" % (self.opcode, self.rspcode,
+			self.btclockres, self.synclead, self.tmstampres,
+			self.tmstampacc)
+
+
+class CSPSetResponseMessage( CSPResponseMessage ):
+
+	def __init__(self, _rspcode, _btclock, _timestamp, _tmstampacc):
+		CSPResponseMessage.__init__(self, MCAP_MD_SYNC_SET_REQ, _rspcode)
+		self.btclock = _btclock
+		self.timestamp = _timestamp
+		self.tmstampacc = _tmstampacc # accuracy, us
+
+	def __repr__(self):
+		return "0x%02X 0x%02X %d %d %d" % (self.opcode, self.rspcode,
+			self.btclock, self.timestamp, self.tmstampacc)
+
 	
 class MessageParser:
 
@@ -191,11 +281,17 @@ class MessageParser:
 
 	def is_request_message(self, _opcode):
 		return _opcode in [MCAP_MD_CREATE_MDL_REQ, MCAP_MD_RECONNECT_MDL_REQ,
-				   MCAP_MD_ABORT_MDL_REQ, MCAP_MD_DELETE_MDL_REQ]	
+				   MCAP_MD_ABORT_MDL_REQ, MCAP_MD_DELETE_MDL_REQ,
+				   MCAP_MD_SYNC_CAP_REQ, MCAP_MD_SYNC_SET_REQ,
+				   MCAP_MD_SYNC_INFO_IND]
 	
 	def is_response_message(self, _opcode):
-		return _opcode in [MCAP_ERROR_RSP, MCAP_MD_CREATE_MDL_RSP, MCAP_MD_RECONNECT_MDL_RSP, 
-				   MCAP_MD_ABORT_MDL_RSP, MCAP_MD_DELETE_MDL_RSP]
+		return _opcode in [MCAP_ERROR_RSP, MCAP_MD_CREATE_MDL_RSP,
+				   MCAP_MD_RECONNECT_MDL_RSP, 
+				   MCAP_MD_ABORT_MDL_RSP,
+				   MCAP_MD_DELETE_MDL_RSP,
+				   MCAP_MD_SYNC_CAP_RSP,
+				   MCAP_MD_SYNC_SET_RSP]
 
 
 	def parse_request_message(self, _message):
