@@ -299,6 +299,12 @@ class MessageParser:
 
 		if opcode == MCAP_MD_CREATE_MDL_REQ:
 			return self.parse_create_request_message(_message)
+		elif opcode == MCAP_MD_SYNC_CAP_REQ:
+			return self.parse_csp_capabilites_request(_message)
+		elif opcode == MCAP_MD_SYNC_SET_REQ:
+			return self.parse_csp_set_request(_message)
+		elif opcode == MCAP_MD_SYNC_INFO_IND:
+			return self.parse_csp_info_indication(_message)
 		else:
 			return self.parse_non_create_request_message(_message)
 
@@ -307,6 +313,10 @@ class MessageParser:
 
                 if opcode == MCAP_MD_CREATE_MDL_RSP:
                         return self.parse_create_response_message(_message)
+		elif opcode == MCAP_MD_SYNC_CAP_RSP:
+			return self.parse_csp_capabilites_response(_message)
+		elif opcode == MCAP_MD_SYNC_SET_RSP:
+			return self.parse_csp_set_response(_message)
                 else:
                         return self.parse_non_create_response_message(_message)
 
