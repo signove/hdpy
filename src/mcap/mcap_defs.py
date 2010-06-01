@@ -265,7 +265,7 @@ class MessageParser:
 	def get_op_code(self, _message):
 		temp = _message
 
-                # MCAP request/response packages do not have a fix lenght. 
+                # MCAP request/response packages do not have a fix length. 
                 # Op codes are on most significant byte
                 while(temp > 0):
                         op_code = temp & 0xFF
