@@ -60,7 +60,7 @@ def get_available_psm():
 			s.bind(("", psm))
 			s.close()
 			return psm
-		except:
+		except Exception as msg:
 			s.close()
 
 	raise Exception("No free PSM could be found")
