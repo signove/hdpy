@@ -79,8 +79,8 @@ class MDL:
 		else:
 			return 1
 
-class MCL:
-	
+class MCL():
+
 	def __init__(self, _btaddr, _role):
 		self.btaddr = _btaddr 
 		self.state = MCAP_MCL_STATE_IDLE
@@ -172,6 +172,7 @@ class MCL:
                 if ( self.is_cc_open() ):
 			try:
                         	self.cc.send(str(_message))
+				
 			except Exception as error:
 				print error
 
@@ -233,13 +234,14 @@ class MCL:
 		self.last_mdlid += 1
 		return mdlid
 
-class MCAPImpl( Thread ):
+class MCAPImpl( Thread):
 
 	def __init__(self, _mcl):
 		Thread.__init__(self)
 		self.messageParser = mcap_defs.MessageParser()
 		self.state = MCAP_STATE_READY
 		self.mcl = _mcl
+		self.last_received = None
 
 	def init_session(self):
 		return self.mcl.open_cc()
@@ -262,6 +264,9 @@ class MCAPImpl( Thread ):
 			print "--" *60
 
 		print 'FINISH...' 
+
+	def wait_for_response():
+		pass
 
 ## SEND METHODS
 
@@ -295,7 +300,6 @@ class MCAPImpl( Thread ):
 	
 	def send_response(self, _response):
 		success = self.send_mcap_command(_response)
-		print "On send_response"
 		return success
 
 	def send_mcap_command(self, _message):
@@ -303,10 +307,8 @@ class MCAPImpl( Thread ):
 		# use CC to send command
 		self.last_sent = _message
 		try:
-			print "WRITE!!"
 			# do whatever you want
 			self.mcl.write(_message)
-			print "WROTTEN!!"
 			return True
 		except Exception as msg:
 			print "CANNOT WRITE: " + str(msg)
@@ -327,7 +329,6 @@ class MCAPImpl( Thread ):
 			return self.send_mdl_error_response()
 	
 	def receive_request(self, _request):
-		print "On receive_request"
 		# if a request is received when a response is expected, only process if 
 		# it is received by the Acceptor; otherwise, just ignore
 		if (self.state == MCAP_STATE_WAITING):
@@ -339,7 +340,6 @@ class MCAPImpl( Thread ):
                 	return self.process_request(_request)
 
         def receive_response(self, _response):
-		print "On receive_response"
 		# if a response is received when no request is outstanding, just ignore
                 if (self.state == MCAP_STATE_WAITING):
                         return self.process_response(_response)
@@ -349,7 +349,6 @@ class MCAPImpl( Thread ):
 ## PROCESS RESPONSE METHODS
 
 	def process_response(self, _response):
-		print "On process_response"
 		responseMessage = self.messageParser.parse_response_message(_response)
 
 		self.state = MCAP_STATE_READY
@@ -416,13 +415,11 @@ class MCAPImpl( Thread ):
 ## PROCESS REQUEST METHODS
 
 	def process_request(self, _request):
-		print "On process_request"
 		requestMessage = self.messageParser.parse_request_message(_request)
 		
 		isOpcodeSupported = self.is_opcode_req_supported( requestMessage.opcode ) 
 		if ( isOpcodeSupported ):
 			if ( requestMessage.opcode == mcap_defs.MCAP_MD_CREATE_MDL_REQ ):
-				print "AQUII"
 				return self.process_create_request(requestMessage)
 			elif ( requestMessage.opcode == mcap_defs.MCAP_MD_RECONNECT_MDL_REQ ):
 				return self.process_reconnect_request(requestMessage)
@@ -457,7 +454,7 @@ class MCAPImpl( Thread ):
 		rsp_params = 0x00
 		if ( rspcode != mcap_defs.MCAP_RSP_CONFIGURATION_REJECTED ):
 			rsp_params = _request.conf
-		print "OLA"
+		
 		createResponse = mcap_defs.CreateMDLResponseMessage(rspcode, _request.mdlid, rsp_params)
 		success = self.send_response( int(createResponse.__repr__(),16) )
 
