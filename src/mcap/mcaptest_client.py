@@ -5,25 +5,30 @@ import mcaptest
 import mcap
 import time
 import sys
+import gobject
 
 btaddr = sys.argv[1]
 psm = sys.argv[2]
 
 mcl = mcap.MCL(btaddr, mcap.MCAP_MCL_ROLE_INITIATOR)
 
-mcap_session = mcap.MCAPImpl(mcl)
+mcap_session = mcap.MCAPSession(mcl)
 
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_IDLE)
+assert(mcl.state == mcap.MCAP_MCL_STATE_IDLE)
 
+print "Requesting connection..."
 if ( not mcl.is_cc_open() ):
-	mcap_session.mcl.connect((btaddr, int(psm)))
+	mcl.connect_cc((btaddr, int(psm)))
 
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
+print "Connected!"
+assert(mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
 
 if ( mcl.is_cc_open() ):
-	mcap_session.start()
+	mcap_session.start_session()
 else:
 	raise Exception ('ERROR: Cannot open control channel for initiator')
+
+gobject.MainLoop().run()
 
 #### send an invalid message (Op Code does not exist) ####
 mcap_session.send_message(0x0AFF000ABC)

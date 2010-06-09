@@ -5,31 +5,30 @@ import mcaptest
 import mcap
 import sys
 import time
+import gobject
 
 btaddr = sys.argv[1]
 
 mcl = mcap.MCL(btaddr, mcap.MCAP_MCL_ROLE_ACCEPTOR)
 
-mcap_session = mcap.MCAPImpl(mcl)
+mcap_session = mcap.MCAPSession(mcl)
 
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_IDLE)
+assert(mcl.state == mcap.MCAP_MCL_STATE_IDLE)
 
 # wait until a connection is done
 print "Waiting for connections on " + btaddr
-mcap_session.init_session()
+mcl.open_cc()
 
-print "Connection on " + str(mcap_session.mcl.psm)
+print "Connected!"
+mcap_session.start_session()
+assert(mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
 
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
-
-print "Start thread... "
+print "Start main loop... "
 if ( mcl.is_cc_open() ):
-	mcap_session.start()
+	gobject.MainLoop().run()
 else:
 	raise Exception ('ERROR: Cannot open control channel for acceptor')
 
-mcap_session.join()
-
-print "Thread closed..."
+print "Finished!"
 
 print 'TESTS OK' 

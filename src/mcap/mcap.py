@@ -8,6 +8,7 @@ from bluetooth import *
 from threading import Thread, RLock
 from select import *
 import traceback
+import gobject
 
 MCAP_MCL_ROLE_ACCEPTOR		= 'ACCEPTOR'
 MCAP_MCL_ROLE_INITIATOR		= 'INITIATOR'  
@@ -137,6 +138,19 @@ class MCL():
 
                 return True
 
+	def connect_cc(self, btaddr):
+                if ( self.is_cc_open() ):
+                        return False
+
+                try:
+                        self.connect(btaddr)
+                except Exception as error:
+                        print 'ERROR: ' + str(error)
+                        return False
+
+                return True
+
+
         def close_cc(self):
                 if ( not self.is_cc_open() ):
                         return False
@@ -172,7 +186,6 @@ class MCL():
                 if ( self.is_cc_open() ):
 			try:
                         	self.cc.send(str(_message))
-				
 			except Exception as error:
 				print error
 
@@ -234,39 +247,54 @@ class MCL():
 		self.last_mdlid += 1
 		return mdlid
 
-class MCAPImpl( Thread):
+class MCAPSession:
 
 	def __init__(self, _mcl):
-		Thread.__init__(self)
-		self.messageParser = mcap_defs.MessageParser()
-		self.state = MCAP_STATE_READY
-		self.mcl = _mcl
-		self.last_received = None
+		self.mcl_state_machine = MCLStateMachine(_mcl)
 
-	def init_session(self):
-		return self.mcl.open_cc()
+	def send_message(self, _message):
+		self.mcl_state_machine.send_message(_message)
 
-	def close_session(self):
-		return self.mcl.close_cc()
+	def stop_session(self):
+		self.mcl_state_machine.mcl.close_cc()
 
-	def run(self):
+	def start_session(self):
+		if ( self.mcl_state_machine.mcl.is_cc_open() ):
+			gobject.io_add_watch(self.mcl_state_machine.mcl.cc, gobject.IO_IN, self.read_cb)
+			gobject.io_add_watch(self.mcl_state_machine.mcl.cc, gobject.IO_OUT, self.write_cb)
+			gobject.io_add_watch(self.mcl_state_machine.mcl.cc, gobject.IO_ERR, self.close_cb)
+			gobject.io_add_watch(self.mcl_state_machine.mcl.cc, gobject.IO_HUP, self.close_cb)
+
+	def wait_for_response(self):
+		pass
+
+	def read_cb(self, socket, *args):
+		print "CAN READ"
+
 		try:
-			while ( self.mcl.is_cc_open() ):
-				message = self.mcl.read()
-				if (message != ''):
-					# do whatever you want
-					command = int(message)
-					self.receive_message(command)
+			if ( self.mcl_state_machine.mcl.is_cc_open() ):
+                    		message = self.mcl_state_machine.mcl.read()
+				print message 
+                    		if (message != ''):
+                    			# do whatever you want
+                        		command = int(message)
+                        		self.mcl_state_machine.receive_message(command)
 		except Exception as inst:
 			print "CANNOT READ: " + repr(inst)
-			print "--" *60
-			traceback.format_exc()
-			print "--" *60
 
-		print 'FINISH...' 
+	def write_cb(self, socket, *args):
+		print "CAN WRITE"
 
-	def wait_for_response():
-		pass
+	def close_cb(self, socket, *args):
+		self.stop_session()
+
+
+class MCLStateMachine:
+
+	def __init__(self, _mcl):
+		self.messageParser = mcap_defs.MessageParser()
+                self.state = MCAP_STATE_READY
+                self.mcl = _mcl
 
 ## SEND METHODS
 
