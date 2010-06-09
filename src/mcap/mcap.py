@@ -2,13 +2,10 @@
 
 import mcap_defs
 import mcap_sock
-import thread
 import time
 from bluetooth import *
-from threading import Thread, RLock
-from select import *
-import traceback
 import gobject
+from struct import pack, unpack
 
 MCAP_MCL_ROLE_ACCEPTOR		= 'ACCEPTOR'
 MCAP_MCL_ROLE_INITIATOR		= 'INITIATOR'  
@@ -27,8 +24,17 @@ MCAP_MDL_STATE_ACTIVE		= 'ACTIVE'
 MCAP_MDL_STATE_CLOSED		= 'CLOSED'
 MCAP_MDL_STATE_DELETED		= 'DELETED'
 
+MSG_FORMAT = 'L'
 
-class MDL:
+def pack_msg(msg):
+	'''Pack the message data in a string to be sent trough bluetooth'''
+	return pack(MSG_FORMAT, msg)
+
+def unpack_msg(msg):
+	'''Unpack the message data from a string received trough bluetooth'''
+	return unpack(MSG_FORMAT, msg)[0]
+
+class MDL(object):
 
 	def __init__(self, _btaddr, _mdlid = 0, _mdepid = 0):
 		self.btaddr = _btaddr
@@ -67,7 +73,7 @@ class MDL:
 
 	def write(self, _message):
 		if (self.state == MCAP_MDL_STATE_ACTIVE):
-			self.dc.send(str(message))
+			self.dc.send(pack_msg(_message))
 
 	def __eq__(self, _mdl):
 		return self.mdlid == _mdl.mdlid
@@ -80,7 +86,7 @@ class MDL:
 		else:
 			return 1
 
-class MCL():
+class MCL(object):
 
 	def __init__(self, _btaddr, _role):
 		self.btaddr = _btaddr 
@@ -183,7 +189,7 @@ class MCL():
 	def write(self, _message):
 		if ( self.is_cc_open() ):
 			try:
-				self.cc.send(str(_message))
+				self.cc.send(pack_msg(_message))
 			except Exception as error:
 				print error
 
@@ -275,7 +281,7 @@ class MCAPSession:
 				print message 
 				if (message != ''):
 					# do whatever you want
-					command = int(message)
+					command = unpack_msg(message)
 					self.mcl_state_machine.receive_message(command)
 		except Exception as inst:
 			print "CANNOT READ: " + repr(inst)
@@ -297,12 +303,10 @@ class MCLStateMachine:
 
 	def send_mdl_error_response(self):
 		errorResponse = mcap_defs.ErrorMDLResponseMessage()
-		success = self.send_response(int(errorResponse.__repr__(),16))
+		success = self.send_response(unpack_msg(errorResponse.__repr__()))
 		return success
 
 	def send_message(self, _message):
-		success = False
-
 		opcode = self.messageParser.get_op_code(_message)		
 		
 		if ( self.messageParser.is_response_message(opcode) ):
@@ -480,7 +484,7 @@ class MCLStateMachine:
 			rsp_params = _request.conf
 		
 		createResponse = mcap_defs.CreateMDLResponseMessage(rspcode, _request.mdlid, rsp_params)
-		success = self.send_response( int(createResponse.__repr__(),16) )
+		success = self.send_response(unpack_msg(createResponse.__repr__()))
 
 		if ( success and (rspcode == mcap_defs.MCAP_RSP_SUCCESS ) ):
 			self.mcl.add_mdl( MDL(_request.mdlid,0) )
@@ -491,25 +495,25 @@ class MCLStateMachine:
 	def process_reconnect_request(self, _request):
 		rspcode = mcap_defs.MCAP_RSP_SUCCESS
 
-        #       if ( not _request.has_valid_length() )
-        #               rspcode = mcap_defs.MCAP_RSP_INVALID_PARAMETER_VALUE
-                if ( not self.is_valid_mdlid(_request.mdlid, False) ):
+		#       if ( not _request.has_valid_length() )
+		#               rspcode = mcap_defs.MCAP_RSP_INVALID_PARAMETER_VALUE
+		if ( not self.is_valid_mdlid(_request.mdlid, False) ):
 			rspcode = mcap_defs.MCAP_RSP_INVALID_MDL
-                elif ( not self.support_more_mdls() ):
+		elif ( not self.support_more_mdls() ):
 			rspcode = mcap_defs.MCAP_RSP_MDL_BUSY
-                elif ( not self.support_more_mdeps() ):
+		elif ( not self.support_more_mdeps() ):
 			rspcode = mcap_defs.MCAP_RSP_MDEP_BUSY
 		elif ( self.state == MCAP_MCL_STATE_PENDING ):
 			rspcode = mcap_defs.MCAP_RSP_INVALID_OPERATION
 
-                reconnectResponse = mcap_defs.ReconnectMDLResponseMessage(rspcode, _request.mdlid)
-                success = self.send_response( int(reconnectResponse.__repr__(),16) )
+		reconnectResponse = mcap_defs.ReconnectMDLResponseMessage(rspcode, _request.mdlid)
+		success = self.send_response(unpack_msg(reconnectResponse.__repr__()))
 
-                if ( success and (rspcode == mcap_defs.MCAP_RSP_SUCCESS ) ):
+		if ( success and (rspcode == mcap_defs.MCAP_RSP_SUCCESS ) ):
 			self.mcl.add_mdl( MDL(_request.mdlid,0) )
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 
-                return success
+		return success
 
 	def process_delete_request(self, _request):
 		rspcode = mcap_defs.MCAP_RSP_SUCCESS
@@ -525,7 +529,7 @@ class MCLStateMachine:
 			rspcode = mcap_defs.MCAP_RSP_INVALID_OPERATION
 
 		deleteResponse = mcap_defs.DeleteMDLResponseMessage(rspcode, _request.mdlid)
-		success = self.send_response( int(deleteResponse.__repr__(),16) )
+		success = self.send_response(unpack_msg(deleteResponse.__repr__()))
 
 		if ( success and (rspcode == mcap_defs.MCAP_RSP_SUCCESS) ):
 			if ( _request.mdlid == mcap_defs.MCAP_MDL_ID_ALL ):
@@ -547,7 +551,7 @@ class MCLStateMachine:
 			rspcode = mcap_defs.MCAP_RSP_INVALID_OPERATION
 		
 		abortResponse = mcap_defs.AbortMDLResponseMessage(rspcode, _request.mdlid)
-		success = self.send_response( int(abortResponse.__repr__(),16) )
+		success = self.send_response(unpack_msg(abortResponse.__repr__()))
 
 		if ( success and ( rspcode == mcap_defs.MCAP_RSP_SUCCESS ) ):
 			if ( self.mcl.has_mdls() ):
