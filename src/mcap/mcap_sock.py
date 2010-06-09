@@ -9,7 +9,7 @@ bz.OCF_READ_CLOCK = 0x07
 
 
 # We handle options here because PyBluez has incomplete and buggy support
-# FIXME implementation-dependent interpretation of a C struct!
+# Remove this from here if we settle using CVS version of PyBluez
 
 options_len = 12
 pos = ["omtu", "imtu", "flush_to", "mode", "fcs", "max_tx", "txwin_size"]
