@@ -54,9 +54,8 @@ class MCAPSessionClientStub:
 				message = self.mcl.read()
 				if (message != ''):
 					# do whatever you want
-					command = int(message)
-					self.mcl_state_machine.receive_message(command)
-					assert(command == int(self.received[self.counter],16))
+					self.mcl_state_machine.receive_message(message)
+					assert(message == self.received[self.counter])
 					self.check_asserts(self.counter)
 					self.bclock.acquire()
 					self.can_write = True
@@ -74,7 +73,7 @@ class MCAPSessionClientStub:
 			return True
 
 		if (self.can_write) :
-			self.mcl_state_machine.send_message(int(self.sent[self.counter],16))		
+			self.mcl_state_machine.send_raw_message(self.sent[self.counter])		
 			self.bclock.acquire()
 			self.can_write = False
 			self.bclock.release()

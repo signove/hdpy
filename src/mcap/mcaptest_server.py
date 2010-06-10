@@ -52,8 +52,7 @@ class MCAPSessionServerStub:
 				message = self.mcl.read()
 				if (message != ''):
 					# do whatever you want
-					command = int(message)
-					self.mcl_state_machine.receive_message(command)
+					self.mcl_state_machine.receive_message(message)
 		except Exception as inst:
 			print "CANNOT READ: " + repr(inst)
 			return False
