@@ -244,7 +244,7 @@ class MCL(object):
 				delete_any = True
 		return delete_any	
 	
-	def create_mdlid():
+	def create_mdlid(self):
 		mdlid = self.last_mdlid
 		if (mdlid > MCAP_MDL_ID_FINAL):
 			return 0
