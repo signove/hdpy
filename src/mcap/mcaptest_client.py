@@ -5,122 +5,140 @@ import mcaptest
 import mcap
 import time
 import sys
-import gobject
+import glib
+import threading
 
-btaddr = sys.argv[1]
-psm = sys.argv[2]
+from mcap import MCLStateMachine, MCL
 
-mcl = mcap.MCL(btaddr, mcap.MCAP_MCL_ROLE_INITIATOR)
+class MCAPSessionClientStub:
 
-mcap_session = mcap.MCAPSession(mcl)
+	sent = ["0x0AFF000ABC", # send an invalid message (Op Code does not exist)
+		"0x01FF000ABC", # send a CREATE_MD_REQ (0x01) with invalid MDLID == 0xFF00 (DO NOT ACCEPT)
+        	"0x0100230ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC (ACCEPT)
+		"0x0100240ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0024 CONF = 0xBC (ACCEPT)
+        	"0x0100270ABC",  # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0027 CONF = 0xBC (ACCEPT)
+        	"0x050027", # send an invalid ABORT_MD_REQ (0x05) MDLID == 0x0027 (DO NOT ACCEPT - not on PENDING state)
+        	"0x070030", # send a valid DELETE_MD_REQ (0x07) MDLID == 0x0027
+        	"0x07FFFF"] # send a valid DELETE_MD_REQ (0x07) MDLID == MDL_ID_ALL (0XFFFF)
 
-assert(mcl.state == mcap.MCAP_MCL_STATE_IDLE)
+	received = ["0x00010000", # receive a ERROR_RSP (0x00) with RSP Invalid OP (0x01)
+		    "0x0205FF00BC", # receive a CREATE_MD_RSP (0x02) with RSP Invalid MDL (0x05)
+        	    "0x02000023BC", # receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
+		    "0x02000024BC", # receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
+        	    "0x02000027BC", # receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
+        	    "0x06070027", # receive a ABORT_MD_RSP (0x06) with RSP Invalid Operation (0x07)
+        	    "0x08000030", # receive a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
+        	    "0x0800FFFF"] # receive a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
 
-print "Requesting connection..."
-if ( not mcl.is_cc_open() ):
-	mcl.connect_cc((btaddr, int(psm)))
+	def __init__(self, _mcl):
+		self.bclock = threading.Lock()
+		self.can_write = True
+ 		self.counter = 0
+		self.mcl = _mcl
+		self.mcl_state_machine = MCLStateMachine(_mcl)
 
-print "Connected!"
-assert(mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
+	def stop_session(self):
+		self.mcl.close_cc()
+		glib.MainLoop.quit(self.inLoop)
 
-if ( mcl.is_cc_open() ):
-	mcap_session.start_session()
-else:
-	raise Exception ('ERROR: Cannot open control channel for initiator')
+	def start_session(self):
+		if ( self.mcl.is_cc_open() ):
+			glib.io_add_watch(self.mcl.cc, glib.IO_IN, self.read_cb)
+			glib.io_add_watch(self.mcl.cc, glib.IO_OUT, self.write_cb)
+			glib.io_add_watch(self.mcl.cc, glib.IO_ERR, self.close_cb)
+			glib.io_add_watch(self.mcl.cc, glib.IO_HUP, self.close_cb)
 
-gobject.MainLoop().run()
+	def read_cb(self, socket, *args):
+		try:
+			if ( self.mcl.is_cc_open() ):
+				message = self.mcl.read()
+				if (message != ''):
+					# do whatever you want
+					command = int(message)
+					self.mcl_state_machine.receive_message(command)
+					assert(command == int(self.received[self.counter],16))
+					self.check_asserts(self.counter)
+					self.bclock.acquire()
+					self.can_write = True
+					self.counter = self.counter + 1
+					self.bclock.release()
+		except Exception as inst:
+			print "CANNOT READ: " + repr(inst)
+			return False
+		return True
 
-#### send an invalid message (Op Code does not exist) ####
-mcap_session.send_message(0x0AFF000ABC)
-# receive a ERROR_RSP (0x00) with RSP Invalid OP (0x01)
-# 0x00010000
+	def write_cb(self, socket, *args):
+		#print "CAN WRITE"
+		if ( self.counter >= len(self.sent) ):
+			self.stop_session()
+			return True
 
-mcap_session.wait_for_response()
+		if (self.can_write) :
+			self.mcl_state_machine.send_message(int(self.sent[self.counter],16))		
+			self.bclock.acquire()
+			self.can_write = False
+			self.bclock.release()
+		return True
 
-#### send a CREATE_MD_REQ (0x01) with invalid MDLID == 0xFF00 (DO NOT ACCEPT) ####
-mcap_session.send_message(0x01FF000ABC)
-# receive a CREATE_MD_RSP (0x02) with RSP Invalid MDL (0x05)
-# 0x0205FF00BC 
+	def close_cb(self, socket, *args):
+		self.stop_session()
+		return True
 
-mcap_session.wait_for_response()
+	def loop(self):
+		self.inLoop = glib.MainLoop()
+		self.inLoop.run()
 
-#### send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC (ACCEPT) ####
-mcap_session.send_message(0x0100230ABC)
-# receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
-# 0x02000023BC
+	def check_asserts(self, counter):
+		if (self.counter == 2):
+			assert(self.mcl.count_mdls() == 1)
+			assert(self.mcl_state_machine.state == mcap.MCAP_STATE_READY)
+			assert(self.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+		elif (self.counter == 3):
+			assert(self.mcl.count_mdls() == 2)
+			assert(self.mcl_state_machine.state == mcap.MCAP_STATE_READY)
+			assert(self.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)		
+		elif (self.counter == 4):
+			assert(self.mcl.count_mdls() == 3)
+			assert(self.mcl_state_machine.state == mcap.MCAP_STATE_READY)
+			assert(self.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+		elif (self.counter == 5):
+			assert(self.mcl.count_mdls() == 3)
+			assert(self.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+			assert(self.mcl_state_machine.state == mcap.MCAP_STATE_READY)
+		elif (self.counter == 6):			
+			assert(self.mcl.count_mdls() == 2)
+			assert(self.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+			assert(self.mcl_state_machine.state == mcap.MCAP_STATE_READY)
+		elif (self.counter == 7):
+			assert(self.mcl.count_mdls() == 0)
+			assert(self.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
+			assert(self.mcl_state_machine.state == mcap.MCAP_STATE_READY)
 
-mcap_session.wait_for_response()
+		
 
-assert(mcap_session.mcl.count_mdls() == 1)
-assert(mcap_session.state == mcap.MCAP_STATE_READY)
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+if __name__=='__main__':
 
-#### receive a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0024 CONF = 0xBC (ACCEPT) ####
-mcap_session.send_message(0x0100240ABC)
-# receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
-# 0x02000024BC
+	btaddr = sys.argv[1]
+	psm = sys.argv[2]
 
-mcap_session.wait_for_response()
+	mcl = MCL(btaddr, mcap.MCAP_MCL_ROLE_INITIATOR)
 
-assert(mcap_session.mcl.count_mdls() == 2)
-assert(mcap_session.state == mcap.MCAP_STATE_READY)
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+	mcap_session = MCAPSessionClientStub(mcl)
 
-#### receive a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0027 CONF = 0xBC (ACCEPT) ####
-mcap_session.send_message(0x0100270ABC)
-# receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
-# 0x02000027BC
+	assert(mcl.state == mcap.MCAP_MCL_STATE_IDLE)
 
-mcap_session.wait_for_response()
+	print "Requesting connection..."
+	if ( not mcl.is_cc_open() ):
+		mcl.connect_cc((btaddr, int(psm)))
 
-assert(mcap_session.mcl.count_mdls() == 3)
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
-assert(mcap_session.state == mcap.MCAP_STATE_READY)
+	print "Connected!"
+	assert(mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
 
-#### send an invalid ABORT_MD_REQ (0x05) MDLID == 0x0027 (DO NOT ACCEPT - not on PENDING state)
-mcap_session.send_message(0x050027)
-# receive a ABORT_MD_RSP (0x06) with RSP Invalid Operation (0x07)
-# 0x06070027
+	if ( mcl.is_cc_open() ):
+		mcap_session.start_session()
+	else:
+		raise Exception ('ERROR: Cannot open control channel for initiator')
 
-mcap_session.wait_for_response()
+	mcap_session.loop()
 
-assert(mcap_session.mcl.count_mdls() == 3)
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
-assert(mcap_session.state == mcap.MCAP_STATE_READY)
-
-#### send an invalid DELETE_MD_REQ (0x07) MDLID == 0x0030 (DO NOT ACCEPT - MDLID do not exist)
-mcap_session.send_message(0x070030)
-# receive a DELETE_MD_RSP (0x08) with RSP Invalid MDL (0x05)
-# 0x08050030
-
-mcap_session.wait_for_response()
-
-assert(mcap_session.mcl.count_mdls() == 3)
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
-assert(mcap_session.state == mcap.MCAP_STATE_READY)
-
-#### send a valid DELETE_MD_REQ (0x07) MDLID == 0x0027
-mcap_session.send_message(0x070027)
-# receive a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
-# 0x08000027
-
-mcap_session.wait_for_response()
-
-assert(mcap_session.mcl.count_mdls() == 2)
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
-assert(mcap_session.state == mcap.MCAP_STATE_READY)
-
-#### send a valid DELETE_MD_REQ (0x07) MDLID == MDL_ID_ALL (0XFFFF)
-mcap_session.send_message(0x07FFFF)
-# receive a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
-# 0x0800FFFF
-
-mcap_session.wait_for_response()
-
-assert(mcap_session.mcl.count_mdls() == 0)
-assert(mcap_session.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
-assert(mcap_session.state == mcap.MCAP_STATE_READY)
-
-mcap_session.close_session()
-
-print 'TESTS OK' 
+	print 'TESTS OK' 
