@@ -7,9 +7,9 @@ L2CAP_MODE_STREAMING = 0x04
 
 bz.OCF_READ_CLOCK = 0x07
 
-
 # We handle options here because PyBluez has incomplete and buggy support
 # Remove this from here if we settle using CVS version of PyBluez
+# TODO add those features to PyBluez itself
 
 options_len = 12
 pos = ["omtu", "imtu", "flush_to", "mode", "fcs", "max_tx", "txwin_size"]
@@ -105,7 +105,29 @@ def hci_open_dev(dev_id):
 	return bz.hci_open_dev(dev_id)
 
 
-def hci_read_clock(sock):
+# Ripped from PyBlueZ advanced examples
+def _get_acl_conn_handle(sock, addr):
+	hci_fd = sock.fileno()
+	reqstr = struct.pack("6sB17s", bz.str2ba(addr), bz.ACL_LINK, "\0" * 17)
+	request = array.array( "c", reqstr )
+	try:
+		fcntl.ioctl( hci_fd, bz.HCIGETCONNINFO, request, 1 )
+		handle = struct.unpack("8xH14x", request.tostring())[0]
+	except IOError:
+		handle = -1
+	return handle
+
+
+# TODO add to pybluez
+def hci_read_clock(sock, remote_addr):
+	acl = 0
+	which_clock = 0 # native
+	if remote_addr:
+		which_clock = 1
+		acl = _get_acl_conn_handle(sock, remote_addr)
+		if acl < 0:
+			return None
+
 	old_filter = sock.getsockopt(bz.SOL_HCI, bz.HCI_FILTER, 14)
 
 	opcode = bz.cmd_opcode_pack(bz.OGF_STATUS_PARAM,
@@ -115,24 +137,30 @@ def hci_read_clock(sock):
 	bz.hci_filter_set_event(flt, bz.EVT_CMD_COMPLETE);
 	bz.hci_filter_set_opcode(flt, opcode)
 	sock.setsockopt( bz.SOL_HCI, bz.HCI_FILTER, flt )
-	pkt = struct.pack("BBB", 0, 0, 0)
+	pkt = struct.pack("<HB", acl, which_clock)
 	bz.hci_send_cmd(sock, bz.OGF_STATUS_PARAM, bz.OCF_READ_CLOCK, pkt)
 
-	pkt = sock.recv(255)
+	while True:
+		pkt = sock.recv(255)
+		# HCI is little-endian
+		status, handle, clock, accuracy = struct.unpack("<xxxxxxBHIH", pkt)
+		if handle == acl:
+			break
 
 	sock.setsockopt(bz.SOL_HCI, bz.HCI_FILTER, old_filter)
 	
-	# HCI is little-endian
-	status, handle, clock, accuracy = struct.unpack("<xxxxxxBHIH", pkt)
+	if status:
+		return None
+
 	return (clock, accuracy)
 
 
 def test():
 	raw = hci_open_dev(0)
-	clock1, accuracy1 = hci_read_clock(raw)
+	clock1, accuracy1 = hci_read_clock(raw, None)
 	time.sleep(0.1)
-	clock2, accuracy2 = hci_read_clock(raw)
-	print "Clocks: %s %s" % (clock1, clock2)
+	clock2, accuracy2 = hci_read_clock(raw, None)
+	print "Native Clocks: %s %s" % (clock1, clock2)
 	print "Accuracies: %s %s" % (accuracy1, accuracy2)
 	print "Difference: %fs (should be near 0.1)" % ((clock2 - clock1) * 312.5 / 1000000.0)
 	print
@@ -163,4 +191,6 @@ def test():
 
 	time.sleep(1)
 
-# test()
+
+if __name__ == "__main__":
+	test()
