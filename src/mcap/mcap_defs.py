@@ -20,6 +20,7 @@ MCAP_MD_SYNC_CAP_RSP			= 0x12
 MCAP_MD_SYNC_SET_REQ			= 0x13
 MCAP_MD_SYNC_SET_RSP			= 0x14
 MCAP_MD_SYNC_INFO_IND			= 0x15
+MCAP_MD_SYNC_INFO_IND_RESEREVED		= 0x16
 
 # Response Codes
 MCAP_RSP_SUCCESS			= 0x00
@@ -46,358 +47,526 @@ MCAP_MDEP_ID_FINAL			= 0x7F
 
 # Errors
 
-class InvalidMessageError( Exception ):
+class InvalidMessage(Exception):
+	pass
 
-	def __init__(self, value):
-		self.value = value
-
-	def __str__(self):
-		return repr(self.value)
-
-class InvalidOperationError( Exception ) :
-
-	def __init__(self, value):
-                self.value = value
-
-        def __str__(self):
-                return repr(self.value)
+class InvalidOperation(Exception):
+	pass
 
 # General messages
 
-class MDLRequestMessage:
+class MDLRequest:
+	mask1 = ">BH"
+	mask1_size = struct.calcsize(mask1)
 
-	def __init__(self, _opcode, _mdlid):
-		self.opcode = _opcode
-		self.mdlid = _mdlid
+	def __init__(self, opcode, mdlid):
+		self.opcode = opcode
+		self.mdlid = mdlid
 
-	def __repr__(self):
-		return "0x%02X%04X" % (self.opcode,self.mdlid)  
+	def encode(self):
+		return struct.pack(self.mask1, self.opcode, self.mdlid)
 
-class MDLResponseMessage:
+	@staticmethod
+	def length():
+		return MDLRequest.mask1_size
 
-	def __init__(self, _opcode, _rspcode, _mdlid):
-		self.opcode = _opcode
-		self.rspcode = _rspcode
-		self.mdlid = _mdlid
+	@staticmethod
+	def _decode(message):
+		data = struct.unpack(MDLRequest.mask1, message[0:MDLRequest.mask1_size])
+		return list(data[1:]), message[MDLRequest.mask1_size:]
 
-	def __repr__(self):
-		return "0x%02X%02X%04X" % (self.opcode,self.rspcode,self.mdlid)
 
-class CSPRequestMessage:
+class MDLResponse:
+	mask1 = ">BBH"
+	mask1_size = struct.calcsize(mask1)
 
-	def __init__(self, _opcode):
-		self.opcode = _opcode
+	def __init__(self, opcode, rspcode, mdlid):
+		self.opcode = opcode
+		self.rspcode = rspcode
+		self.mdlid = mdlid
 
-	def __repr__(self):
-		return "0x%02x" % (self.opcode)  
+	def encode(self):
+		return struct.pack(self.mask1, self.opcode, self.rspcode, self.mdlid)
 
-class CSPResponseMessage:
+	@staticmethod
+	def length():
+		return MDLResponse.mask1_size
 
-	def __init__(self, _opcode, _rspcode):
-		self.opcode = _opcode
-		self.rspcode = _rspcode
+	@staticmethod
+	def _decode(message):
+		data = struct.unpack(MDLResponse.mask1, message[0:MDLResponse.mask1_size])
+		return list(data[1:]), message[MDLResponse.mask1_size:]
 
-	def __repr__(self):
-		return "0x%02X%02X" % (self.opcode, self.rspcode)
+
+class CSPRequest:
+	mask1 = ">B"
+	mask1_size = struct.calcsize(mask1)
+
+	def __init__(self, opcode):
+		self.opcode = opcode
+
+	def encode(self):
+		return struct.pack(mask1, self.opcode)
+
+	@staticmethod
+	def length():
+		return mask1_size
+
+	@staticmethod
+	def _decode(message):
+		data = struct.unpack(mask1, message[0:mask1_size])
+		return list(data[1:]), message[mask1_size:]
+
+
+class CSPResponse:
+	mask1 = ">BB"
+	mask1_size = struct.calcsize(mask1)
+
+	def __init__(self, opcode, rspcode):
+		self.opcode = opcode
+		self.rspcode = rspcode
+
+	def encode(self):
+		return struct.pack(mask1, self.opcode, self.rspcode)
+
+	@staticmethod
+	def length():
+		return mask1_size
+
+	@staticmethod
+	def _decode(message):
+		data = struct.unpack(mask1, message[0:mask1_size])
+		return list(data[1:]), message[mask1_size:]
+
 
 # Specific request messages
 
-class CreateMDLRequestMessage( MDLRequestMessage ):
+class CreateMDLRequest( MDLRequest ):
+	mask2 = ">BB"
+	mask2_size = struct.calcsize(mask2)
 
-	def __init__(self, _mdlid, _mdepid, _conf):
-		MDLRequestMessage.__init__(self, MCAP_MD_CREATE_MDL_REQ, _mdlid)
-		self.mdepid = _mdepid
-		self.conf = _conf
+	def __init__(self, mdlid, mdepid, conf):
+		MDLRequest.__init__(self, MCAP_MD_CREATE_MDL_REQ, mdlid)
+		self.mdepid = mdepid
+		self.conf = conf
 
-	def __repr__(self):
-		return "0x%02X%04X%02X%02X" % (self.opcode,self.mdlid,self.mdepid,self.conf)
+	def encode(self):
+		return MDLRequest.encode(self) + \
+			struct.pack(mask2, self.mdepid, self.conf)
 
+	@staticmethod
+	def length():
+		return MDLRequest.length() + CreateMDLRequest.mask2_size
 
-class ReconnectMDLRequestMessage( MDLRequestMessage ):
-
-	def __init__(self, _mdlid):
-		MDLRequestMessage.__init__(self, MCAP_MD_RECONNECT_MDL_REQ, _mdlid)
-
-
-class AbortMDLRequestMessage( MDLRequestMessage ):
-
-	def __init__(self, _mdlid):
-                MDLRequestMessage.__init__(self, MCAP_MD_ABORT_MDL_REQ, _mdlid)
-
-
-class DeleteMDLRequestMessage( MDLRequestMessage ):
-
-	def __init__(self, _mdlid):
-                MDLRequestMessage.__init__(self, MCAP_MD_DELETE_MDL_REQ, _mdlid)
+	@staticmethod
+	def decode(message):
+		if len(message) != CreateMDLRequest.length():
+			raise InvalidMessage("Invalid msg length")
+		data, message = CreateMDLRequest._decode(message)
+		data.extend(struct.unpack(CreateMDLRequest.mask2, message))
+		return CreateMDLRequest(*data)
 
 
-class CSPCapabilitiesRequestMessage( CSPRequestMessage ):
+class ReconnectMDLRequest( MDLRequest ):
 
-	def __init__(self, _reqaccuracy):
-		CSPRequestMessage.__init__(self, MCAP_MD_SYNC_CAP_REQ)
-		self.reqaccuracy = _reqaccuracy
+	def __init__(self, mdlid):
+		MDLRequest.__init__(self, MCAP_MD_RECONNECT_MDL_REQ, mdlid)
 
-	def __repr__(self):
-		return "0x%02X %d" % (self.opcode, self.reqaccuracy)
-
-
-class CSPSetRequestMessage( CSPRequestMessage ):
-
-	def __init__(self, _update, _btclock, _timestamp):
-		CSPRequestMessage.__init__(self, MCAP_MD_SYNC_SET_REQ)
-		self.update = _update
-		self.btclock = _btclock
-		self.timestamp = _timestamp
-
-	def __repr__(self):
-		return "0x%02X %d %d %d" % (self.opcode, self.update,
-			self.btclock, self.timestamp)
+	@staticmethod
+	def decode(message):
+		if len(message) != ReconnectMDLRequest.length():
+			raise InvalidMessage("Invalid msg length")
+		data, message = ReconnectMDLRequest._decode(message)
+		return ReconnectMDLRequest(*data)
 
 
-class CSPSyncInfoIndication( CSPRequestMessage ):
+class AbortMDLRequest( MDLRequest ):
 
-	def __init__(self, _update, _btclock, _timestamp, _accuracy):
-		CSPRequestMessage.__init__(self, MCAP_MD_SYNC_INFO_IND)
-		self.btclock = _btclock
-		self.timestamp = _timestamp
-		self.accuracy = _accuracy # us
+	def __init__(self, mdlid):
+                MDLRequest.__init__(self, MCAP_MD_ABORT_MDL_REQ, mdlid)
 
-	def __repr__(self):
-		return "0x%02X %d %d %d" % (self.opcode, self.btclock,
-			self.timestamp, self.accuracy)
+	@staticmethod
+	def decode(message):
+		if len(message) != AbortMDLRequest.length():
+			raise InvalidMessage("Invalid msg length")
+		data, message = AbortMDLRequest._decode(message)
+		return AbortMDLRequest(*data)
 
 
-def debug(msg, data):
-	data = ["0x%02x" % ord(c) for c in data]
-	data = " ".join(data)
-	print msg, data
+class DeleteMDLRequest( MDLRequest ):
+
+	def __init__(self, mdlid):
+                MDLRequest.__init__(self, MCAP_MD_DELETE_MDL_REQ, mdlid)
+
+	@staticmethod
+	def decode(message):
+		if len(message) != DeleteMDLRequest.length():
+			raise InvalidMessage("Invalid msg length")
+		data, message = DeleteMDLRequest._decode(message)
+		return DeleteMDLRequest(*data)
+
+
+class CSPCapabilitiesRequest( CSPRequest ):
+	mask2 = ">H"
+	mask2_size = struct.calcsize(mask2)
+
+	def __init__(self, reqaccuracy):
+		CSPRequest.__init__(self, MCAP_MD_SYNC_CAP_REQ)
+		self.reqaccuracy = reqaccuracy
+
+	def encode(self):
+		return CSPRequest.encode(self) + \
+			struct.pack(mask2, self.reqaccuracy)
+
+	@staticmethod
+	def length():
+		return CSPRequest.length() + mask2_size
+
+	@staticmethod
+	def decode(message):
+		if len(message) != CSPCapabilitiesRequest.length():
+			raise InvalidMessage("Invalid msg length")
+		data, message = CSPCapabilitiesRequest._decode(message)
+		data.extend(struct.unpack(mask2, message))
+		return CSPCapabilitiesRequest(*data)
+
+
+class CSPSetRequest( CSPRequest ):
+	mask2 = ">BIQ"
+	mask2_size = struct.calcsize(mask2)
+
+	def __init__(self, update, btclock, timestamp):
+		CSPRequest.__init__(self, MCAP_MD_SYNC_SET_REQ)
+		self.update = update
+		self.btclock = btclock
+		self.timestamp = timestamp
+
+	def encode(self):
+		return CSPRequest.encode(self) + \
+			struct.pack(mask2, self.update, self.btclock, self.timestamp)
+
+	@staticmethod
+	def length():
+		return CSPRequest.length() + CSPSetRequest.mask2_size
+
+	@staticmethod
+	def decode(message):
+		if len(message) != CSPSetRequest.length():
+			raise InvalidMessage("Invalid msg length")
+		data, message = CSPSetRequest._decode(message)
+		data.extend(struct.unpack(mask2, message))
+		return CSPSetRequest(*data)
+
+
+class CSPSyncInfoIndication( CSPRequest ):
+	mask2 = ">IQH"
+	mask2_size = struct.calcsize(mask2)
+
+	def __init__(self, update, btclock, timestamp, accuracy):
+		CSPRequest.__init__(self, MCAP_MD_SYNC_INFO_IND)
+		self.btclock = btclock
+		self.timestamp = timestamp
+		self.accuracy = accuracy # us
+
+	def encode(self):
+		return CSPRequest.encode(self) + \
+			struct.pack(mask2, self.btclock, self.timestamp, self.accuracy)
+
+	@staticmethod
+	def length():
+		return CSPRequest.length() + CSPSyncInfoIndication.mask2_size
+
+	@staticmethod
+	def decode(message):
+		if len(message) != CSPSyncInfoIndication.length():
+			raise InvalidMessage("Invalid msg length")
+		data, message = CSPSyncInfoIndication._decode(message)
+		data.extend(struct.unpack(mask2, message))
+		return CSPSyncInfoIndication(*data)
 
 
 # Specific response messages
 
-
-class ErrorMDLResponseMessage( MDLResponseMessage ):
+class ErrorMDLResponse( MDLResponse ):
 
         def __init__(self):
-                MDLResponseMessage.__init__(self, MCAP_ERROR_RSP, MCAP_RSP_INVALID_OP_CODE, 0x0000)
+                MDLResponse.__init__(self, MCAP_ERROR_RSP, MCAP_RSP_INVALID_OP_CODE, 0x0000)
 
-class CreateMDLResponseMessage( MDLResponseMessage ):
+	@staticmethod
+	def decode(message):
+		if len(message) != ErrorMDLResponse.length():
+			raise InvalidMessage("Invalid msg length")
+		data, message = ErrorMDLResponse._decode(message)
+		return ErrorMDLResponse(*data)
 
-        def __init__(self, _rspcode, _mdlid, _params):
-                MDLResponseMessage.__init__(self, MCAP_MD_CREATE_MDL_RSP, _rspcode, _mdlid)
-                self.params = _params
+
+class CreateMDLResponse( MDLResponse ):
+	mask2 = ">B"
+	mask2_size = struct.calcsize(mask2)
+
+        def __init__(self, rspcode, mdlid, config):
+                MDLResponse.__init__(self, MCAP_MD_CREATE_MDL_RSP, rspcode, mdlid)
+                self.config = config
 	
-	def __repr__(self):
-		return "0x%02X%02X%04X%02X" % (self.opcode,self.rspcode,self.mdlid,self.params)
+	def encode(self):
+		return MDLResponse.encode(self) + \
+			struct.pack(mask2, self.config)
 
 	@staticmethod
-	def is_valid_response(_rspcode):
-		return _rspcode in [MCAP_RSP_SUCESS, MCAP_RSP_INVALID_PARAMETER_VALUE,
-                                    MCAP_RSP_INVALID_MDEP, MCAP_RSP_MDEP_BUSY,
-                                    MCAP_RSP_INVALID_MDL, MCAP_RSP_MDL_BUSY,
-                                    MCAP_RSP_INVALID_OPERATION, MCAP_RSP_RESOURCE_UNAVAILABLE,
-                                    MCAP_RSP_UNSPECIFIED_ERROR, MCAP_RSP_REQUEST_NOT_SUPPORTED,
-                                    MCAP_RSP_CONFIGURATION_REJECTED]
-
-
-class ReconnectMDLResponseMessage( MDLResponseMessage ):
-
-        def __init__(self, _rspcode, _mdlid):
-                MDLResponseMessage.__init__(self, MCAP_MD_RECONNECT_MDL_RSP, _rspcode, _mdlid)
+	def length():
+		return MDLResponse.length() + CreateMDLResponse.mask2_size
 
 	@staticmethod
-        def is_valid_response(_rspcode):
-                return _rspcode in [MCAP_RSP_SUCESS, MCAP_RSP_INVALID_PARAMETER_VALUE,
-                                    MCAP_RSP_MDEP_BUSY, MCAP_RSP_INVALID_MDL,
-                                    MCAP_RSP_MDL_BUSY, MCAP_RSP_INVALID_OPERATION,
-                                    MCAP_RSP_RESOURCE_UNAVAILABLE, MCAP_RSP_UNSPECIFIED_ERROR, 
-                                    MCAP_RSP_REQUEST_NOT_SUPPORTED]
+	def decode(message):
+		if len(message) != CreateMDLResponse.length():
+			raise InvalidMessage("Invalid msg length")
+		data, message = CreateMDLResponse._decode(message)
+		data.extend(struct.unpack(CreateMDLResponse.mask2, message))
+		return CreateMDLResponse(*data)
 
-class AbortMDLResponseMessage( MDLResponseMessage ):
 
-        def __init__(self, _rspcode, _mdlid):
-                MDLResponseMessage.__init__(self, MCAP_MD_ABORT_MDL_RSP, _rspcode, _mdlid)
+class ReconnectMDLResponse( MDLResponse ):
 
-	@staticmethod
-        def is_valid_response(_rspcode):
-                return _rspcode in [MCAP_RSP_SUCESS, MCAP_RSP_INVALID_PARAMETER_VALUE,
-                                    MCAP_RSP_INVALID_MDL, MCAP_RSP_INVALID_OPERATION,
-                                    MCAP_RSP_UNSPECIFIED_ERROR, MCAP_RSP_REQUEST_NOT_SUPPORTED]
-
-class DeleteMDLResponseMessage( MDLResponseMessage ):
-
-        def __init__(self, _rspcode, _mdlid):
-                MDLResponseMessage.__init__(self, MCAP_MD_DELETE_MDL_RSP, _rspcode, _mdlid)
+        def __init__(self, rspcode, mdlid):
+                MDLResponse.__init__(self, MCAP_MD_RECONNECT_MDL_RSP, rspcode, mdlid)
 
 	@staticmethod
-        def is_valid_response(_rspcode):
-                return _rspcode in [MCAP_RSP_SUCESS, MCAP_RSP_INVALID_PARAMETER_VALUE,
-                                    MCAP_RSP_INVALID_MDL, MCAP_RSP_MDL_BUSY,
-				    MCAP_RSP_INVALID_OPERATION, MCAP_RSP_UNSPECIFIED_ERROR, 
-				    MCAP_RSP_REQUEST_NOT_SUPPORTED]
+	def decode(message):
+		if len(message) != ReconnectMDLResponse.length():
+			raise InvalidMessage("Invalid msg length")
+		data, message = ReconnectMDLResponse._decode(message)
+		return ReconnectMDLResponse(*data)
 
 
-class CSPCapabilitiesResponseMessage( CSPResponseMessage ):
+class AbortMDLResponse( MDLResponse ):
 
-	def __init__(self, _rspcode, _btclockres, _synclead, _tmstampres,
-			_tmstampacc):
-		CSPResponseMessage.__init__(self, MCAP_MD_SYNC_CAP_REQ, _rspcode)
-		self.btclockres = _btclockres # BT clock ticks
-		self.synclead = _synclead # delay, ms
-		self.tmstampres = _tmstampres # resolution, us
-		self.tmstampacc = _tmstampacc # accuracy, parts per million
+        def __init__(self, rspcode, mdlid):
+                MDLResponse.__init__(self, MCAP_MD_ABORT_MDL_RSP, rspcode, mdlid)
 
-	def __repr__(self):
-		return "0x%02X%02X %d %d %d %d" % (self.opcode, self.rspcode,
-			self.btclockres, self.synclead, self.tmstampres,
-			self.tmstampacc)
+	@staticmethod
+	def decode(message):
+		if len(message) != AbortMDLResponse.length():
+			raise InvalidMessage("Invalid msg length")
+		data, message = AbortMDLResponse._decode(message)
+		return AbortMDLResponse(*data)
 
 
-class CSPSetResponseMessage( CSPResponseMessage ):
+class DeleteMDLResponse( MDLResponse ):
 
-	def __init__(self, _rspcode, _btclock, _timestamp, _tmstampacc):
-		CSPResponseMessage.__init__(self, MCAP_MD_SYNC_SET_REQ, _rspcode)
-		self.btclock = _btclock
-		self.timestamp = _timestamp
-		self.tmstampacc = _tmstampacc # accuracy, us
+        def __init__(self, rspcode, mdlid):
+                MDLResponse.__init__(self, MCAP_MD_DELETE_MDL_RSP, rspcode, mdlid)
 
-	def __repr__(self):
-		return "0x%02X 0x%02X %d %d %d" % (self.opcode, self.rspcode,
-			self.btclock, self.timestamp, self.tmstampacc)
+	@staticmethod
+	def decode(message):
+		if len(message) != DeleteMDLResponse.length():
+			raise InvalidMessage("Invalid msg length")
+		data, message = DeleteMDLResponse._decode(message)
+		return DeleteMDLResponse(*data)
 
+
+class CSPCapabilitiesResponse( CSPResponse ):
+	mask2 = ">BBHHH"
+	mask2_size = struct.calcsize(mask2)
+
+	def __init__(self, rspcode, btclockres, synclead, tmstampres,
+			tmstampacc):
+		CSPResponse.__init__(self, MCAP_MD_SYNC_CAP_REQ, rspcode)
+		self.btclockres = btclockres # BT clock ticks
+		self.synclead = synclead # delay, ms
+		self.tmstampres = tmstampres # resolution, us
+		self.tmstampacc = tmstampacc # accuracy, parts per million
+
+	def encode(self):
+		return CSPResponse.encode(self) + \
+			struct.pack(self.mark2, self.btclockres, self.synclead,
+				self.tmstampres, self.tmstampacc)
+
+	@staticmethod
+	def length():
+		return CSPResponse.length() + CSPCapabilitiesResponse.mask2_size
+
+	@staticmethod
+	def decode(message):
+		if len(message) != CSPCapabilitiesResponse.length():
+			raise InvalidMessage("Invalid msg length")
+		data, message = CSPCapabilitiesResponse._decode(message)
+		data.extend(struct.unpack(CSPCapabilitiesResponse.mask2, message))
+		return CSPCapabilitiesResponse(*data)
+
+
+class CSPSetResponse( CSPResponse ):
+	mask2 = ">BIQH"
+	mask2_size = struct.calcsize(mask2)
+
+	def __init__(self, rspcode, btclock, timestamp, tmstampacc):
+		CSPResponse.__init__(self, MCAP_MD_SYNC_SET_REQ, rspcode)
+		self.btclock = btclock
+		self.timestamp = timestamp
+		self.tmstampacc = tmstampacc # accuracy, us
+
+	def encode(self):
+		return CSPResponse.encode(self) + \
+			struct.pack(self.mask2, self.btclock, self.timestamp, self.tmstampacc)
 	
+	@staticmethod
+	def length():
+		return CSPResponse.length() + CSPSetResponse.mask2_size
+
+	@staticmethod
+	def decode(message):
+		if len(message) != CSPSetResponse.length():
+			raise InvalidMessage("Invalid msg length")
+		data, message = CSPSetResponse._decode(message)
+		data.extend(struct.unpack(CSPSetResponse.mask2, message))
+		return CSPSetResponse(*data)
+
+
 class MessageParser:
+	known_opcodes = { \
+		MCAP_MD_CREATE_MDL_REQ: CreateMDLRequest,
+		MCAP_MD_RECONNECT_MDL_REQ: ReconnectMDLRequest,
+		MCAP_MD_ABORT_MDL_REQ: AbortMDLRequest,
+		MCAP_MD_DELETE_MDL_REQ: DeleteMDLRequest,
+		MCAP_MD_SYNC_CAP_REQ: CSPCapabilitiesRequest,
+		MCAP_MD_SYNC_SET_REQ: CSPSetRequest,
+		MCAP_MD_SYNC_INFO_IND: CSPSyncInfoIndication,
+		MCAP_ERROR_RSP:	ErrorMDLResponse,
+               	MCAP_MD_CREATE_MDL_RSP: CreateMDLResponse,
+               	MCAP_MD_RECONNECT_MDL_RSP: ReconnectMDLResponse,
+               	MCAP_MD_ABORT_MDL_RSP: AbortMDLResponse,
+               	MCAP_MD_DELETE_MDL_RSP: DeleteMDLResponse,
+		MCAP_MD_SYNC_CAP_RSP: CSPCapabilitiesResponse,
+		MCAP_MD_SYNC_SET_RSP: CSPSetResponse }
 
 	def __init__(self):
 		pass
 
-	def get_op_code(self, _message):
-		temp = _message
+	def get_opcode(self, message):
+		if len(message) < 1:
+			raise InvalidMessage("Empty message")
+		return struct.unpack("B", message[0])[0]
 
-                # MCAP request/response packages do not have a fix length. 
-                # Op codes are on most significant byte
-                while(temp > 0):
-                        op_code = temp & 0xFF
-                        temp >>= 8
+	def parse(self, message):
+                opcode = self.get_opcode(message)
+		if opcode not in self.known_opcodes:
+			raise InvalidMessage("Bad message opcode: %d" % opcode)
+		k = self.known_opcodes[opcode]
+		o = k.decode(message)
+		return o
 
-		# check if is ERROR_RSP - special case
-		# it stops at RSP_CODE, which, in ERROR_RSP is always 0x01
-		if ( op_code == 0x01 ):
-			if ( ( _message & 0xFFFFFFFF) == 0x00010000 ):
-				return MCAP_ERROR_RSP 
 
-                return op_code
+def testmsg(hexmsg):
+	binmsg = [ chr(int(hexmsg[i:i+2], 16)) for i in range(0, len(hexmsg), 2) ]
+	return "".join(binmsg)
 
-	def is_request_message(self, _opcode):
-		return _opcode in [MCAP_MD_CREATE_MDL_REQ, MCAP_MD_RECONNECT_MDL_REQ,
-				   MCAP_MD_ABORT_MDL_REQ, MCAP_MD_DELETE_MDL_REQ,
-				   MCAP_MD_SYNC_CAP_REQ, MCAP_MD_SYNC_SET_REQ,
-				   MCAP_MD_SYNC_INFO_IND]
+
+def test():
+	createReq = CreateMDLRequest(0x01, 0x01, 0x0001)
+	assert(createReq.mdlid == 0x01)
+	assert(createReq.mdepid == 0x01)
+	assert(createReq.opcode == MCAP_MD_CREATE_MDL_REQ)
+
+	reconnectReq = ReconnectMDLRequest(0x01)
+	assert(reconnectReq.mdlid == 0x01)
+	assert(reconnectReq.opcode == MCAP_MD_RECONNECT_MDL_REQ)
+
+	deleteReq = DeleteMDLRequest(0x02)
+	assert(deleteReq.mdlid == 0x02)
+	assert(deleteReq.opcode == MCAP_MD_DELETE_MDL_REQ)
+
+	abortReq = AbortMDLRequest(0x03)
+	assert(abortReq.mdlid == 0x03)
+	assert(abortReq.opcode == MCAP_MD_ABORT_MDL_REQ)
+
+	# TEST PARSER
+
+	parser = MessageParser()
 	
-	def is_response_message(self, _opcode):
-		return _opcode in [MCAP_ERROR_RSP, MCAP_MD_CREATE_MDL_RSP,
-				   MCAP_MD_RECONNECT_MDL_RSP, 
-				   MCAP_MD_ABORT_MDL_RSP,
-				   MCAP_MD_DELETE_MDL_RSP,
-				   MCAP_MD_SYNC_CAP_RSP,
-				   MCAP_MD_SYNC_SET_RSP]
+	# test CreateReq message parsing
+	createReq = testmsg("0100230ABC")
+	createReqObj = parser.parse(createReq)
+	assert(createReqObj.opcode == MCAP_MD_CREATE_MDL_REQ)
+	assert(createReqObj.mdlid == 0x0023)
+	assert(createReqObj.mdepid == 0x0A)
+	assert(createReqObj.conf == 0xBC)
+	
+	
+	# test ReconnectReq message parsing
+	reconnectReq = testmsg("0300AB")
+	reconnectReqObj = parser.parse(reconnectReq)
+	assert(reconnectReqObj.opcode == MCAP_MD_RECONNECT_MDL_REQ)
+	assert(reconnectReqObj.mdlid == 0x00AB)
+	
+	
+	# test AbortReq message parsing
+	abortReq = testmsg("0500AB")
+	abortReqObj = parser.parse(abortReq)
+	assert(abortReqObj.opcode == MCAP_MD_ABORT_MDL_REQ)
+	assert(abortReqObj.mdlid == 0x00AB)
+	
+	
+	# test DeleteReq message parsing
+	deleteReq = testmsg("0700CC")
+	deleteReqObj = parser.parse(deleteReq)
+	assert(deleteReqObj.opcode == MCAP_MD_DELETE_MDL_REQ)
+	assert(deleteReqObj.mdlid == 0x00CC)
+	
+	
+	# test CreateRsp message parsing
+	createRsp = testmsg("0200002307")
+	createRspObj = parser.parse(createRsp)
+	assert(createRspObj.opcode == MCAP_MD_CREATE_MDL_RSP)
+	assert(createRspObj.mdlid == 0x0023)
+	assert(createRspObj.rspcode == MCAP_RSP_SUCCESS)
+	assert(createRspObj.config == 0x07)
+	
+	
+	# test ReconnectRsp message parsing
+	reconnectRsp = testmsg("040200AB")
+	reconnectRspObj = parser.parse(reconnectRsp)
+	assert(reconnectRspObj.opcode == MCAP_MD_RECONNECT_MDL_RSP)
+	assert(reconnectRspObj.mdlid == 0x00AB)
+	assert(reconnectRspObj.rspcode == MCAP_RSP_INVALID_PARAMETER_VALUE)
+	
+	
+	# test AbortRsp message parsing
+	abortRsp = testmsg("0605FFFF")
+	abortRspObj = parser.parse(abortRsp)
+	assert(abortRspObj.opcode == MCAP_MD_ABORT_MDL_RSP)
+	assert(abortRspObj.mdlid == 0xFFFF)
+	assert(abortRspObj.rspcode == MCAP_RSP_INVALID_MDL)
+	
+
+	# test DeleteRsp message parsing
+	deleteRsp = testmsg("080000CC")
+	deleteRspObj = parser.parse(deleteRsp)
+	assert(deleteRspObj.opcode == MCAP_MD_DELETE_MDL_RSP)
+	assert(deleteRspObj.mdlid == 0x00CC)
+	assert(deleteRspObj.rspcode == MCAP_RSP_SUCCESS)
 
 
-	def parse_request_message(self, _message):
-		opcode = self.get_op_code(_message)
+	exc = None
+	try:
+		parser.parse(testmsg("8B003344"))
+	except Exception, e:
+		exc = e
+	assert(isinstance(exc, InvalidMessage))
+	
+	exc = None
+	try:
+		parser.parse(testmsg("01"))
+	except Exception, e:
+		exc = e
+	assert(isinstance(exc, InvalidMessage))
 
-		if opcode == MCAP_MD_CREATE_MDL_REQ:
-			return self.parse_create_request_message(_message)
-		elif opcode == MCAP_MD_SYNC_CAP_REQ:
-			return self.parse_csp_capabilites_request(_message)
-		elif opcode == MCAP_MD_SYNC_SET_REQ:
-			return self.parse_csp_set_request(_message)
-		elif opcode == MCAP_MD_SYNC_INFO_IND:
-			return self.parse_csp_info_indication(_message)
-		else:
-			return self.parse_non_create_request_message(_message)
+	exc = None
+	try:
+		parser.parse("")
+	except Exception, e:
+		exc = e
+	assert(isinstance(exc, InvalidMessage))
 
-	def parse_response_message(self, _message):
-                opcode = self.get_op_code(_message)
+	print "TESTS OK"
 
-                if opcode == MCAP_MD_CREATE_MDL_RSP:
-                        return self.parse_create_response_message(_message)
-		elif opcode == MCAP_MD_SYNC_CAP_RSP:
-			return self.parse_csp_capabilites_response(_message)
-		elif opcode == MCAP_MD_SYNC_SET_RSP:
-			return self.parse_csp_set_response(_message)
-                else:
-                        return self.parse_non_create_response_message(_message)
-
-	def parse_create_request_message(self, _message):
-		configuration = _message & 0xFF
-		mdepid = (_message >> 8) & 0xFF 
-		mdlid =  (_message >> 16) & 0xFFFF
-		return CreateMDLRequestMessage(mdlid, mdepid, configuration)
-		
-	def parse_non_create_request_message(self, _message):
-		mdlid = _message & 0xFFFF
-		op_code = (_message >> 16) & 0xFF
-		return MDLRequestMessage(op_code, mdlid)
-
-	def parse_csp_capabilities_request(self, _message):
-		if len(_message) != 3:
-			debug("Bad CSP cap req", _message)
-			return None
-		accuracy = struct.unpack(">xH", _message)
-		return CSPCapabilitiesRequestMessage(accuracy)
-
-	def parse_csp_set_request(self, _message):
-		if len(_message) != 14:
-			debug("Bad CSP set req", _message)
-			return None
-		update, btclock, timestamp = struct.unpack(">xBIQ", _message)
-		return CSPSetRequestMessage(update, btclock, timestamp)
-
-	def parse_csp_info_indication(self, _message):
-		if len(_message) != 15:
-			debug("Bad CSP info indication", _message)
-			return None
-		btclock, timestamp, accuracy = struct.unpack(">xIQH", _message)
-		return CSPSyncInfoIndication(btclock, timestamp, accuracy)
-
-	def parse_create_response_message(self, _message):
-		rsp_vars = _message & 0xFF
-		mdlid = (_message >> 8) & 0xFFFF
-		rsp_code = (_message >> 24) & 0xFF
-		return CreateMDLResponseMessage(rsp_code, mdlid, rsp_vars)
-				
-	def parse_non_create_response_message(self, _message):
-		mdlid = _message & 0xFFFF
-		rsp_code = (_message >> 16) & 0xFF
-		op_code = (_message >> 24) & 0xFF
-		return MDLResponseMessage(op_code, rsp_code, mdlid)
-
-	def parse_csp_capabilities_response(self, _message):
-		if len(_message) != 9:
-			debug("Bad CSP cap rsp", _message)
-			return None
-		response, btclockres, synclead, tmstampres, tmstampacc = \
-			struct.unpack(">xBBHHH", _message)
-		return CSPCapabilitiesResponseMessage(response, btclockres,
-			synclead, tmstampres, tmstampacc)
-
-	def parse_csp_set_response(self, _message):
-		if len(_message) != 16:
-			debug("Bad CSP set rsp", _message)
-			return None
-		response, btclock, timestamp, tmstampacc = \
-			struct.unpack(">xBIQH", _message)
-		return CSPSetResponseMessage(response, btclock, timestamp,
-			tmstampacc)
-
-	def parse_message(self, _message):
-                opcode = self.get_op_code(_message)
-
-                if self.is_request_message(opcode):
-                        return self.parse_request_message(_message)
-                elif self.is_response_message(opcode):
-                        return self.parse_response_message(_message)
-                else:
-                        return None
-
+if __name__ == "__main__":
+	test()

@@ -5,7 +5,6 @@ import mcap_sock
 import time
 from bluetooth import *
 import gobject
-from struct import pack, unpack
 
 MCAP_MCL_ROLE_ACCEPTOR		= 'ACCEPTOR'
 MCAP_MCL_ROLE_INITIATOR		= 'INITIATOR'  
@@ -24,13 +23,6 @@ MCAP_MDL_STATE_ACTIVE		= 'ACTIVE'
 MCAP_MDL_STATE_CLOSED		= 'CLOSED'
 MCAP_MDL_STATE_DELETED		= 'DELETED'
 
-MSG_FORMAT = 'L'
-
-def pack_msg(msg):
-	return pack(MSG_FORMAT, msg)
-
-def unpack_msg(msg):
-	return int(msg,16)
 
 class MDL(object):
 
@@ -254,7 +246,7 @@ class MCL(object):
 class MCLStateMachine:
 
 	def __init__(self, _mcl):
-		self.messageParser = mcap_defs.MessageParser()
+		self.parser = mcap_defs.MessageParser()
 		self.state = MCAP_STATE_READY
 		self.mcl = _mcl
 
@@ -279,7 +271,7 @@ class MCLStateMachine:
                                 return False
 
 	def send_message(self, _message):
-		if ( self.messageParser.is_response_message(_message.opcode) ):
+		if ( self.parser.is_response_message(_message.opcode) ):
 			return self.send_response(_message)
 		else:
 			return self.send_request(_message)
@@ -316,15 +308,13 @@ class MCLStateMachine:
 ## RECEIVE METHODS
 
 	def receive_message(self, _message):
-		message_value = unpack_msg(_message) # convert to number
-
-		opcode = self.messageParser.get_op_code(message_value)
+		opcode = self.parser.get_opcode(_message)
 	
-		self.last_received = message_value
+		self.last_received = _message
 
-		if ( self.messageParser.is_request_message(opcode) ):
+		if ( self.parser.is_request_message(opcode) ):
 			return self.receive_request(_message)
-		elif ( self.messageParser.is_response_message(opcode) ):
+		elif ( self.parser.is_response_message(opcode) ):
 			return self.receive_response(_message)
 		else:
 			return self.send_mdl_error_response()
@@ -350,8 +340,7 @@ class MCLStateMachine:
 ## PROCESS RESPONSE METHODS
 
 	def process_response(self, _response):
-		response_value = unpack_msg(_response) # convert to number 
-		responseMessage = self.messageParser.parse_response_message(response_value)
+		responseMessage = self.parser.parse_response_message(_response)
 
 		self.state = MCAP_STATE_READY
 
@@ -367,7 +356,6 @@ class MCLStateMachine:
 			self.print_error_message( responseMessage.rspcode )
 
 	def process_create_response(self, _response):
-	
 		if ( _response.rspcode == mcap_defs.MCAP_RSP_SUCCESS ):
 			self.mcl.add_mdl( MDL(_response.mdlid, 0) )
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
@@ -416,10 +404,9 @@ class MCLStateMachine:
 ## PROCESS REQUEST METHODS
 
 	def process_request(self, _request):
-		request_value = unpack_msg(_request) # convert to number
-		requestMessage = self.messageParser.parse_request_message(request_value)
+		requestMessage = self.parser.parse_request_message(_request)
 		
-		isOpcodeSupported = self.is_opcode_req_supported( requestMessage.opcode ) 
+		isOpcodeSupported = self.parse.is_request( requestMessage.opcode ) 
 		if ( isOpcodeSupported ):
 			if ( requestMessage.opcode == mcap_defs.MCAP_MD_CREATE_MDL_REQ ):
 				return self.process_create_request(requestMessage)
@@ -596,7 +583,3 @@ class MCLStateMachine:
 			print "Request Not Supported"
 		elif ( _error_rsp_code ==  mcap_defs.MCAP_RSP_CONFIGURATION_REJECTED ):
 			print "Configuration Rejected"
-
-	def is_opcode_req_supported(self, _opcode):
-		return _opcode in [mcap_defs.MCAP_MD_CREATE_MDL_REQ, mcap_defs.MCAP_MD_RECONNECT_MDL_REQ,
-                                   mcap_defs.MCAP_MD_ABORT_MDL_REQ, mcap_defs.MCAP_MD_DELETE_MDL_REQ]
