@@ -50,6 +50,9 @@ MCAP_MDEP_ID_FINAL			= 0x7F
 class InvalidMessage(Exception):
 	pass
 
+class InvalidResponse(Exception):
+	pass
+
 class InvalidOperation(Exception):
 	pass
 
@@ -305,6 +308,8 @@ class CreateMDLResponse( MDLResponse ):
 	mask2_size = struct.calcsize(mask2)
 
         def __init__(self, rspcode, mdlid, config):
+		if not self.is_valid_response(rspcode):
+			raise InvalidResponse("%d" % rspcode)
                 MDLResponse.__init__(self, MCAP_MD_CREATE_MDL_RSP, rspcode, mdlid)
                 self.config = config
 	
@@ -324,10 +329,26 @@ class CreateMDLResponse( MDLResponse ):
 		data.extend(struct.unpack(CreateMDLResponse.mask2, message))
 		return CreateMDLResponse(*data)
 
+	@staticmethod
+	def is_valid_response(rspcode):
+		return rspcode in [ \
+			MCAP_RSP_SUCCESS,
+			MCAP_RSP_INVALID_PARAMETER_VALUE,
+			MCAP_RSP_INVALID_MDEP,
+			MCAP_RSP_MDEP_BUSY,
+			MCAP_RSP_INVALID_MDL,
+			MCAP_RSP_MDL_BUSY,
+			MCAP_RSP_INVALID_OPERATION,
+			MCAP_RSP_RESOURCE_UNAVAILABLE,
+			MCAP_RSP_UNSPECIFIED_ERROR,
+			MCAP_RSP_REQUEST_NOT_SUPPORTED,
+			MCAP_RSP_CONFIGURATION_REJECTED]
 
 class ReconnectMDLResponse( MDLResponse ):
 
         def __init__(self, rspcode, mdlid):
+		if not self.is_valid_response(rspcode):
+			raise InvalidResponse("%d" % rspcode)
                 MDLResponse.__init__(self, MCAP_MD_RECONNECT_MDL_RSP, rspcode, mdlid)
 
 	@staticmethod
@@ -337,10 +358,25 @@ class ReconnectMDLResponse( MDLResponse ):
 		data, message = ReconnectMDLResponse._decode(message)
 		return ReconnectMDLResponse(*data)
 
+	@staticmethod
+        def is_valid_response(_rspcode):
+                return _rspcode in [ \
+			MCAP_RSP_SUCCESS,
+			MCAP_RSP_INVALID_PARAMETER_VALUE,
+			MCAP_RSP_MDEP_BUSY,
+			MCAP_RSP_INVALID_MDL,
+			MCAP_RSP_MDL_BUSY,
+			MCAP_RSP_INVALID_OPERATION,
+			MCAP_RSP_RESOURCE_UNAVAILABLE,
+			MCAP_RSP_UNSPECIFIED_ERROR, 
+			MCAP_RSP_REQUEST_NOT_SUPPORTED]
+
 
 class AbortMDLResponse( MDLResponse ):
 
         def __init__(self, rspcode, mdlid):
+		if not self.is_valid_response(rspcode):
+			raise InvalidResponse("%d" % rspcode)
                 MDLResponse.__init__(self, MCAP_MD_ABORT_MDL_RSP, rspcode, mdlid)
 
 	@staticmethod
@@ -350,10 +386,22 @@ class AbortMDLResponse( MDLResponse ):
 		data, message = AbortMDLResponse._decode(message)
 		return AbortMDLResponse(*data)
 
+	@staticmethod
+        def is_valid_response(_rspcode):
+                return _rspcode in [ \
+			MCAP_RSP_SUCCESS,
+			MCAP_RSP_INVALID_PARAMETER_VALUE,
+			MCAP_RSP_INVALID_MDL,
+			MCAP_RSP_INVALID_OPERATION,
+			MCAP_RSP_UNSPECIFIED_ERROR,
+			MCAP_RSP_REQUEST_NOT_SUPPORTED ]
+
 
 class DeleteMDLResponse( MDLResponse ):
 
         def __init__(self, rspcode, mdlid):
+		if not self.is_valid_response(rspcode):
+			raise InvalidResponse("%d" % rspcode)
                 MDLResponse.__init__(self, MCAP_MD_DELETE_MDL_RSP, rspcode, mdlid)
 
 	@staticmethod
@@ -362,6 +410,17 @@ class DeleteMDLResponse( MDLResponse ):
 			raise InvalidMessage("Invalid msg length")
 		data, message = DeleteMDLResponse._decode(message)
 		return DeleteMDLResponse(*data)
+
+	@staticmethod
+        def is_valid_response(_rspcode):
+                return _rspcode in [ \
+			MCAP_RSP_SUCCESS,
+			MCAP_RSP_INVALID_PARAMETER_VALUE,
+			MCAP_RSP_INVALID_MDL,
+			MCAP_RSP_MDL_BUSY,
+			MCAP_RSP_INVALID_OPERATION,
+			MCAP_RSP_UNSPECIFIED_ERROR, 
+			MCAP_RSP_REQUEST_NOT_SUPPORTED]
 
 
 class CSPCapabilitiesResponse( CSPResponse ):
