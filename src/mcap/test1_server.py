@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 
-import mcap_defs
-import mcaptest
-import mcap
+from mcap_defs import *
+from mcap import *
+from test1 import *
 import sys
 import time
 import glib
 import threading
-
-from mcap import MCLStateMachine, MCL
 
 class MCAPSessionServerStub:
 
@@ -79,11 +77,11 @@ if __name__=='__main__':
 
 	btaddr = sys.argv[1]
 
-	mcl = mcap.MCL(btaddr, mcap.MCAP_MCL_ROLE_ACCEPTOR)
+	mcl = MCL(btaddr, MCAP_MCL_ROLE_ACCEPTOR)
 
 	mcap_session = MCAPSessionServerStub(mcl)
 
-	assert(mcl.state == mcap.MCAP_MCL_STATE_IDLE)
+	assert(mcl.state == MCAP_MCL_STATE_IDLE)
 
 	# wait until a connection is done
 	print "Waiting for connections on " + btaddr
@@ -91,7 +89,7 @@ if __name__=='__main__':
 
 	print "Connected!"
 	mcap_session.start_session()
-	assert(mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
+	assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
 
 	print "Start main loop... "
 

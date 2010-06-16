@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 
-import mcap_defs
-import mcaptest
-import mcap
+from mcap_defs import *
+from mcap import *
+from test1 import *
 import time
 import sys
 import glib
 import threading
-
-from mcap import MCLStateMachine, MCL
 
 class MCAPSessionClientStub:
 
@@ -59,7 +57,7 @@ class MCAPSessionClientStub:
 				if (message != ''):
 					# do whatever you want
 					self.mcl_state_machine.receive_message(message)
-					assert(message == mcap_defs.testmsg(self.received[self.counter]))
+					assert(message == testmsg(self.received[self.counter]))
 					self.check_asserts(self.counter)
 					self.bclock.acquire()
 					self.can_write = True
@@ -72,12 +70,12 @@ class MCAPSessionClientStub:
 
 	def write_cb(self, socket, *args):
 		#print "CAN WRITE"
-		if ( self.counter >= len(mcap_defs.testmsg(self.sent)) ):
+		if ( self.counter >= len(testmsg(self.sent)) ):
 			self.stop_session()
 			return True
 
 		if (self.can_write) :
-			self.mcl_state_machine.send_raw_message(mcap_defs.testmsg(self.sent[self.counter]))
+			self.mcl_state_machine.send_raw_message(testmsg(self.sent[self.counter]))
 			self.bclock.acquire()
 			self.can_write = False
 			self.bclock.release()
@@ -94,28 +92,28 @@ class MCAPSessionClientStub:
 	def check_asserts(self, counter):
 		if (self.counter == 2):
 			assert(self.mcl.count_mdls() == 1)
-			assert(self.mcl_state_machine.state == mcap.MCAP_STATE_READY)
-			assert(self.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+			assert(self.mcl_state_machine.state == MCAP_STATE_READY)
+			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
 		elif (self.counter == 3):
 			assert(self.mcl.count_mdls() == 2)
-			assert(self.mcl_state_machine.state == mcap.MCAP_STATE_READY)
-			assert(self.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)		
+			assert(self.mcl_state_machine.state == MCAP_STATE_READY)
+			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)		
 		elif (self.counter == 4):
 			assert(self.mcl.count_mdls() == 3)
-			assert(self.mcl_state_machine.state == mcap.MCAP_STATE_READY)
-			assert(self.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
+			assert(self.mcl_state_machine.state == MCAP_STATE_READY)
+			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
 		elif (self.counter == 5):
 			assert(self.mcl.count_mdls() == 3)
-			assert(self.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
-			assert(self.mcl_state_machine.state == mcap.MCAP_STATE_READY)
+			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
+			assert(self.mcl_state_machine.state == MCAP_STATE_READY)
 		elif (self.counter == 6):			
 			assert(self.mcl.count_mdls() == 2)
-			assert(self.mcl.state == mcap.MCAP_MCL_STATE_ACTIVE)
-			assert(self.mcl_state_machine.state == mcap.MCAP_STATE_READY)
+			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
+			assert(self.mcl_state_machine.state == MCAP_STATE_READY)
 		elif (self.counter == 7):
 			assert(self.mcl.count_mdls() == 0)
-			assert(self.mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
-			assert(self.mcl_state_machine.state == mcap.MCAP_STATE_READY)
+			assert(self.mcl.state == MCAP_MCL_STATE_CONNECTED)
+			assert(self.mcl_state_machine.state == MCAP_STATE_READY)
 
 		
 
@@ -124,18 +122,18 @@ if __name__=='__main__':
 	btaddr = sys.argv[1]
 	psm = sys.argv[2]
 
-	mcl = MCL(btaddr, mcap.MCAP_MCL_ROLE_INITIATOR)
+	mcl = MCL(btaddr, MCAP_MCL_ROLE_INITIATOR)
 
 	mcap_session = MCAPSessionClientStub(mcl)
 
-	assert(mcl.state == mcap.MCAP_MCL_STATE_IDLE)
+	assert(mcl.state == MCAP_MCL_STATE_IDLE)
 
 	print "Requesting connection..."
 	if ( not mcl.is_cc_open() ):
 		mcl.connect_cc((btaddr, int(psm)))
 
 	print "Connected!"
-	assert(mcl.state == mcap.MCAP_MCL_STATE_CONNECTED)
+	assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
 
 	if ( mcl.is_cc_open() ):
 		mcap_session.start_session()
