@@ -152,7 +152,7 @@ class CreateMDLRequest( MDLRequest ):
 
 	def encode(self):
 		return MDLRequest.encode(self) + \
-			struct.pack(mask2, self.mdepid, self.conf)
+			struct.pack(self.mask2, self.mdepid, self.conf)
 
 	@staticmethod
 	def length():
@@ -216,18 +216,18 @@ class CSPCapabilitiesRequest( CSPRequest ):
 
 	def encode(self):
 		return CSPRequest.encode(self) + \
-			struct.pack(mask2, self.reqaccuracy)
+			struct.pack(self.mask2, self.reqaccuracy)
 
 	@staticmethod
 	def length():
-		return CSPRequest.length() + mask2_size
+		return CSPRequest.length() + CSPCapabilitiesRequest.mask2_size
 
 	@staticmethod
 	def decode(message):
 		if len(message) != CSPCapabilitiesRequest.length():
 			raise InvalidMessage("Invalid msg length")
 		data, message = CSPCapabilitiesRequest._decode(message)
-		data.extend(struct.unpack(mask2, message))
+		data.extend(struct.unpack(CSPCapabilitiesRequest.mask2, message))
 		return CSPCapabilitiesRequest(*data)
 
 
@@ -243,7 +243,7 @@ class CSPSetRequest( CSPRequest ):
 
 	def encode(self):
 		return CSPRequest.encode(self) + \
-			struct.pack(mask2, self.update, self.btclock, self.timestamp)
+			struct.pack(self.mask2, self.update, self.btclock, self.timestamp)
 
 	@staticmethod
 	def length():
@@ -254,7 +254,7 @@ class CSPSetRequest( CSPRequest ):
 		if len(message) != CSPSetRequest.length():
 			raise InvalidMessage("Invalid msg length")
 		data, message = CSPSetRequest._decode(message)
-		data.extend(struct.unpack(mask2, message))
+		data.extend(struct.unpack(CSPSetRequest.mask2, message))
 		return CSPSetRequest(*data)
 
 
@@ -270,7 +270,7 @@ class CSPSyncInfoIndication( CSPRequest ):
 
 	def encode(self):
 		return CSPRequest.encode(self) + \
-			struct.pack(mask2, self.btclock, self.timestamp, self.accuracy)
+			struct.pack(self.mask2, self.btclock, self.timestamp, self.accuracy)
 
 	@staticmethod
 	def length():
@@ -281,7 +281,7 @@ class CSPSyncInfoIndication( CSPRequest ):
 		if len(message) != CSPSyncInfoIndication.length():
 			raise InvalidMessage("Invalid msg length")
 		data, message = CSPSyncInfoIndication._decode(message)
-		data.extend(struct.unpack(mask2, message))
+		data.extend(struct.unpack(CSPSyncInfoIndication.mask2, message))
 		return CSPSyncInfoIndication(*data)
 
 
@@ -310,7 +310,7 @@ class CreateMDLResponse( MDLResponse ):
 	
 	def encode(self):
 		return MDLResponse.encode(self) + \
-			struct.pack(mask2, self.config)
+			struct.pack(self.mask2, self.config)
 
 	@staticmethod
 	def length():
@@ -461,88 +461,96 @@ def testmsg(hexmsg):
 
 
 def test():
-	createReq = CreateMDLRequest(0x01, 0x01, 0x0001)
-	assert(createReq.mdlid == 0x01)
-	assert(createReq.mdepid == 0x01)
-	assert(createReq.opcode == MCAP_MD_CREATE_MDL_REQ)
+	msg = CreateMDLRequest(0x01, 0x01, 0x0001)
+	assert(msg.mdlid == 0x01)
+	assert(msg.mdepid == 0x01)
+	assert(msg.opcode == MCAP_MD_CREATE_MDL_REQ)
 
-	reconnectReq = ReconnectMDLRequest(0x01)
-	assert(reconnectReq.mdlid == 0x01)
-	assert(reconnectReq.opcode == MCAP_MD_RECONNECT_MDL_REQ)
+	msg = ReconnectMDLRequest(0x01)
+	assert(msg.mdlid == 0x01)
+	assert(msg.opcode == MCAP_MD_RECONNECT_MDL_REQ)
 
-	deleteReq = DeleteMDLRequest(0x02)
-	assert(deleteReq.mdlid == 0x02)
-	assert(deleteReq.opcode == MCAP_MD_DELETE_MDL_REQ)
+	msg = DeleteMDLRequest(0x02)
+	assert(msg.mdlid == 0x02)
+	assert(msg.opcode == MCAP_MD_DELETE_MDL_REQ)
 
-	abortReq = AbortMDLRequest(0x03)
-	assert(abortReq.mdlid == 0x03)
-	assert(abortReq.opcode == MCAP_MD_ABORT_MDL_REQ)
+	msg = AbortMDLRequest(0x03)
+	assert(msg.mdlid == 0x03)
+	assert(msg.opcode == MCAP_MD_ABORT_MDL_REQ)
 
 	# TEST PARSER
 
 	parser = MessageParser()
 	
 	# test CreateReq message parsing
-	createReq = testmsg("0100230ABC")
-	createReqObj = parser.parse(createReq)
-	assert(createReqObj.opcode == MCAP_MD_CREATE_MDL_REQ)
-	assert(createReqObj.mdlid == 0x0023)
-	assert(createReqObj.mdepid == 0x0A)
-	assert(createReqObj.conf == 0xBC)
+	msg = testmsg("0100230ABC")
+	msgObj = parser.parse(msg)
+	assert(msgObj.opcode == MCAP_MD_CREATE_MDL_REQ)
+	assert(msgObj.mdlid == 0x0023)
+	assert(msgObj.mdepid == 0x0A)
+	assert(msgObj.conf == 0xBC)
+	assert(msgObj.encode() == msg)
 	
 	
 	# test ReconnectReq message parsing
-	reconnectReq = testmsg("0300AB")
-	reconnectReqObj = parser.parse(reconnectReq)
-	assert(reconnectReqObj.opcode == MCAP_MD_RECONNECT_MDL_REQ)
-	assert(reconnectReqObj.mdlid == 0x00AB)
+	msg = testmsg("0300AB")
+	msgObj = parser.parse(msg)
+	assert(msgObj.opcode == MCAP_MD_RECONNECT_MDL_REQ)
+	assert(msgObj.mdlid == 0x00AB)
+	assert(msgObj.encode() == msg)
 	
 	
 	# test AbortReq message parsing
-	abortReq = testmsg("0500AB")
-	abortReqObj = parser.parse(abortReq)
-	assert(abortReqObj.opcode == MCAP_MD_ABORT_MDL_REQ)
-	assert(abortReqObj.mdlid == 0x00AB)
+	msg = testmsg("0500AB")
+	msgObj = parser.parse(msg)
+	assert(msgObj.opcode == MCAP_MD_ABORT_MDL_REQ)
+	assert(msgObj.mdlid == 0x00AB)
+	assert(msgObj.encode() == msg)
 	
 	
 	# test DeleteReq message parsing
-	deleteReq = testmsg("0700CC")
-	deleteReqObj = parser.parse(deleteReq)
-	assert(deleteReqObj.opcode == MCAP_MD_DELETE_MDL_REQ)
-	assert(deleteReqObj.mdlid == 0x00CC)
+	msg = testmsg("0700CC")
+	msgObj = parser.parse(msg)
+	assert(msgObj.opcode == MCAP_MD_DELETE_MDL_REQ)
+	assert(msgObj.mdlid == 0x00CC)
+	assert(msgObj.encode() == msg)
 	
-	
+
 	# test CreateRsp message parsing
-	createRsp = testmsg("0200002307")
-	createRspObj = parser.parse(createRsp)
-	assert(createRspObj.opcode == MCAP_MD_CREATE_MDL_RSP)
-	assert(createRspObj.mdlid == 0x0023)
-	assert(createRspObj.rspcode == MCAP_RSP_SUCCESS)
-	assert(createRspObj.config == 0x07)
+	msg = testmsg("0200002307")
+	msgObj = parser.parse(msg)
+	assert(msgObj.opcode == MCAP_MD_CREATE_MDL_RSP)
+	assert(msgObj.mdlid == 0x0023)
+	assert(msgObj.rspcode == MCAP_RSP_SUCCESS)
+	assert(msgObj.config == 0x07)
+	assert(msgObj.encode() == msg)
 	
 	
 	# test ReconnectRsp message parsing
-	reconnectRsp = testmsg("040200AB")
-	reconnectRspObj = parser.parse(reconnectRsp)
-	assert(reconnectRspObj.opcode == MCAP_MD_RECONNECT_MDL_RSP)
-	assert(reconnectRspObj.mdlid == 0x00AB)
-	assert(reconnectRspObj.rspcode == MCAP_RSP_INVALID_PARAMETER_VALUE)
+	msg = testmsg("040200AB")
+	msgObj = parser.parse(msg)
+	assert(msgObj.opcode == MCAP_MD_RECONNECT_MDL_RSP)
+	assert(msgObj.mdlid == 0x00AB)
+	assert(msgObj.rspcode == MCAP_RSP_INVALID_PARAMETER_VALUE)
+	assert(msgObj.encode() == msg)
 	
 	
 	# test AbortRsp message parsing
-	abortRsp = testmsg("0605FFFF")
-	abortRspObj = parser.parse(abortRsp)
-	assert(abortRspObj.opcode == MCAP_MD_ABORT_MDL_RSP)
-	assert(abortRspObj.mdlid == 0xFFFF)
-	assert(abortRspObj.rspcode == MCAP_RSP_INVALID_MDL)
+	msg = testmsg("0605FFFF")
+	msgObj = parser.parse(msg)
+	assert(msgObj.opcode == MCAP_MD_ABORT_MDL_RSP)
+	assert(msgObj.mdlid == 0xFFFF)
+	assert(msgObj.rspcode == MCAP_RSP_INVALID_MDL)
+	assert(msgObj.encode() == msg)
 	
 
 	# test DeleteRsp message parsing
-	deleteRsp = testmsg("080000CC")
-	deleteRspObj = parser.parse(deleteRsp)
-	assert(deleteRspObj.opcode == MCAP_MD_DELETE_MDL_RSP)
-	assert(deleteRspObj.mdlid == 0x00CC)
-	assert(deleteRspObj.rspcode == MCAP_RSP_SUCCESS)
+	msg = testmsg("080000CC")
+	msgObj = parser.parse(msg)
+	assert(msgObj.opcode == MCAP_MD_DELETE_MDL_RSP)
+	assert(msgObj.mdlid == 0x00CC)
+	assert(msgObj.rspcode == MCAP_RSP_SUCCESS)
+	assert(msgObj.encode() == msg)
 
 
 	exc = None
