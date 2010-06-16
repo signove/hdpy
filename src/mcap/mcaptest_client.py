@@ -12,23 +12,27 @@ from mcap import MCLStateMachine, MCL
 
 class MCAPSessionClientStub:
 
-	sent = ["0x0AFF000ABC", # send an invalid message (Op Code does not exist)
-		"0x01FF000ABC", # send a CREATE_MD_REQ (0x01) with invalid MDLID == 0xFF00 (DO NOT ACCEPT)
-        	"0x0100230ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC (ACCEPT)
-		"0x0100240ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0024 CONF = 0xBC (ACCEPT)
-        	"0x0100270ABC",  # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0027 CONF = 0xBC (ACCEPT)
-        	"0x050027", # send an invalid ABORT_MD_REQ (0x05) MDLID == 0x0027 (DO NOT ACCEPT - not on PENDING state)
-        	"0x070030", # send a valid DELETE_MD_REQ (0x07) MDLID == 0x0027
-        	"0x07FFFF"] # send a valid DELETE_MD_REQ (0x07) MDLID == MDL_ID_ALL (0XFFFF)
+	sent = [ 
+		"0AFF000ABC", # send an invalid message (Op Code does not exist)
+		"01FF000ABC", # send a CREATE_MD_REQ (0x01) with invalid MDLID == 0xFF00 (DO NOT ACCEPT)
+        	"0100230ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC (ACCEPT)
+		"0100240ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0024 CONF = 0xBC (ACCEPT)
+        	"0100270ABC",  # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0027 CONF = 0xBC (ACCEPT)
+        	"050027", # send an invalid ABORT_MD_REQ (0x05) MDLID == 0x0027 (DO NOT ACCEPT - not on PENDING state)
+        	"070030", # send a valid DELETE_MD_REQ (0x07) MDLID == 0x0027
+        	"07FFFF", # send a valid DELETE_MD_REQ (0x07) MDLID == MDL_ID_ALL (0XFFFF)
+		]
 
-	received = ["0x00010000", # receive a ERROR_RSP (0x00) with RSP Invalid OP (0x01)
-		    "0x0205FF00BC", # receive a CREATE_MD_RSP (0x02) with RSP Invalid MDL (0x05)
-        	    "0x02000023BC", # receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
-		    "0x02000024BC", # receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
-        	    "0x02000027BC", # receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
-        	    "0x06070027", # receive a ABORT_MD_RSP (0x06) with RSP Invalid Operation (0x07)
-        	    "0x08000030", # receive a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
-        	    "0x0800FFFF"] # receive a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
+	received = [
+		"00010000", # receive a ERROR_RSP (0x00) with RSP Invalid OP (0x01)
+		"0205FF00BC", # receive a CREATE_MD_RSP (0x02) with RSP Invalid MDL (0x05)
+        	"02000023BC", # receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
+		"02000024BC", # receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
+        	"02000027BC", # receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
+        	"06070027", # receive a ABORT_MD_RSP (0x06) with RSP Invalid Operation (0x07)
+        	"08000030", # receive a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
+        	"0800FFFF", # receive a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
+		]
 
 	def __init__(self, _mcl):
 		self.bclock = threading.Lock()
@@ -55,7 +59,7 @@ class MCAPSessionClientStub:
 				if (message != ''):
 					# do whatever you want
 					self.mcl_state_machine.receive_message(message)
-					assert(message == self.received[self.counter])
+					assert(message == mcap_defs.testmsg(self.received[self.counter]))
 					self.check_asserts(self.counter)
 					self.bclock.acquire()
 					self.can_write = True
@@ -68,12 +72,12 @@ class MCAPSessionClientStub:
 
 	def write_cb(self, socket, *args):
 		#print "CAN WRITE"
-		if ( self.counter >= len(self.sent) ):
+		if ( self.counter >= len(mcap_defs.testmsg(self.sent)) ):
 			self.stop_session()
 			return True
 
 		if (self.can_write) :
-			self.mcl_state_machine.send_raw_message(self.sent[self.counter])		
+			self.mcl_state_machine.send_raw_message(mcap_defs.testmsg(self.sent[self.counter]))
 			self.bclock.acquire()
 			self.can_write = False
 			self.bclock.release()

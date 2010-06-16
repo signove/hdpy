@@ -104,7 +104,7 @@ class MCL(object):
 
 	def connect(self, btaddr):
 		if not self.is_cc_open():
-			self.cc = create_control_socket()
+			self.cc, psm = create_control_socket(self.btaddr)
 			set_ertm(self.cc)
 			self.psm = btaddr[1]
 			self.cc.connect((btaddr[0], self.psm))
