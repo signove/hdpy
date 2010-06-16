@@ -444,12 +444,13 @@ class MessageParser:
 	def get_opcode(self, message):
 		if len(message) < 1:
 			raise InvalidMessage("Empty message")
-		return struct.unpack("B", message[0])[0]
+		opcode = struct.unpack("B", message[0])[0]
+		if opcode not in self.known_opcodes:
+			raise InvalidMessage("Unknown opcode %d" % opcode)
+		return opcode
 
 	def parse(self, message):
                 opcode = self.get_opcode(message)
-		if opcode not in self.known_opcodes:
-			raise InvalidMessage("Bad message opcode: %d" % opcode)
 		k = self.known_opcodes[opcode]
 		o = k.decode(message)
 		return o
