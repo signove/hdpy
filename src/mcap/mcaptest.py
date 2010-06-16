@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import mcap_defs
+from mcap_defs import *
 
 # MD_CREATE_MDL
 
