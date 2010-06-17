@@ -160,7 +160,7 @@ class MCL(object):
 
 	def close(self):
 		if self.sk:
-			self.delete_all_mdls() # delete all MDLS first
+			self.close_all_mdls()
 			try:
 				self.sk.shutdown(2)
 				self.sk.close()
@@ -252,6 +252,11 @@ class MCL(object):
 			mdl.state = MCAP_MDL_STATE_DELETED
 		return mdl is not None
 	
+	def close_all_mdls(self):
+		for mdl in self.mdl_list:
+			if mdl.state != MCAP_MDL_STATE_DELETED:
+				mdl.close()
+
 	def delete_all_mdls(self):
 		for mdl in self.mdl_list:
 			mdl.close()
