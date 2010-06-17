@@ -2,7 +2,6 @@
 
 from mcap_defs import *
 from mcap import *
-from test1 import *
 import time
 import sys
 import glib
@@ -45,13 +44,16 @@ class MCAPSessionClientStub:
 	def closed_mcl(self, mcl, *args):
 		self.stop_session(mcl)
 
-	def activity_mcl(self, mcl, message, *args):
-		print "Received raw msg", repr(message)
-		expected_msg = testmsg(self.received[self.counter])
-		assert(message == expected_msg)
-		self.check_asserts(mcl)
-		self.counter += 1
-		self.take_initiative(mcl)
+	def activity_mcl(self, mcl, recv, message, *args):
+		if recv:
+			print "Received raw msg", repr(message)
+			expected_msg = testmsg(self.received[self.counter])
+			assert(message == expected_msg)
+			self.check_asserts(mcl)
+			self.counter += 1
+			self.take_initiative(mcl)
+		else:
+			print "Sent raw msg", repr(message)
 		return True
 
 	def take_initiative(self, mcl):

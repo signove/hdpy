@@ -4,37 +4,6 @@ from mcap_defs import *
 from mcap_sock import *
 import time
 
-MCAP_MCL_ROLE_ACCEPTOR		= 'ACCEPTOR'
-MCAP_MCL_ROLE_INITIATOR		= 'INITIATOR'  
-
-MCAP_STATE_READY		= 'READY'
-MCAP_STATE_WAITING		= 'WAITING'
-
-MCAP_MCL_STATE_IDLE		= 'IDLE'
-MCAP_MCL_STATE_CONNECTED	= 'CONNECTED'
-MCAP_MCL_STATE_PENDING		= 'PENDING'
-MCAP_MCL_STATE_ACTIVE		= 'ACTIVE'
-
-MCAP_MDL_STATE_CLOSED		= 'CLOSED'
-MCAP_MDL_STATE_LISTENING	= 'LISTENING'
-MCAP_MDL_STATE_ACTIVE		= 'ACTIVE'
-MCAP_MDL_STATE_CLOSED		= 'CLOSED'
-MCAP_MDL_STATE_DELETED		= 'DELETED'
-
-error_rsp_messages = { 
-	MCAP_RSP_INVALID_OP_CODE:		"Invalid Op Code",
-	MCAP_RSP_INVALID_PARAMETER_VALUE:	"Invalid Parameter Value",
-	MCAP_RSP_INVALID_MDEP:			"Invalid MDEP",
-	MCAP_RSP_MDEP_BUSY:			"MDEP Busy",
-	MCAP_RSP_INVALID_MDL:			"Invalid MDL",
-	MCAP_RSP_MDL_BUSY:			"MDL Busy",
-	MCAP_RSP_INVALID_OPERATION:		"Invalid Operation",
-	MCAP_RSP_RESOURCE_UNAVAILABLE:		"Resource Unavailable",
-	MCAP_RSP_UNSPECIFIED_ERROR:		"Unspecified Error",
-	MCAP_RSP_REQUEST_NOT_SUPPORTED:		"Request Not Supported",
-	MCAP_RSP_CONFIGURATION_REJECTED:	"Configuration Rejected",
-	}
-
 
 class InvalidOperation(Exception):
 	pass
@@ -171,8 +140,9 @@ class MCL(object):
 			except IOError:
 				pass
 			self.sk = None
+			self.observer.closed_mcl(self)
+
 		self.state = MCAP_MCL_STATE_IDLE
-		self.observer.closed_mcl(self)
 
 	def connect(self):
 		if self.state != MCAP_MCL_STATE_IDLE:
@@ -189,7 +159,7 @@ class MCL(object):
 		message = self.read()
 		if message:
 			self.sm.receive_message(message)
-			self.observer.activity_mcl(self, message)
+			self.observer.activity_mcl(self, True, message)
 		else:
 			self.close()
 		return True
@@ -219,6 +189,7 @@ class MCL(object):
 	def write(self, message):
 		try:
 			l = self.sk.send(message)
+			self.observer.activity_mcl(self, False, message)
 		except IOError:
 			l = 0
 		return l > 0
@@ -327,13 +298,7 @@ class MCLStateMachine:
 		# convert __command to raw representation
 		# use CC to send command
 		self.last_sent = message
-		try:
-			# do whatever you want
-			self.mcl.write(message.encode())
-			return True
-		except Exception as msg:
-			print "CANNOT WRITE: " + str(msg)
-			return False
+		return self.mcl.write(message.encode())
 			
 ## RECEIVE METHODS
 

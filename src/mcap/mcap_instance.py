@@ -25,17 +25,20 @@ class MCAPInstance:
 			self.do_listen()
 
 	def do_listen(self):
-		self.ccl = ControlChannelListener(adapter, self)
+		self.ccl = ControlChannelListener(self.adapter, self)
 		self.cpsm = self.ccl.psm
-		self.dcl = DataChannelListener(adapter, self)
+		self.dcl = DataChannelListener(self.adapter, self)
 		self.dpsm = self.ccl.psm
 
 ### Commands
 
 	# feedback via callback
 	def CreateMCL(self, addr):
-		pass # FIXME5
-		# return mcl
+		mcl = MCL(self, self.adapter, MCAP_MCL_ROLE_INITIATOR, addr)
+		mcl.connect()
+		self.MCLConnected(mcl) # FIXME
+		pass # FIXME handling mcl
+		return mcl
 	
 	def DeleteMCL(self, mcl):
 		pass # FIXME
@@ -43,13 +46,17 @@ class MCAPInstance:
 	def CloseMCL(self, mcl):
 		pass # FIXME
 
-	def CreateMDL(self, mcl, mdep_id, conf):
+	def CreateMDL(self, mcl, mdlid, mdepid, conf):
 		''' followed by ConnectMDL/AbortMDL, which should be '''
 		''' invoked when MDLRequested callback is triggered '''
+		req = CreateMDLRequest(mdlid, mdepid, conf)
+		mcl.sm.send_request(req)
 		pass # FIXME
 		# return mdl
 
-	def AbortMDL(self, mdl):
+	def AbortMDL(self, mcl, mdlid):
+		req = AbortMDLRequest(mdlid)
+		mcl.sm.send_request(req)
 		pass # FIXME
 
 	def ConnectMDL(self, mdl):
@@ -73,12 +80,16 @@ class MCAPInstance:
 	def Send(self, mdl, data):
 		pass # FIXME
 
+	def SendRawRequest(self, mcl, *chars):
+		req = RawRequest(*chars)
+		mcl.sm.send_request(req)
+
 ### Callback methods that must be implemented by subclass
 
 	def Recv(self, mdl, data):
 		raise Exception("Not implemented")
 
-	def MCLConnected(self, mcl, remote_addr):
+	def MCLConnected(self, mcl):
 		raise Exception("Not implemented")
 
 	def MCLDisconnected(self, mcl):
@@ -118,19 +129,43 @@ class MCAPInstance:
 	def Idle(self, cb, *args):
 		raise Exception("Not implemented")
 
+### Callback methods that may be reimplemented if subclass is interested
+
+	def RecvDump(self, mcl, message):
+		pass
+
+	def SendDump(self, mcl, message):
+		pass
+	
+### Internal machinery
+
 ### Internal callbacks
 
 	def watch_cc(self, listener, fd, activity_cb, error_cb):
 		self.Watch(fd, activity_cb, error_cb)
 
 	def new_cc(self, listener, sk, remote_addr):
+		# FIXME check for duplicate
 		mcl = MCL(self, self.adapter, MCAP_MCL_ROLE_ACCEPTOR, remote_addr)
 		mcl.accept(sk)
 		# FIXME mcl handling
-		# FIXME feedback
+		self.MCLConnected(mcl)
 
 	def error_cc(self, listener):
-		pass # FIXME
+		raise Exception("Error in control PSM listener, bailing out")
+
+	def watch_mcl(self, mcl, fd, activity_cb, error_cb):
+		self.Watch(fd, activity_cb, error_cb)
+
+	def closed_mcl(self, mcl):
+		self.MCLDisconnected(mcl)
+		pass # FIXME mcl has been closed
+
+	def activity_mcl(self, mcl, is_recv, message):
+		if is_recv:
+			self.RecvDump(mcl, message)
+		else:
+			self.SendDump(mcl, message)
 
 	def watch_dc(self, listener, fd, activity_cb, error_cb):
 		self.Watch(fd, activity_cb, error_cb)
@@ -139,7 +174,7 @@ class MCAPInstance:
 		pass # FIXME
 
 	def error_dc(self, listener):
-		pass # FIXME
+		raise Exception("Error in data PSM listener, bailing out")
 
 # FIXME incorporate test1
 # FIXME call the callbacks

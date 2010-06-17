@@ -45,7 +45,41 @@ MCAP_MDL_ID_ALL				= 0xFFFF
 MCAP_MDEP_ID_INITIAL			= 0x00
 MCAP_MDEP_ID_FINAL			= 0x7F
 
-# Errors
+# State
+MCAP_MCL_ROLE_ACCEPTOR		= 'ACCEPTOR'
+MCAP_MCL_ROLE_INITIATOR		= 'INITIATOR'  
+
+MCAP_STATE_READY		= 'READY'
+MCAP_STATE_WAITING		= 'WAITING'
+
+MCAP_MCL_STATE_IDLE		= 'IDLE'
+MCAP_MCL_STATE_CONNECTED	= 'CONNECTED'
+MCAP_MCL_STATE_PENDING		= 'PENDING'
+MCAP_MCL_STATE_ACTIVE		= 'ACTIVE'
+
+MCAP_MDL_STATE_CLOSED		= 'CLOSED'
+MCAP_MDL_STATE_LISTENING	= 'LISTENING'
+MCAP_MDL_STATE_ACTIVE		= 'ACTIVE'
+MCAP_MDL_STATE_CLOSED		= 'CLOSED'
+MCAP_MDL_STATE_DELETED		= 'DELETED'
+
+# Verbose error messages
+
+error_rsp_messages = { 
+	MCAP_RSP_INVALID_OP_CODE:		"Invalid Op Code",
+	MCAP_RSP_INVALID_PARAMETER_VALUE:	"Invalid Parameter Value",
+	MCAP_RSP_INVALID_MDEP:			"Invalid MDEP",
+	MCAP_RSP_MDEP_BUSY:			"MDEP Busy",
+	MCAP_RSP_INVALID_MDL:			"Invalid MDL",
+	MCAP_RSP_MDL_BUSY:			"MDL Busy",
+	MCAP_RSP_INVALID_OPERATION:		"Invalid Operation",
+	MCAP_RSP_RESOURCE_UNAVAILABLE:		"Resource Unavailable",
+	MCAP_RSP_UNSPECIFIED_ERROR:		"Unspecified Error",
+	MCAP_RSP_REQUEST_NOT_SUPPORTED:		"Request Not Supported",
+	MCAP_RSP_CONFIGURATION_REJECTED:	"Configuration Rejected",
+	}
+
+# Error exceptions
 
 class InvalidMessage(Exception):
 	pass
@@ -55,7 +89,18 @@ class InvalidResponse(Exception):
 
 # General messages
 
-class MDLRequest:
+class RawRequest(object):
+	''' This class is for error injection purposes only '''
+
+	def __init__(self, *b):
+		self.raw = "".join([chr(x) for x in b])
+		self.opcode = b[0]
+
+	def encode(self):
+		return self.raw
+
+
+class MDLRequest(object):
 	mask1 = ">BH"
 	mask1_size = struct.calcsize(mask1)
 
@@ -76,7 +121,7 @@ class MDLRequest:
 		return list(data[1:]), message[MDLRequest.mask1_size:]
 
 
-class MDLResponse:
+class MDLResponse(object):
 	mask1 = ">BBH"
 	mask1_size = struct.calcsize(mask1)
 
@@ -98,7 +143,7 @@ class MDLResponse:
 		return list(data[1:]), message[MDLResponse.mask1_size:]
 
 
-class CSPRequest:
+class CSPRequest(object):
 	mask1 = ">B"
 	mask1_size = struct.calcsize(mask1)
 
@@ -118,7 +163,7 @@ class CSPRequest:
 		return list(data[1:]), message[mask1_size:]
 
 
-class CSPResponse:
+class CSPResponse(object):
 	mask1 = ">BB"
 	mask1_size = struct.calcsize(mask1)
 

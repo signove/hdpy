@@ -2,7 +2,6 @@
 
 from mcap_defs import *
 from mcap import *
-from test1 import *
 import sys
 import time
 import glib
@@ -61,8 +60,11 @@ class MCAPSessionServerStub:
 	def stop_session(self):
 		glib.MainLoop.quit(self.inLoop)
 
-	def activity_mcl(self, mcl, message, *args):
-		print "Received", repr(message)
+	def activity_mcl(self, mcl, recv, message, *args):
+		if recv:
+			print "Received", repr(message)
+		else:
+			print "Sent", repr(message)
 		return True
 
 	def loop(self):
