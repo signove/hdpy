@@ -36,135 +36,144 @@ error_rsp_messages = {
 	}
 
 
+class ControlChannelListener(object):
+	def __init__(self, adapter, observer):
+		self.observer = observer
+		socket, psm = create_data_listening_socket(adapter, True, 512)
+		self.sk = socket
+		self.psm = psm
+
+	def activity(self, *args):
+		sk, address = self.sk.accept()
+		self.observer.new_cc(sk, address)
+		return True
+
+
+
+class DataChannelListener(object):
+	def __init__(self, adapter, observer):
+		socket, psm = create_control_listening_socket(adapter)
+		self.observer = observer
+		self.sk = socket
+		self.psm = psm
+
+	def activity(self, *args):
+		sk, address = self.sk.accept()
+		self.observer.new_cc(sk, address)
+		return True
+
+
 class MDL(object):
 
-	def __init__(self, btaddr, mdlid = 0, mdepid = 0):
-		self.btaddr = btaddr
+	def __init__(self, mcl, mdlid, mdepid):
+		self.mcl = mcl
 		self.mdlid = mdlid
 		self.mdepid = mdepid
+		self.sk = None
 		self.state = MCAP_MDL_STATE_CLOSED
-		self.dc = None
-		self.psm = None
 
-	def open(self):
-		self.state = MCAP_MDL_STATE_LISTENING
-		socket, psm = create_data_listening_socket(self.btaddr, True, 512)
-		self.dc = socket
-		self.psm = psm		
-		self.state = MCAP_MDL_STATE_ACTIVE
-	
 	def close(self):
-		if self.state in (MCAP_MDL_STATE_LISTENING,
-			          MCAP_MDL_STATE_ACTIVE):
-			self.dc.shutdown(2)
-			self.dc.close()
-			self.dc = None
 		self.state = MCAP_MDL_STATE_CLOSED
+		if self.sk:
+			try:
+				self.sk.shutdown(2)
+				self.sk.close()
+			except IOError:
+				pass
+			self.sk = None
+
+	def accept(self, sk):
+		if self.state != MCAP_MDL_STATE_CLOSED:
+			raise InvalidOperation("Trying to accept over a non-closed MDL")
+
+		self.sk = sk
+		self.state = MCAP_MDL_STATE_ACTIVE
 
 	def connect(self):
-		if self.state == MCAP_MDL_STATE_LISTENING:
-			socket = create_data_socket(self.btaddr, None, True, 512)
-			self.dc = socket
-			self.psm = 0
-		self.state = MCAP_MDL_STATE_ACTIVE	
+		if self.state != MCAP_MDL_STATE_CLOSED:
+			raise InvalidOperation("Trying to connect a non-closed MDL")
+
+		socket = create_data_socket(self.mcl.adapter, None, True, 512)
+		self.sk = socket
+		self.sk.connect(self.mcl.remote_addr)
+		self.state = MCAP_MDL_STATE_ACTIVE
 
 	def __eq__(self, mdl):
 		return self.mdlid == mdl.mdlid
 
 	def __cmp__(self, mdl):
-		if ( self.mdlid < mdl.mdlid ):
+		if self.mdlid < mdl.mdlid:
 			return -1
-		elif ( self.__eq__(_mdl) ):
+		elif self.__eq__(_mdl):
 			return 0
 		else:
 			return 1
 
+	def read(self):
+		try:
+			message = self.sk.recv(1024)
+		except IOError:
+			message = ''
+		if not message:
+			self.close()
+		return message
+
+	def write(self, message):
+		try:
+			l = self.sk.send(message)
+		except IOError:
+			l = 0
+		ok = l > 0
+		if not ok:
+			self.close()
+		return ok
+
 
 class MCL(object):
 
-	def __init__(self, btaddr, role):
-		self.btaddr = btaddr 
-		self.remote = None
+	def __init__(self, adapter, role, remote_addr):
+		self.adapter = adapter 
+		self.role = role
+		self.remote_addr = remote_addr
+
 		self.state = MCAP_MCL_STATE_IDLE
 		self.lastmdlid = MCAP_MDL_ID_INITIAL
 
 		self.csp_base_time = time.time()
 		self.csp_base_counter = 0
 
-		self.cc = None
-		self.psm = None
+		self.sk = None
 
 		self.mdl_list = []
 		self.is_channel_open = False
 
-		self.role = role
-
 		self.index = 0
 
-	def is_cc_open(self):
-		return self.state != MCAP_MCL_STATE_IDLE
-
-	def open(self):
-		if not self.is_cc_open():
-			server_socket, self.psm = create_control_listening_socket(self.btaddr)
-			self.cc, address = server_socket.accept()
-			self.cc.setblocking(True)
-			self.state = MCAP_MCL_STATE_CONNECTED
-		# FIXME annotate remote upon accept
+	def accept(self, sk):
+		self.sk = sk
+		self.state = MCAP_MCL_STATE_CONNECTED
 
 	def close(self):
-		if self.is_cc_open():
+		if self.sk:
 			self.delete_all_mdls() # delete all MDLS first
-			self.cc.shutdown(2)
-			self.cc.close()
-			self.state = MCAP_MCL_STATE_IDLE
-			self.remote = None
+			try:
+				self.sk.shutdown(2)
+				self.sk.close()
+			except IOError:
+				pass
+			self.sk = None
+		self.state = MCAP_MCL_STATE_IDLE
+		self.remote_addr = None
 
-	def connect(self, btaddr):
-		if not self.is_cc_open():
-			self.cc = create_control_socket(self.btaddr)
-			set_ertm(self.cc)
-			self.psm = 0
-			self.cc.connect(btaddr)
-			self.cc.setblocking(True)
-			self.state = MCAP_MCL_STATE_CONNECTED
-			self.remote = btaddr
+	def connect(self):
+		if self.state != MCAP_MCL_STATE_IDLE:
+			raise InvalidOperation("State is not idle (already open/connected")
 
-	def open_cc(self):
-		if self.is_cc_open():
-			return False
+		sk = create_control_socket(self.adapter)
+		sk.connect(self.remote_addr)
 
-		try:
-			self.open()
-		except Exception as error:
-			print 'ERROR: ' + str(error)
-			return False
-
-		return True
-
-	def connect_cc(self, btaddr):
-		if self.is_cc_open():
-			return False
-
-		try:
-			self.connect(btaddr)
-		except Exception as error:
-			print 'ERROR: ' + str(error)
-			return False
-
-		return True
-
-	def close_cc(self):
-		if not self.is_cc_open():
-			return False
-
-		try:
-			self.close()
-		except Exception as msg:
-			print 'ERROR: ' + str(msg)
-			return False
-
-		return True
+		self.sk = sk
+		self.state = MCAP_MCL_STATE_CONNECTED
 
 	def get_csp_timestamp(self):
 		now = time.time()
@@ -178,18 +187,18 @@ class MCL(object):
 		self.csp_base_counter = counter
 
 	def read(self):
-		if self.is_cc_open():
-			message = self.cc.recv(1024)
-			return message
-		else:
-			return ''
+		try:
+			message = self.sk.recv(1024)
+		except IOError:
+			message = ''
+		return message
 
 	def write(self, message):
-		if self.is_cc_open():
-			try:
-				self.cc.send(message)
-			except Exception as error:
-				print error
+		try:
+			l = self.sk.send(message)
+		except IOError:
+			l = 0
+		return l > 0
 
 	def count_mdls(self):
 		counter = 0 
@@ -370,7 +379,7 @@ class MCLStateMachine:
 
 	def process_create_response(self, response):
 		if response.rspcode == MCAP_RSP_SUCCESS:
-			self.mcl.add_mdl( MDL(response.mdlid, 0) )
+			self.mcl.add_mdl( MDL(self.mcl, response.mdlid, 0) )
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 		else:
 			if self.mcl.has_mdls():
@@ -391,7 +400,7 @@ class MCLStateMachine:
 			if mdlid == MCAP_MDL_ID_ALL:
 				self.mcl.delete_all_mdls()
 			else:
-				self.mcl.delete_mdl( MDL(response.mdlid,0) )
+				self.mcl.delete_mdl( MDL(self.mcl, response.mdlid,0) )
 			
 			if not self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
@@ -428,10 +437,10 @@ class MCLStateMachine:
 			elif request.opcode == MCAP_MD_ABORT_MDL_REQ:
 				return self.process_abort_request(request)
 			else:
-				raise Exception("Should not happen")
+				raise InvalidOperation("Should not happen")
 
 		except InvalidMessage:
-			# FIXME: damaged messages should have a harsher response
+			# FIXME: damaged messages should have a harsher response?
 			opcodeRsp = request.opcode + 1
 			rsp = MDLResponse(opcodeRsp, MCAP_RSP_REQUEST_NOT_SUPPORTED, 0x0000)
 			return self.send_response(rsp)
@@ -463,7 +472,7 @@ class MCLStateMachine:
 		success = self.send_response(createResponse)
 
 		if success and (rspcode == MCAP_RSP_SUCCESS):
-			self.mcl.add_mdl(MDL(request.mdlid,0))
+			self.mcl.add_mdl(MDL(self.mcl, request.mdlid, 0))
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 		
 		return success
@@ -486,7 +495,7 @@ class MCLStateMachine:
 		success = self.send_response(reconnectResponse)
 
 		if success and (rspcode == MCAP_RSP_SUCCESS):
-			self.mcl.add_mdl( MDL(request.mdlid,0) )
+			self.mcl.add_mdl( MDL(self.mcl, request.mdlid, 0) )
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 
 		return success
@@ -511,7 +520,7 @@ class MCLStateMachine:
 			if request.mdlid == MCAP_MDL_ID_ALL:
 				self.mcl.delete_all_mdls()
 			else:
-				self.mcl.delete_mdl( MDL(request.mdlid, 0) )
+				self.mcl.delete_mdl( MDL(self.mcl, request.mdlid, 0) )
 
 			if not self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED	
@@ -541,7 +550,7 @@ class MCLStateMachine:
 		if (mdlid == MCAP_MDL_ID_ALL):
 			return True
 		
-		return self.mcl.contains_mdl( MDL(mdlid, 0) )
+		return self.mcl.contains_mdl( MDL(self.mcl, mdlid, 0) )
 
 	def is_valid_mdlid(self, mdlid, accept_all):
 		# has 16 bits

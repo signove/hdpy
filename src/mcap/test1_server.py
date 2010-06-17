@@ -6,7 +6,6 @@ from test1 import *
 import sys
 import time
 import glib
-import threading
 
 class MCAPSessionServerStub:
 
@@ -32,20 +31,26 @@ class MCAPSessionServerStub:
         	"0800FFFF", # receive a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
 		]
 
-	def __init__(self, _mcl):
-		self.bclock = threading.Lock()
-		self.mcl = _mcl
-		self.mcl_sm = MCLStateMachine(_mcl)
+	def __init__(self):
+		pass
+
+	def new_cc(self, sk, remote_addr):
+		self.mcl = MCL("00:00:00:00:00:00", MCAP_MCL_ROLE_ACCEPTOR, remote_addr)
+		assert(self.mcl.state == MCAP_MCL_STATE_IDLE)
+		self.mcl.accept(sk)
+		assert(self.mcl.state == MCAP_MCL_STATE_CONNECTED)
+
+		self.mcl_sm = MCLStateMachine(self.mcl)
+
+		glib.io_add_watch(self.mcl.sk, glib.IO_IN, self.read_cb)
+		glib.io_add_watch(self.mcl.sk, glib.IO_ERR, self.close_cb)
+		glib.io_add_watch(self.mcl.sk, glib.IO_HUP, self.close_cb)
+
+		print "Connected!"
 
 	def stop_session(self):
-		self.mcl.close_cc()
+		self.mcl.close()
 		glib.MainLoop.quit(self.inLoop)
-
-	def start_session(self):
-		if self.mcl.is_cc_open():
-			glib.io_add_watch(self.mcl.cc, glib.IO_IN, self.read_cb)
-			glib.io_add_watch(self.mcl.cc, glib.IO_ERR, self.close_cb)
-			glib.io_add_watch(self.mcl.cc, glib.IO_HUP, self.close_cb)
 
 	def read_cb(self, socket, *args):
 		try:
@@ -53,6 +58,7 @@ class MCAPSessionServerStub:
 		except IOError:
 			message = ""
 		if message:
+			print "Received", repr(message)
 			self.mcl_sm.receive_message(message)
 		else:
 			self.stop_session()
@@ -68,25 +74,14 @@ class MCAPSessionServerStub:
 
 
 if __name__=='__main__':
+	session = MCAPSessionServerStub()
+	mcl_listener = ControlChannelListener("00:00:00:00:00:00", session)
+	glib.io_add_watch(mcl_listener.sk, glib.IO_IN, mcl_listener.activity)
+	glib.io_add_watch(mcl_listener.sk, glib.IO_ERR, mcl_listener.activity)
+	glib.io_add_watch(mcl_listener.sk, glib.IO_HUP, mcl_listener.activity)
 
-	mcl = MCL("00:00:00:00:00:00", MCAP_MCL_ROLE_ACCEPTOR)
-
-	mcap_session = MCAPSessionServerStub(mcl)
-
-	assert(mcl.state == MCAP_MCL_STATE_IDLE)
-
-	# wait until a connection is done
 	print "Waiting for connections on default dev"
-	mcl.open_cc()
+	session.loop()
 
-	print "Connected!"
-	mcap_session.start_session()
-	assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
-
-	print "Start main loop... "
-
-	mcap_session.loop()
-	
 	print "Main loop finished."
-
 	print 'TESTS OK' 

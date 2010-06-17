@@ -37,23 +37,19 @@ class MCAPSessionClientStub:
 		self.mcl_sm = MCLStateMachine(_mcl)
 
 	def stop_session(self):
-		self.mcl.close_cc()
+		self.mcl.close()
 		glib.MainLoop.quit(self.inLoop)
 
-	def start_session(self):
-		if self.mcl.is_cc_open():
-			glib.io_add_watch(self.mcl.cc, glib.IO_IN, self.read_cb)
-			glib.io_add_watch(self.mcl.cc, glib.IO_ERR, self.close_cb)
-			glib.io_add_watch(self.mcl.cc, glib.IO_HUP, self.close_cb)
 
 	def read_cb(self, socket, *args):
 		try:
 			message = self.mcl.read()
 		except IOError:
+			print "IOError"
 			message = ""
 	
 		if message:
-			"Received raw msg", repr(message)
+			print "Received raw msg", repr(message)
 			self.mcl_sm.receive_message(message)
 			expected_msg = testmsg(self.received[self.counter])
 			assert(message == expected_msg)
@@ -66,7 +62,7 @@ class MCAPSessionClientStub:
 		return True
 
 	def take_initiative(self):
-		glib.timeout_add(0, self.take_initiative_cb)
+		glib.idle_add(self.take_initiative_cb)
 
 	def take_initiative_cb(self, *args):
 		if self.counter >= len(self.sent):
@@ -116,31 +112,28 @@ class MCAPSessionClientStub:
 
 if __name__=='__main__':
 	try:
-		btaddr = sys.argv[1]
-		psm = int(sys.argv[2])
+		remote_addr = (sys.argv[1], int(sys.argv[2]))
 	except:
 		print "Usage: %s <remote addr> <remote control PSM>" % sys.argv[0]
 		sys.exit(1)
 
-	mcl = MCL("00:00:00:00:00:00", MCAP_MCL_ROLE_INITIATOR)
+	mcl = MCL("00:00:00:00:00:00", MCAP_MCL_ROLE_INITIATOR, remote_addr)
 
-	mcap_session = MCAPSessionClientStub(mcl)
+	session = MCAPSessionClientStub(mcl)
 
 	assert(mcl.state == MCAP_MCL_STATE_IDLE)
 
 	print "Requesting connection..."
-	if ( not mcl.is_cc_open() ):
-		mcl.connect_cc((btaddr, psm))
+	mcl.connect()
 
 	print "Connected!"
 	assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
 
-	if ( mcl.is_cc_open() ):
-		mcap_session.start_session()
-	else:
-		raise Exception ('ERROR: Cannot open control channel for initiator')
+	glib.io_add_watch(mcl.sk, glib.IO_IN, session.read_cb)
+	glib.io_add_watch(mcl.sk, glib.IO_ERR, session.close_cb)
+	glib.io_add_watch(mcl.sk, glib.IO_HUP, session.close_cb)
 
-	mcap_session.take_initiative()
-	mcap_session.loop()
+	session.take_initiative()
+	session.loop()
 
 	print 'TESTS OK' 

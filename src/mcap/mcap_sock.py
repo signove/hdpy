@@ -74,6 +74,7 @@ def create_socket(btaddr, psm, reliable):
 		set_ertm(s)
 	else:
 		set_streaming(s)
+	s.setblocking(True)
 	s.bind((btaddr, psm))
 	return s
 
