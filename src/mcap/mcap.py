@@ -150,6 +150,8 @@ class MCL(object):
 
 		self.index = 0
 
+		self.sm = MCLStateMachine(self)
+
 	def accept(self, sk):
 		self.sk = sk
 		self.state = MCAP_MCL_STATE_CONNECTED

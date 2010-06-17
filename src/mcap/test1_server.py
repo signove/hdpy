@@ -45,8 +45,6 @@ class MCAPSessionServerStub:
 		self.mcl.accept(sk)
 		assert(self.mcl.state == MCAP_MCL_STATE_CONNECTED)
 
-		self.mcl_sm = MCLStateMachine(self.mcl)
-
 		glib.io_add_watch(self.mcl.sk, glib.IO_IN, self.read_cb)
 		glib.io_add_watch(self.mcl.sk, glib.IO_ERR, self.close_cb)
 		glib.io_add_watch(self.mcl.sk, glib.IO_HUP, self.close_cb)
@@ -67,7 +65,7 @@ class MCAPSessionServerStub:
 			message = ""
 		if message:
 			print "Received", repr(message)
-			self.mcl_sm.receive_message(message)
+			self.mcl.sm.receive_message(message)
 		else:
 			self.stop_session()
 		return True

@@ -31,10 +31,9 @@ class MCAPSessionClientStub:
         	"0800FFFF", # receive a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
 		]
 
-	def __init__(self, _mcl):
+	def __init__(self, mcl):
  		self.counter = 0
-		self.mcl = _mcl
-		self.mcl_sm = MCLStateMachine(_mcl)
+		self.mcl = mcl
 
 	def stop_session(self):
 		self.mcl.close()
@@ -50,7 +49,7 @@ class MCAPSessionClientStub:
 	
 		if message:
 			print "Received raw msg", repr(message)
-			self.mcl_sm.receive_message(message)
+			self.mcl.sm.receive_message(message)
 			expected_msg = testmsg(self.received[self.counter])
 			assert(message == expected_msg)
 			self.check_asserts(self.counter)
@@ -70,7 +69,7 @@ class MCAPSessionClientStub:
 		else:
 			msg = testmsg(self.sent[self.counter])
 			print "Sending ", repr(msg)
-			self.mcl_sm.send_raw_message(msg)
+			self.mcl.sm.send_raw_message(msg)
 		# It is important to return False.
 		return False
 
@@ -85,28 +84,28 @@ class MCAPSessionClientStub:
 	def check_asserts(self, counter):
 		if (self.counter == 2):
 			assert(self.mcl.count_mdls() == 1)
-			assert(self.mcl_sm.state == MCAP_STATE_READY)
+			assert(self.mcl.sm.state == MCAP_STATE_READY)
 			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
 		elif (self.counter == 3):
 			assert(self.mcl.count_mdls() == 2)
-			assert(self.mcl_sm.state == MCAP_STATE_READY)
+			assert(self.mcl.sm.state == MCAP_STATE_READY)
 			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)		
 		elif (self.counter == 4):
 			assert(self.mcl.count_mdls() == 3)
-			assert(self.mcl_sm.state == MCAP_STATE_READY)
+			assert(self.mcl.sm.state == MCAP_STATE_READY)
 			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
 		elif (self.counter == 5):
 			assert(self.mcl.count_mdls() == 3)
 			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
-			assert(self.mcl_sm.state == MCAP_STATE_READY)
+			assert(self.mcl.sm.state == MCAP_STATE_READY)
 		elif (self.counter == 6):			
 			assert(self.mcl.count_mdls() == 2)
 			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
-			assert(self.mcl_sm.state == MCAP_STATE_READY)
+			assert(self.mcl.sm.state == MCAP_STATE_READY)
 		elif (self.counter == 7):
 			assert(self.mcl.count_mdls() == 0)
 			assert(self.mcl.state == MCAP_MCL_STATE_CONNECTED)
-			assert(self.mcl_sm.state == MCAP_STATE_READY)
+			assert(self.mcl.sm.state == MCAP_STATE_READY)
 
 		
 
