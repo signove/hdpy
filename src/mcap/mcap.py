@@ -132,7 +132,8 @@ class MDL(object):
 
 class MCL(object):
 
-	def __init__(self, adapter, role, remote_addr):
+	def __init__(self, observer, adapter, role, remote_addr):
+		self.observer = observer
 		self.adapter = adapter 
 		self.role = role
 		self.remote_addr = remote_addr
@@ -155,6 +156,7 @@ class MCL(object):
 	def accept(self, sk):
 		self.sk = sk
 		self.state = MCAP_MCL_STATE_CONNECTED
+		self.observer.watch_mcl(self, sk, self.activity, self.error)
 
 	def close(self):
 		if self.sk:
@@ -166,7 +168,7 @@ class MCL(object):
 				pass
 			self.sk = None
 		self.state = MCAP_MCL_STATE_IDLE
-		self.remote_addr = None
+		self.observer.closed_mcl(self)
 
 	def connect(self):
 		if self.state != MCAP_MCL_STATE_IDLE:
@@ -177,6 +179,20 @@ class MCL(object):
 
 		self.sk = sk
 		self.state = MCAP_MCL_STATE_CONNECTED
+		self.observer.watch_mcl(self, sk, self.activity, self.error)
+
+	def activity(self, *args):
+		message = self.read()
+		if message:
+			self.sm.receive_message(message)
+			self.observer.activity_mcl(self, message)
+		else:
+			self.close()
+		return True
+
+	def error(self, *args):
+		self.close()
+		return True
 
 	def get_csp_timestamp(self):
 		now = time.time()

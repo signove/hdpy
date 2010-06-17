@@ -31,82 +31,71 @@ class MCAPSessionClientStub:
         	"0800FFFF", # receive a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
 		]
 
-	def __init__(self, mcl):
+	def __init__(self):
  		self.counter = 0
-		self.mcl = mcl
 
-	def stop_session(self):
-		self.mcl.close()
+	def stop_session(self, mcl):
 		glib.MainLoop.quit(self.inLoop)
 
+	def watch_mcl(self, mcl, fd, activity_cb, error_cb):
+		glib.io_add_watch(fd, glib.IO_IN, activity_cb)
+		glib.io_add_watch(fd, glib.IO_ERR, error_cb)
+		glib.io_add_watch(fd, glib.IO_HUP, error_cb)
 
-	def read_cb(self, socket, *args):
-		try:
-			message = self.mcl.read()
-		except IOError:
-			print "IOError"
-			message = ""
-	
-		if message:
-			print "Received raw msg", repr(message)
-			self.mcl.sm.receive_message(message)
-			expected_msg = testmsg(self.received[self.counter])
-			assert(message == expected_msg)
-			self.check_asserts(self.counter)
-			self.counter += 1
-			self.take_initiative()
-		else:
-			self.stop_session()
+	def closed_mcl(self, mcl, *args):
+		self.stop_session(mcl)
 
+	def activity_mcl(self, mcl, message, *args):
+		print "Received raw msg", repr(message)
+		expected_msg = testmsg(self.received[self.counter])
+		assert(message == expected_msg)
+		self.check_asserts(mcl)
+		self.counter += 1
+		self.take_initiative(mcl)
 		return True
 
-	def take_initiative(self):
-		glib.idle_add(self.take_initiative_cb)
+	def take_initiative(self, mcl):
+		glib.idle_add(self.take_initiative_cb, mcl)
 
-	def take_initiative_cb(self, *args):
+	def take_initiative_cb(self, mcl, *args):
 		if self.counter >= len(self.sent):
 			self.stop_session()
 		else:
 			msg = testmsg(self.sent[self.counter])
 			print "Sending ", repr(msg)
-			self.mcl.sm.send_raw_message(msg)
+			mcl.sm.send_raw_message(msg)
 		# It is important to return False.
 		return False
-
-	def close_cb(self, socket, *args):
-		self.stop_session()
-		return True
 
 	def loop(self):
 		self.inLoop = glib.MainLoop()
 		self.inLoop.run()
 
-	def check_asserts(self, counter):
+	def check_asserts(self, mcl):
 		if (self.counter == 2):
-			assert(self.mcl.count_mdls() == 1)
-			assert(self.mcl.sm.state == MCAP_STATE_READY)
-			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
+			assert(mcl.count_mdls() == 1)
+			assert(mcl.sm.state == MCAP_STATE_READY)
+			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
 		elif (self.counter == 3):
-			assert(self.mcl.count_mdls() == 2)
-			assert(self.mcl.sm.state == MCAP_STATE_READY)
-			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)		
+			assert(mcl.count_mdls() == 2)
+			assert(mcl.sm.state == MCAP_STATE_READY)
+			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)		
 		elif (self.counter == 4):
-			assert(self.mcl.count_mdls() == 3)
-			assert(self.mcl.sm.state == MCAP_STATE_READY)
-			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
+			assert(mcl.count_mdls() == 3)
+			assert(mcl.sm.state == MCAP_STATE_READY)
+			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
 		elif (self.counter == 5):
-			assert(self.mcl.count_mdls() == 3)
-			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
-			assert(self.mcl.sm.state == MCAP_STATE_READY)
+			assert(mcl.count_mdls() == 3)
+			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
+			assert(mcl.sm.state == MCAP_STATE_READY)
 		elif (self.counter == 6):			
-			assert(self.mcl.count_mdls() == 2)
-			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
-			assert(self.mcl.sm.state == MCAP_STATE_READY)
+			assert(mcl.count_mdls() == 2)
+			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
+			assert(mcl.sm.state == MCAP_STATE_READY)
 		elif (self.counter == 7):
-			assert(self.mcl.count_mdls() == 0)
-			assert(self.mcl.state == MCAP_MCL_STATE_CONNECTED)
-			assert(self.mcl.sm.state == MCAP_STATE_READY)
-
+			assert(mcl.count_mdls() == 0)
+			assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
+			assert(mcl.sm.state == MCAP_STATE_READY)
 		
 
 if __name__=='__main__':
@@ -116,9 +105,8 @@ if __name__=='__main__':
 		print "Usage: %s <remote addr> <remote control PSM>" % sys.argv[0]
 		sys.exit(1)
 
-	mcl = MCL("00:00:00:00:00:00", MCAP_MCL_ROLE_INITIATOR, remote_addr)
-
-	session = MCAPSessionClientStub(mcl)
+	session = MCAPSessionClientStub()
+	mcl = MCL(session, "00:00:00:00:00:00", MCAP_MCL_ROLE_INITIATOR, remote_addr)
 
 	assert(mcl.state == MCAP_MCL_STATE_IDLE)
 
@@ -128,11 +116,7 @@ if __name__=='__main__':
 	print "Connected!"
 	assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
 
-	glib.io_add_watch(mcl.sk, glib.IO_IN, session.read_cb)
-	glib.io_add_watch(mcl.sk, glib.IO_ERR, session.close_cb)
-	glib.io_add_watch(mcl.sk, glib.IO_HUP, session.close_cb)
-
-	session.take_initiative()
+	session.take_initiative(mcl)
 	session.loop()
 
 	print 'TESTS OK' 

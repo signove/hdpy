@@ -40,38 +40,29 @@ class MCAPSessionServerStub:
 		glib.io_add_watch(fd, glib.IO_HUP, error_cb)
 
 	def new_cc(self, listener, sk, remote_addr):
-		self.mcl = MCL("00:00:00:00:00:00", MCAP_MCL_ROLE_ACCEPTOR, remote_addr)
+		self.mcl = MCL(self, "00:00:00:00:00:00", MCAP_MCL_ROLE_ACCEPTOR, remote_addr)
 		assert(self.mcl.state == MCAP_MCL_STATE_IDLE)
 		self.mcl.accept(sk)
 		assert(self.mcl.state == MCAP_MCL_STATE_CONNECTED)
-
-		glib.io_add_watch(self.mcl.sk, glib.IO_IN, self.read_cb)
-		glib.io_add_watch(self.mcl.sk, glib.IO_ERR, self.close_cb)
-		glib.io_add_watch(self.mcl.sk, glib.IO_HUP, self.close_cb)
 
 		print "Connected!"
 
 	def error_cc(eslf, listener):
 		self.stop_session()
 
+	def watch_mcl(self, mcl, fd, activity_cb, error_cb):
+		glib.io_add_watch(fd, glib.IO_IN, activity_cb)
+		glib.io_add_watch(fd, glib.IO_ERR, error_cb)
+		glib.io_add_watch(fd, glib.IO_HUP, error_cb)
+
+	def closed_mcl(self, socket, *args):
+		self.stop_session()
+
 	def stop_session(self):
-		self.mcl.close()
 		glib.MainLoop.quit(self.inLoop)
 
-	def read_cb(self, socket, *args):
-		try:
-			message = self.mcl.read()
-		except IOError:
-			message = ""
-		if message:
-			print "Received", repr(message)
-			self.mcl.sm.receive_message(message)
-		else:
-			self.stop_session()
-		return True
-
-	def close_cb(self, socket, *args):
-		self.stop_session()
+	def activity_mcl(self, mcl, message, *args):
+		print "Received", repr(message)
 		return True
 
 	def loop(self):
