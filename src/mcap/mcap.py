@@ -110,6 +110,7 @@ class MCL(object):
 		self.adapter = adapter 
 		self.role = role
 		self.remote_addr = remote_addr
+		self.invalidated = False
 
 		self.state = MCAP_MCL_STATE_IDLE
 		self.last_mdlid = MCAP_MDL_ID_INITIAL

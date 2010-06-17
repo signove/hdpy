@@ -21,6 +21,8 @@ class MCAPInstance:
 		self.cpsm = 0
 		self.dpsm = 0
 		self.ccl = self.dcl = None
+		self.mcls = []
+		self.peers = {}
 		if listen:
 			self.do_listen()
 
@@ -30,21 +32,56 @@ class MCAPInstance:
 		self.dcl = DataChannelListener(self.adapter, self)
 		self.dpsm = self.ccl.psm
 
+### Housekeeping
+
+	def add_mcl(self, mcl):
+		peer = mcl.remote_addr[0]
+		if mcl in self.mcls:
+			raise Exception("MCL already in instance list")
+		if peer in self.peers:
+			raise Exception("Peer already in instance peer list")
+		if mcl.invalidated:
+			raise Exception("MCL had been deleted")
+		self.mcls.append(mcl)
+		self.peers[peer] = mcl
+
+	def remove_mcl(self, mcl):
+		mcl.close()
+		mcl.invalidated = True
+		for i, item in enumerate(self.mcls):
+			if item is mcl:
+				del self.mcls[i]
+				break
+		del self.peers[mcl.peer]
+
+	def peer_connected(self, remote_addr):
+		return remote_addr[0] in self.peers
+
+	def peer_mcl(self, remote_addr):
+		return self.peers[remote_addr[0]]
+
 ### Commands
 
-	# feedback via callback
 	def CreateMCL(self, addr):
-		mcl = MCL(self, self.adapter, MCAP_MCL_ROLE_INITIATOR, addr)
-		mcl.connect()
-		self.MCLConnected(mcl) # FIXME
-		pass # FIXME handling mcl
+		if self.peer_connected(addr):
+			mcl = self.peer_mcl(addr)
+		else:
+			mcl = MCL(self, self.adapter, MCAP_MCL_ROLE_INITIATOR,
+				addr)
+			self.add_mcl(mcl)
+
+		if mcl.state == MCAP_MCL_STATE_IDLE:
+			mcl.connect()
+
+		self.MCLConnected(mcl) # FIXME async
 		return mcl
 	
 	def DeleteMCL(self, mcl):
-		pass # FIXME
+		self.remove_mcl(mcl)
+		# FIXME deletion feedback?
 
 	def CloseMCL(self, mcl):
-		pass # FIXME
+		mcl.close()
 
 	def CreateMDL(self, mcl, mdlid, mdepid, conf):
 		''' followed by ConnectMDL/AbortMDL, which should be '''
@@ -57,28 +94,38 @@ class MCAPInstance:
 	def AbortMDL(self, mcl, mdlid):
 		req = AbortMDLRequest(mdlid)
 		mcl.sm.send_request(req)
-		pass # FIXME
+		# FIXME abortion feedback?
 
 	def ConnectMDL(self, mdl):
-		pass # FIXME
+		# FIXME test if mdl exist
+		# FIXME connection feedback?
+		pass
 
 	# feedback via callback
 	def DeleteMDL(self, mdl):
-		pass # FIXME
+		mcl = mdl.mcl
+		req = DeleteMDLRequest(mdl.mdlid)
+		mcl.sm.send_request(req)
+		# FIXME mdl deletion feeback?
 
 	# feedback via callback
 	def DeleteAll(self, mcl):
-		pass # FIXME
+		req = DeleteMDLRequest(MCAP_MDL_ID_ALL)
+		mcl.sm.send_request(req)
+		pass # FIXME feeback?
 
 	def CloseMDL(self, mdl):
-		pass # FIXME
+		mcl = mdl.mcl
+		mdl.close()
+		pass # FIXME mdl deletion feebacok?
 
 	# feedback via callback
 	def ReconnectMDL(mdl):
+		mcl = mdl.mcl
 		pass # FIXME
 
 	def Send(self, mdl, data):
-		pass # FIXME
+		return mdl.send(data)
 
 	def SendRawRequest(self, mcl, *chars):
 		req = RawRequest(*chars)
@@ -144,12 +191,20 @@ class MCAPInstance:
 	def watch_cc(self, listener, fd, activity_cb, error_cb):
 		self.Watch(fd, activity_cb, error_cb)
 
-	def new_cc(self, listener, sk, remote_addr):
-		# FIXME check for duplicate
-		mcl = MCL(self, self.adapter, MCAP_MCL_ROLE_ACCEPTOR, remote_addr)
-		mcl.accept(sk)
-		# FIXME mcl handling
-		self.MCLConnected(mcl)
+	def new_cc(self, listener, sk, addr):
+		if self.peer_connected(addr):
+			mcl = self.peer_mcl(addr)
+		else:
+			mcl = MCL(self, self.adapter, MCAP_MCL_ROLE_ACCEPTOR,
+				addr)
+			self.add_mcl(mcl)
+
+		if mcl.state == MCAP_MCL_STATE_IDLE:
+			mcl.accept(sk)
+			self.MCLConnected(mcl)
+		else:
+			# crossed or duplicated connection, reject
+			sk.close()
 
 	def error_cc(self, listener):
 		raise Exception("Error in control PSM listener, bailing out")
@@ -159,7 +214,6 @@ class MCAPInstance:
 
 	def closed_mcl(self, mcl):
 		self.MCLDisconnected(mcl)
-		pass # FIXME mcl has been closed
 
 	def activity_mcl(self, mcl, is_recv, message):
 		if is_recv:
@@ -176,17 +230,14 @@ class MCAPInstance:
 	def error_dc(self, listener):
 		raise Exception("Error in data PSM listener, bailing out")
 
-# FIXME incorporate test1
 # FIXME call the callbacks
-# FIXME MCL = (instance, remote_addr)
 # FIXME mcl.create_mdl() method
-# FIXME Crossed connections protection (MCL/MDL)
+# FIXME Crossed connections protection (MDL)
 # FIXME incoming MDLs
-# FIXME watcher adater
-# FIXME timeout adapter
 # FIXME MDL observer read / error separate
 # FIXME notify close MDL sk
 # FIXME test existing MDL ID
-# FIXME test2
-# FIXME activity_mcl (for debug)
-# FIXME CreateMCL == initator role
+# FIXME CreateMCL() x connect() blockage x feedback
+# FIXME remove direct refs to state machine
+# FIXME Recv for MDLs - connect watcher
+# Uncache timeout
