@@ -21,6 +21,20 @@ MCAP_MDL_STATE_ACTIVE		= 'ACTIVE'
 MCAP_MDL_STATE_CLOSED		= 'CLOSED'
 MCAP_MDL_STATE_DELETED		= 'DELETED'
 
+error_rsp_messages = { 
+	MCAP_RSP_INVALID_OP_CODE:		"Invalid Op Code",
+	MCAP_RSP_INVALID_PARAMETER_VALUE:	"Invalid Parameter Value",
+	MCAP_RSP_INVALID_MDEP:			"Invalid MDEP",
+	MCAP_RSP_MDEP_BUSY:			"MDEP Busy",
+	MCAP_RSP_INVALID_MDL:			"Invalid MDL",
+	MCAP_RSP_MDL_BUSY:			"MDL Busy",
+	MCAP_RSP_INVALID_OPERATION:		"Invalid Operation",
+	MCAP_RSP_RESOURCE_UNAVAILABLE:		"Resource Unavailable",
+	MCAP_RSP_UNSPECIFIED_ERROR:		"Unspecified Error",
+	MCAP_RSP_REQUEST_NOT_SUPPORTED:		"Request Not Supported",
+	MCAP_RSP_CONFIGURATION_REJECTED:	"Configuration Rejected",
+	}
+
 
 class MDL(object):
 
@@ -555,21 +569,7 @@ class MCLStateMachine:
 		return True
 
 	def print_error_message(self, error_rsp_code):
-		if error_rsp_code in error_rsp_table:
-			print error_rsp_table[error_rsp_code]
+		if error_rsp_code in error_rsp_messages:
+			print error_rsp_messages[error_rsp_code]
 		else:
 			print "Unknown error rsp code %d" % error_rsp_code
-
-error_rsp_table = { 
-	MCAP_RSP_INVALID_OP_CODE:		"Invalid Op Code",
-	MCAP_RSP_INVALID_PARAMETER_VALUE:	"Invalid Parameter Value",
-	MCAP_RSP_INVALID_MDEP:			"Invalid MDEP",
-	MCAP_RSP_MDEP_BUSY:			"MDEP Busy",
-	MCAP_RSP_INVALID_MDL:			"Invalid MDL",
-	MCAP_RSP_MDL_BUSY:			"MDL Busy",
-	MCAP_RSP_INVALID_OPERATION:		"Invalid Operation",
-	MCAP_RSP_RESOURCE_UNAVAILABLE:		"Resource Unavailable",
-	MCAP_RSP_UNSPECIFIED_ERROR:		"Unspecified Error",
-	MCAP_RSP_REQUEST_NOT_SUPPORTED:		"Request Not Supported",
-	MCAP_RSP_CONFIGURATION_REJECTED:	"Configuration Rejected",
-	}
