@@ -63,9 +63,9 @@ class MDL(object):
 
 	def connect(self):
 		if self.state == MCAP_MDL_STATE_LISTENING:
-			socket, psm = create_data_socket(self.btaddr, True, 512)
+			socket = create_data_socket(self.btaddr, None, True, 512)
 			self.dc = socket
-			self.psm = psm 
+			self.psm = 0
 		self.state = MCAP_MDL_STATE_ACTIVE	
 
 	def __eq__(self, mdl):
@@ -79,10 +79,12 @@ class MDL(object):
 		else:
 			return 1
 
+
 class MCL(object):
 
 	def __init__(self, btaddr, role):
 		self.btaddr = btaddr 
+		self.remote = None
 		self.state = MCAP_MCL_STATE_IDLE
 		self.lastmdlid = MCAP_MDL_ID_INITIAL
 
@@ -108,6 +110,7 @@ class MCL(object):
 			self.cc, address = server_socket.accept()
 			self.cc.setblocking(True)
 			self.state = MCAP_MCL_STATE_CONNECTED
+		# FIXME annotate remote upon accept
 
 	def close(self):
 		if self.is_cc_open():
@@ -115,15 +118,17 @@ class MCL(object):
 			self.cc.shutdown(2)
 			self.cc.close()
 			self.state = MCAP_MCL_STATE_IDLE
+			self.remote = None
 
 	def connect(self, btaddr):
 		if not self.is_cc_open():
-			self.cc, psm = create_control_socket(self.btaddr)
+			self.cc = create_control_socket(self.btaddr)
 			set_ertm(self.cc)
-			self.psm = btaddr[1]
-			self.cc.connect((btaddr[0], self.psm))
+			self.psm = 0
+			self.cc.connect(btaddr)
 			self.cc.setblocking(True)
 			self.state = MCAP_MCL_STATE_CONNECTED
+			self.remote = btaddr
 
 	def open_cc(self):
 		if self.is_cc_open():
@@ -243,6 +248,8 @@ class MCL(object):
 			return 0
 		self.last_mdlid += 1
 		return mdlid
+
+
 
 class MCLStateMachine:
 

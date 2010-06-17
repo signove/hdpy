@@ -66,37 +66,40 @@ def get_available_psm():
 	raise Exception("No free PSM could be found")
 
 
-def create_socket(btaddr, reliable):
-	psm = get_available_psm()
+def create_socket(btaddr, psm, reliable):
+	if psm is None:
+		psm = 0
 	s = BluetoothSocket(proto=L2CAP)
 	if reliable:
 		set_ertm(s)
 	else:
 		set_streaming(s)
 	s.bind((btaddr, psm))
-	return (s, psm)
+	return s
 
 
-def create_control_socket(btaddr):
-	s, psm = create_socket(btaddr, True)
+def create_control_socket(btaddr, psm=None):
+	s = create_socket(btaddr, psm, True)
 	set_mtu(s, 48)
-	return (s, psm)
+	return s
 
 
-def create_data_socket(btaddr, reliable, mtu):
-	s, psm = create_socket(btaddr, reliable)
+def create_data_socket(btaddr, psm, reliable, mtu):
+	s = create_socket(btaddr, psm, reliable)
 	set_mtu(s, mtu)
-	return (s, psm)
+	return s
 
 
 def create_control_listening_socket(btaddr):
-	s, psm = create_control_socket(btaddr)
+	psm = get_available_psm()
+	s = create_control_socket(btaddr, psm)
 	s.listen(5)
 	return (s, psm)
 
 
 def create_data_listening_socket(btaddr, reliable, mtu):
-	s, psm = create_data_socket(btaddr, reliable, mtu)
+	psm = get_available_psm()
+	s = create_data_socket(btaddr, psm, reliable, mtu)
 	s.listen(5)
 	return (s, psm)
 
@@ -177,16 +180,16 @@ def test():
 	print "Listening streaming data socket at PSM %d" % psm
 	print "Options", get_options(u)
 
-	v, psm = create_control_socket("00:00:00:00:00:00")
-	print "Control socket at PSM %d" % psm
+	v = create_control_socket("00:00:00:00:00:00")
+	print "Control socket"
 	print "Options", get_options(v)
 
-	w, psm = create_data_socket("00:00:00:00:00:00", True, 512)
-	print "Reliable data socket at PSM %d" % psm
+	w = create_data_socket("00:00:00:00:00:00", None, True, 512)
+	print "Reliable data socket at PSM"
 	print "Options", get_options(w)
 
-	x, psm = create_data_socket("00:00:00:00:00:00", False, 512)
-	print "Rtreaming data socket at PSM %d" % psm
+	x = create_data_socket("00:00:00:00:00:00",  None, False, 512)
+	print "Streaming data socket"
 	print "Options", get_options(x)
 
 	time.sleep(1)
