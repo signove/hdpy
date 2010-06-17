@@ -36,6 +36,10 @@ error_rsp_messages = {
 	}
 
 
+class InvalidOperation(Exception):
+	pass
+
+
 class ControlChannelListener(object):
 	def __init__(self, adapter, observer):
 		self.observer = observer

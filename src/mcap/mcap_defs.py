@@ -53,9 +53,6 @@ class InvalidMessage(Exception):
 class InvalidResponse(Exception):
 	pass
 
-class InvalidOperation(Exception):
-	pass
-
 # General messages
 
 class MDLRequest:
