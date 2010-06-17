@@ -53,6 +53,7 @@ class MCAPSessionClientStub:
 			message = ""
 	
 		if message:
+			"Received raw msg", repr(message)
 			self.mcl_sm.receive_message(message)
 			expected_msg = testmsg(self.received[self.counter])
 			assert(message == expected_msg)
@@ -68,7 +69,6 @@ class MCAPSessionClientStub:
 		glib.timeout_add(0, self.take_initiative_cb)
 
 	def take_initiative_cb(self, *args):
-		print "Doing something..."
 		if self.counter >= len(self.sent):
 			self.stop_session()
 		else:

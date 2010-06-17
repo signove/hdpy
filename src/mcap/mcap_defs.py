@@ -292,8 +292,8 @@ class CSPSyncInfoIndication( CSPRequest ):
 
 class ErrorMDLResponse( MDLResponse ):
 
-        def __init__(self):
-                MDLResponse.__init__(self, MCAP_ERROR_RSP, MCAP_RSP_INVALID_OP_CODE, 0x0000)
+        def __init__(self, errcode=MCAP_RSP_INVALID_OP_CODE, mdlid=0x0000):
+                MDLResponse.__init__(self, MCAP_ERROR_RSP, errcode, mdlid)
 
 	@staticmethod
 	def decode(message):
