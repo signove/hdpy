@@ -139,7 +139,7 @@ class MCL(object):
 		self.remote_addr = remote_addr
 
 		self.state = MCAP_MCL_STATE_IDLE
-		self.lastmdlid = MCAP_MDL_ID_INITIAL
+		self.last_mdlid = MCAP_MDL_ID_INITIAL
 
 		self.csp_base_time = time.time()
 		self.csp_base_counter = 0
@@ -220,47 +220,45 @@ class MCL(object):
 		return l > 0
 
 	def count_mdls(self):
-		counter = 0 
-		for value in self.mdl_list:
-			if value.state != MCAP_MDL_STATE_DELETED:
-				counter += 1		
-		return counter
+		return len(self.mdl_list)
 
 	def has_mdls(self):
 		return self.count_mdls() > 0
 
 	def get_mdl(mdlid):
 		found = None
-		for mdl in self.mdl_list:
+		i = -1
+		for pos, mdl in enumerate(self.mdl_list):
 			if mdl.mdlid == mdlid:
-				if mdl.state != MCAP_MDL_STATE_DELETED:
-					found = mdl
+				i = pos
+				found = mdl
 				break
-		return found
+		return found, i
 
 	def contains_mdl(self, mdlid):
-		mdl = self.get(mdlid)
+		mdl, i = self.get_mdl(mdlid)
 		return mdl is not None
 
 	def add_mdl(self, mdl):
 		self.mdl_list.append(mdl)
 
 	def delete_mdl(self, mdlid):
-		mdl = self.get_mdl(mdlid)
+		mdl, i = self.get_mdl(mdlid)
 		if mdl:
 			mdl.close()
+			# change state so if someone holds a reference to
+			# this MDL, will see that it has been deleted
 			mdl.state = MCAP_MDL_STATE_DELETED
+			del self.mdl_list[i]
 		return mdl is not None
 	
 	def close_all_mdls(self):
 		for mdl in self.mdl_list:
-			if mdl.state != MCAP_MDL_STATE_DELETED:
-				mdl.close()
+			mdl.close()
 
 	def delete_all_mdls(self):
-		for mdl in self.mdl_list:
-			mdl.close()
-			mdl.state = MCAP_MDL_STATE_DELETED
+		while self.mdl_list:
+			self.delete_mdl(self.mdl_list[0].mdlid)
 	
 	def create_mdlid(self):
 		mdlid = self.last_mdlid
@@ -517,7 +515,7 @@ class MCLStateMachine:
 		#       if ( not request.has_valid_length() )
 		#               rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 		if (not self.is_valid_mdlid(request.mdlid, True)) or \
-			(not self.contains_mdl_id(request.mdlid)):
+			(not self.contains_mdlid(request.mdlid)):
 			rspcode = MCAP_RSP_INVALID_MDL
 
 		elif not self.support_more_mdls():
@@ -559,7 +557,7 @@ class MCLStateMachine:
 
 ## UTILITY METHODS
 
-	def contains_mdl_id(self, mdlid):
+	def contains_mdlid(self, mdlid):
 		if (mdlid == MCAP_MDL_ID_ALL):
 			return True
 		
