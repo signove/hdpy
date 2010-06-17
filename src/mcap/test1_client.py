@@ -6,7 +6,6 @@ from test1 import *
 import time
 import sys
 import glib
-import threading
 
 class MCAPSessionClientStub:
 
@@ -33,53 +32,51 @@ class MCAPSessionClientStub:
 		]
 
 	def __init__(self, _mcl):
-		self.bclock = threading.Lock()
-		self.can_write = True
  		self.counter = 0
 		self.mcl = _mcl
-		self.mcl_state_machine = MCLStateMachine(_mcl)
+		self.mcl_sm = MCLStateMachine(_mcl)
 
 	def stop_session(self):
 		self.mcl.close_cc()
 		glib.MainLoop.quit(self.inLoop)
 
 	def start_session(self):
-		if ( self.mcl.is_cc_open() ):
+		if self.mcl.is_cc_open():
 			glib.io_add_watch(self.mcl.cc, glib.IO_IN, self.read_cb)
-			glib.io_add_watch(self.mcl.cc, glib.IO_OUT, self.write_cb)
 			glib.io_add_watch(self.mcl.cc, glib.IO_ERR, self.close_cb)
 			glib.io_add_watch(self.mcl.cc, glib.IO_HUP, self.close_cb)
 
 	def read_cb(self, socket, *args):
 		try:
-			if ( self.mcl.is_cc_open() ):
-				message = self.mcl.read()
-				if (message != ''):
-					# do whatever you want
-					self.mcl_state_machine.receive_message(message)
-					assert(message == testmsg(self.received[self.counter]))
-					self.check_asserts(self.counter)
-					self.bclock.acquire()
-					self.can_write = True
-					self.counter = self.counter + 1
-					self.bclock.release()
-		except Exception as inst:
-			print "CANNOT READ: " + repr(inst)
-			return False
-		return True
-
-	def write_cb(self, socket, *args):
-		#print "CAN WRITE"
-		if ( self.counter >= len(testmsg(self.sent)) ):
+			message = self.mcl.read()
+		except IOError:
+			message = ""
+	
+		if message:
+			self.mcl_sm.receive_message(message)
+			expected_msg = testmsg(self.received[self.counter])
+			assert(message == expected_msg)
+			self.check_asserts(self.counter)
+			self.counter += 1
+			self.take_initiative()
+		else:
 			self.stop_session()
-			return True
 
-		if (self.can_write) :
-			self.mcl_state_machine.send_raw_message(testmsg(self.sent[self.counter]))
-			self.bclock.acquire()
-			self.can_write = False
-			self.bclock.release()
 		return True
+
+	def take_initiative(self):
+		glib.timeout_add(0, self.take_initiative_cb)
+
+	def take_initiative_cb(self, *args):
+		print "Doing something..."
+		if self.counter >= len(self.sent):
+			self.stop_session()
+		else:
+			msg = testmsg(self.sent[self.counter])
+			print "Sending ", repr(msg)
+			self.mcl_sm.send_raw_message(msg)
+		# It is important to return False.
+		return False
 
 	def close_cb(self, socket, *args):
 		self.stop_session()
@@ -92,37 +89,40 @@ class MCAPSessionClientStub:
 	def check_asserts(self, counter):
 		if (self.counter == 2):
 			assert(self.mcl.count_mdls() == 1)
-			assert(self.mcl_state_machine.state == MCAP_STATE_READY)
+			assert(self.mcl_sm.state == MCAP_STATE_READY)
 			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
 		elif (self.counter == 3):
 			assert(self.mcl.count_mdls() == 2)
-			assert(self.mcl_state_machine.state == MCAP_STATE_READY)
+			assert(self.mcl_sm.state == MCAP_STATE_READY)
 			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)		
 		elif (self.counter == 4):
 			assert(self.mcl.count_mdls() == 3)
-			assert(self.mcl_state_machine.state == MCAP_STATE_READY)
+			assert(self.mcl_sm.state == MCAP_STATE_READY)
 			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
 		elif (self.counter == 5):
 			assert(self.mcl.count_mdls() == 3)
 			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
-			assert(self.mcl_state_machine.state == MCAP_STATE_READY)
+			assert(self.mcl_sm.state == MCAP_STATE_READY)
 		elif (self.counter == 6):			
 			assert(self.mcl.count_mdls() == 2)
 			assert(self.mcl.state == MCAP_MCL_STATE_ACTIVE)
-			assert(self.mcl_state_machine.state == MCAP_STATE_READY)
+			assert(self.mcl_sm.state == MCAP_STATE_READY)
 		elif (self.counter == 7):
 			assert(self.mcl.count_mdls() == 0)
 			assert(self.mcl.state == MCAP_MCL_STATE_CONNECTED)
-			assert(self.mcl_state_machine.state == MCAP_STATE_READY)
+			assert(self.mcl_sm.state == MCAP_STATE_READY)
 
 		
 
 if __name__=='__main__':
+	try:
+		btaddr = sys.argv[1]
+		psm = int(sys.argv[2])
+	except:
+		print "Usage: %s <remote addr> <remote control PSM>" % sys.argv[0]
+		sys.exit(1)
 
-	btaddr = sys.argv[1]
-	psm = sys.argv[2]
-
-	mcl = MCL(btaddr, MCAP_MCL_ROLE_INITIATOR)
+	mcl = MCL("00:00:00:00:00:00", MCAP_MCL_ROLE_INITIATOR)
 
 	mcap_session = MCAPSessionClientStub(mcl)
 
@@ -130,7 +130,7 @@ if __name__=='__main__':
 
 	print "Requesting connection..."
 	if ( not mcl.is_cc_open() ):
-		mcl.connect_cc((btaddr, int(psm)))
+		mcl.connect_cc((btaddr, psm))
 
 	print "Connected!"
 	assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
@@ -140,6 +140,7 @@ if __name__=='__main__':
 	else:
 		raise Exception ('ERROR: Cannot open control channel for initiator')
 
+	mcap_session.take_initiative()
 	mcap_session.loop()
 
 	print 'TESTS OK' 
