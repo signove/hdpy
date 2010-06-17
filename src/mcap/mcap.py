@@ -98,17 +98,6 @@ class MDL(object):
 		self.sk.connect(self.mcl.remote_addr)
 		self.state = MCAP_MDL_STATE_ACTIVE
 
-	def __eq__(self, mdl):
-		return self.mdlid == mdl.mdlid
-
-	def __cmp__(self, mdl):
-		if self.mdlid < mdl.mdlid:
-			return -1
-		elif self.__eq__(_mdl):
-			return 0
-		else:
-			return 1
-
 	def read(self):
 		try:
 			message = self.sk.recv(1024)
@@ -210,46 +199,33 @@ class MCL(object):
 	def has_mdls(self):
 		return self.count_mdls() > 0
 
-	def contains_mdl(self, mdl):
-		try:
-			mdl_index = self.mdl_list.index(mdl)
-		except ValueError:
-			mdl_index = -1
+	def get_mdl(mdlid):
+		found = None
+		for mdl in self.mdl_list:
+			if mdl.mdlid == mdlid:
+				if mdl.state != MCAP_MDL_STATE_DELETED:
+					found = mdl
+				break
+		return found
 
-		if (mdl_index < 0):
-			return False
-		else:
-			item = self.mdl_list[mdl_index]
-			return ( item.state != MCAP_MDL_STATE_DELETED )
+	def contains_mdl(self, mdlid):
+		mdl = self.get(mdlid)
+		return mdl is not None
 
 	def add_mdl(self, mdl):
 		self.mdl_list.append(mdl)
 
-	def delete_mdl(self, mdl):
-		try:
-			mdl_index = self.mdl_list.index(_mdl)
-		except ValueError:
-			mdl_index = -1
-
-		if mdl_index < 0:
-			return False
-		else:
-			item = self.mdl_list[mdl_index]
-			item.close()
-			if (item.state == MCAP_MDL_STATE_CLOSED):
-				item.state = MCAP_MDL_STATE_DELETED
-				return True
-			else:
-				return False
+	def delete_mdl(self, mdlid):
+		mdl = self.get_mdl(mdlid)
+		if mdl:
+			mdl.close()
+			mdl.state = MCAP_MDL_STATE_DELETED
+		return mdl is not None
 	
 	def delete_all_mdls(self):
-		delete_any = False
 		for mdl in self.mdl_list:
 			mdl.close()
-			if mdl.state == MCAP_MDL_STATE_CLOSED:
-				mdl.state = MCAP_MDL_STATE_DELETED
-				delete_any = True
-		return delete_any	
+			mdl.state = MCAP_MDL_STATE_DELETED
 	
 	def create_mdlid(self):
 		mdlid = self.last_mdlid
@@ -400,7 +376,7 @@ class MCLStateMachine:
 			if mdlid == MCAP_MDL_ID_ALL:
 				self.mcl.delete_all_mdls()
 			else:
-				self.mcl.delete_mdl( MDL(self.mcl, response.mdlid,0) )
+				self.mcl.delete_mdl(response.mdlid)
 			
 			if not self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
@@ -508,8 +484,10 @@ class MCLStateMachine:
 		if (not self.is_valid_mdlid(request.mdlid, True)) or \
 			(not self.contains_mdl_id(request.mdlid)):
 			rspcode = MCAP_RSP_INVALID_MDL
+
 		elif not self.support_more_mdls():
 			rspcode = MCAP_RSP_MDL_BUSY
+
 		elif self.state == MCAP_MCL_STATE_PENDING:
 			rspcode = MCAP_RSP_INVALID_OPERATION
 
@@ -520,7 +498,7 @@ class MCLStateMachine:
 			if request.mdlid == MCAP_MDL_ID_ALL:
 				self.mcl.delete_all_mdls()
 			else:
-				self.mcl.delete_mdl( MDL(self.mcl, request.mdlid, 0) )
+				self.mcl.delete_mdl(request.mdlid)
 
 			if not self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED	
@@ -550,7 +528,7 @@ class MCLStateMachine:
 		if (mdlid == MCAP_MDL_ID_ALL):
 			return True
 		
-		return self.mcl.contains_mdl( MDL(self.mcl, mdlid, 0) )
+		return self.mcl.contains_mdl(mdlid)
 
 	def is_valid_mdlid(self, mdlid, accept_all):
 		# has 16 bits
