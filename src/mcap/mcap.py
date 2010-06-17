@@ -160,7 +160,6 @@ class MCL(object):
 
 	def read(self):
 		if self.is_cc_open():
-			# return as string
 			message = self.cc.recv(1024)
 			return message
 		else:
@@ -169,7 +168,6 @@ class MCL(object):
 	def write(self, message):
 		if self.is_cc_open():
 			try:
-			# receive as string
 				self.cc.send(message)
 			except Exception as error:
 				print error
@@ -242,7 +240,7 @@ class MCLStateMachine:
 ## SEND METHODS
 
 	def send_mdl_error_response(self):
-		errorResponse = ErrorMDLResponseMessage()
+		errorResponse = ErrorMDLResponse()
 		success = self.send_response(errorResponse)
 		return success
 
@@ -297,9 +295,13 @@ class MCLStateMachine:
 ## RECEIVE METHODS
 
 	def receive_message(self, message):
-		opcode = self.parser.get_opcode(message)
 		self.last_received = message
 
+		try:
+			opcode = self.parser.get_opcode(message)
+		except InvalidMessage:
+			return self.send_mdl_error_response()
+	
 		try:
 			if (opcode % 2):
 				return self.receive_request(message)
@@ -410,13 +412,13 @@ class MCLStateMachine:
 		except InvalidMessage:
 			# FIXME: damaged messages should have a harsher response
 			opcodeRsp = request.opcode + 1
-			rsp = MDLResponseMessage(opcodeRsp, MCAP_RSP_REQUEST_NOT_SUPPORTED, 0x0000)
+			rsp = MDLResponse(opcodeRsp, MCAP_RSP_REQUEST_NOT_SUPPORTED, 0x0000)
 			return self.send_response(rsp)
 
 	def process_create_request(self, request):
 		rspcode = MCAP_RSP_SUCCESS
 
-	#	if not request.has_valid_length() )
+	#	if not request.has_valid_length():
 	#		rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 		if not self.is_valid_mdlid(request.mdlid, False):
 			rspcode = MCAP_RSP_INVALID_MDL
@@ -436,7 +438,7 @@ class MCLStateMachine:
 		if rspcode != MCAP_RSP_CONFIGURATION_REJECTED:
 			rsp_params = request.conf
 		
-		createResponse = CreateMDLResponseMessage(rspcode, request.mdlid, rsp_params)
+		createResponse = CreateMDLResponse(rspcode, request.mdlid, rsp_params)
 		success = self.send_response(createResponse)
 
 		if success and (rspcode == MCAP_RSP_SUCCESS):
@@ -459,7 +461,7 @@ class MCLStateMachine:
 		elif self.state == MCAP_MCL_STATE_PENDING:
 			rspcode = MCAP_RSP_INVALID_OPERATION
 
-		reconnectResponse = ReconnectMDLResponseMessage(rspcode, request.mdlid)
+		reconnectResponse = ReconnectMDLResponse(rspcode, request.mdlid)
 		success = self.send_response(reconnectResponse)
 
 		if success and (rspcode == MCAP_RSP_SUCCESS):
@@ -481,7 +483,7 @@ class MCLStateMachine:
 		elif self.state == MCAP_MCL_STATE_PENDING:
 			rspcode = MCAP_RSP_INVALID_OPERATION
 
-		deleteResponse = DeleteMDLResponseMessage(rspcode, request.mdlid)
+		deleteResponse = DeleteMDLResponse(rspcode, request.mdlid)
 		success = self.send_response(deleteResponse)
 
 		if success and (rspcode == MCAP_RSP_SUCCESS):
@@ -503,7 +505,7 @@ class MCLStateMachine:
 		elif self.state != MCAP_MCL_STATE_PENDING:
 			rspcode = MCAP_RSP_INVALID_OPERATION
 		
-		abortResponse = AbortMDLResponseMessage(rspcode, request.mdlid)
+		abortResponse = AbortMDLResponse(rspcode, request.mdlid)
 		success = self.send_response(abortResponse)
 
 		if success and ( rspcode == MCAP_RSP_SUCCESS ):

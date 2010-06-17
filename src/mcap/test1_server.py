@@ -35,33 +35,27 @@ class MCAPSessionServerStub:
 	def __init__(self, _mcl):
 		self.bclock = threading.Lock()
 		self.mcl = _mcl
-		self.mcl_state_machine = MCLStateMachine(_mcl)
+		self.mcl_sm = MCLStateMachine(_mcl)
 
 	def stop_session(self):
 		self.mcl.close_cc()
 		glib.MainLoop.quit(self.inLoop)
 
 	def start_session(self):
-		if ( self.mcl.is_cc_open() ):
+		if self.mcl.is_cc_open():
 			glib.io_add_watch(self.mcl.cc, glib.IO_IN, self.read_cb)
-			glib.io_add_watch(self.mcl.cc, glib.IO_OUT, self.write_cb)
 			glib.io_add_watch(self.mcl.cc, glib.IO_ERR, self.close_cb)
 			glib.io_add_watch(self.mcl.cc, glib.IO_HUP, self.close_cb)
 
 	def read_cb(self, socket, *args):
 		try:
-			if ( self.mcl.is_cc_open() ):
-				message = self.mcl.read()
-				if (message != ''):
-					# do whatever you want
-					self.mcl_state_machine.receive_message(message)
-		except Exception as inst:
-			print "CANNOT READ: " + repr(inst)
-			return False
-		return True
-
-	def write_cb(self, socket, *args):
-#		print "CAN WRITE"
+			message = self.mcl.read()
+		except IOError:
+			message = ""
+		if message:
+			self.mcl_sm.receive_message(message)
+		else:
+			self.stop_session()
 		return True
 
 	def close_cb(self, socket, *args):
@@ -75,16 +69,14 @@ class MCAPSessionServerStub:
 
 if __name__=='__main__':
 
-	btaddr = sys.argv[1]
-
-	mcl = MCL(btaddr, MCAP_MCL_ROLE_ACCEPTOR)
+	mcl = MCL("00:00:00:00:00:00", MCAP_MCL_ROLE_ACCEPTOR)
 
 	mcap_session = MCAPSessionServerStub(mcl)
 
 	assert(mcl.state == MCAP_MCL_STATE_IDLE)
 
 	# wait until a connection is done
-	print "Waiting for connections on " + btaddr
+	print "Waiting for connections on default dev"
 	mcl.open_cc()
 
 	print "Connected!"
