@@ -70,7 +70,7 @@ class DataChannelListener(object):
 
 	def activity(self, *args):
 		sk, address = self.sk.accept()
-		self.observer.new_cc(self, sk, address)
+		self.observer.new_dc(self, sk, address)
 		return True
 
 	def error(self, *args):
