@@ -34,7 +34,12 @@ class MCAPSessionServerStub:
 	def __init__(self):
 		pass
 
-	def new_cc(self, sk, remote_addr):
+	def watch_cc(self, listener, fd, activity_cb, error_cb):
+		glib.io_add_watch(fd, glib.IO_IN, activity_cb)
+		glib.io_add_watch(fd, glib.IO_ERR, error_cb)
+		glib.io_add_watch(fd, glib.IO_HUP, error_cb)
+
+	def new_cc(self, listener, sk, remote_addr):
 		self.mcl = MCL("00:00:00:00:00:00", MCAP_MCL_ROLE_ACCEPTOR, remote_addr)
 		assert(self.mcl.state == MCAP_MCL_STATE_IDLE)
 		self.mcl.accept(sk)
@@ -47,6 +52,9 @@ class MCAPSessionServerStub:
 		glib.io_add_watch(self.mcl.sk, glib.IO_HUP, self.close_cb)
 
 		print "Connected!"
+
+	def error_cc(eslf, listener):
+		self.stop_session()
 
 	def stop_session(self):
 		self.mcl.close()
@@ -76,9 +84,6 @@ class MCAPSessionServerStub:
 if __name__=='__main__':
 	session = MCAPSessionServerStub()
 	mcl_listener = ControlChannelListener("00:00:00:00:00:00", session)
-	glib.io_add_watch(mcl_listener.sk, glib.IO_IN, mcl_listener.activity)
-	glib.io_add_watch(mcl_listener.sk, glib.IO_ERR, mcl_listener.activity)
-	glib.io_add_watch(mcl_listener.sk, glib.IO_HUP, mcl_listener.activity)
 
 	print "Waiting for connections on default dev"
 	session.loop()

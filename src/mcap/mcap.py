@@ -42,11 +42,17 @@ class ControlChannelListener(object):
 		socket, psm = create_data_listening_socket(adapter, True, 512)
 		self.sk = socket
 		self.psm = psm
+		observer.watch_cc(self, self.sk, self.activity, self.error)
 
 	def activity(self, *args):
 		sk, address = self.sk.accept()
-		self.observer.new_cc(sk, address)
+		self.observer.new_cc(self, sk, address)
 		return True
+
+	def error(self, *args):
+		self.sk = None
+		self.psm = 0
+		self.observer.error_cc(self)
 
 
 
@@ -56,11 +62,17 @@ class DataChannelListener(object):
 		self.observer = observer
 		self.sk = socket
 		self.psm = psm
+		observer.watch_dc(self, self.sk, self.activity, self.error)
 
 	def activity(self, *args):
 		sk, address = self.sk.accept()
-		self.observer.new_cc(sk, address)
+		self.observer.new_cc(self, sk, address)
 		return True
+
+	def error(self, *args):
+		self.sk = None
+		self.psm = 0
+		self.observer.error_dc(self)
 
 
 class MDL(object):
