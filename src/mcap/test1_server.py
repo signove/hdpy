@@ -14,19 +14,19 @@ class MCAPSessionServerStub:
         	"0100230ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC (ACCEPT)
 		"0100240ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0024 CONF = 0xBC (ACCEPT)
         	"0100270ABC",  # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0027 CONF = 0xBC (ACCEPT)
-        	"050027", # send an invalid ABORT_MD_REQ (0x05) MDLID == 0x0027 (DO NOT ACCEPT - not on PENDING state)
-        	"070030", # send a valid DELETE_MD_REQ (0x07) MDLID == 0x0027
+        	"050027", # send valid ABORT_MD_REQ (0x05) MDLID == 0x0027 (DO NOT ACCEPT - not on PENDING state)
+        	"070030", # send an invalid DELETE_MD_REQ (0x07) MDLID == 0x0030
         	"07FFFF", # send a valid DELETE_MD_REQ (0x07) MDLID == MDL_ID_ALL (0XFFFF)
 		]
 
 	sent = [
 		"00010000", # receive a ERROR_RSP (0x00) with RSP Invalid OP (0x01)
-		"0205FF00BC", # receive a CREATE_MD_RSP (0x02) with RSP Invalid MDL (0x05)
+		"0205FF00", # receive a CREATE_MD_RSP (0x02) with RSP Invalid MDL (0x05)
         	"02000023BC", # receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
 		"02000024BC", # receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
         	"02000027BC", # receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
-        	"06070027", # receive a ABORT_MD_RSP (0x06) with RSP Invalid Operation (0x07)
-        	"08050030", # receive a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
+        	"06000027", # receive a ABORT_MD_RSP (0x06) with RSP Success
+        	"08050030", # receive an invalid DELETE_MD_RSP (0x08) 
         	"0800FFFF", # receive a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
 		]
 
