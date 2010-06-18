@@ -655,11 +655,13 @@ class MCLStateMachine:
 # FIXME update test scripts
 # FIXME test3
 # FIXME test against bluez
-
-# FIXME pre-existent MDL in case of active reconnect?
-# FIXME pre-existent MDL in case of passive reconnect? x 2
+# FIXME if new active/passive connect, discard old MDL w/ same MDLID
+# FIXME get old MDL by MDLID upon reconnection (active/passive)
 # FIXME MDL crossing protection
 # FIXME is_valid_configuration should be call back upper layer to question
 # FIXME MDL streaming or ertm channel?
 # FIXME error feedback (for requests we had made)
 # FIXME MDL mdep id attribution?
+# FIXME MCAP capabilities?
+# FIXME do not trust parameters in response (chk against local copy)
+# 	note: this invalidates usage of send_raw_messasge
