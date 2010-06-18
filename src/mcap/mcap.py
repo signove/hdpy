@@ -367,12 +367,14 @@ class MCLStateMachine:
 		elif responseMessage.opcode == MCAP_ERROR_RSP:
 			self.print_error_message(responseMessage.rspcode)
 
-	def process_create_response(self, response):
+	def process_create_response(self, response, reconn=False):
 		if response.rspcode == MCAP_RSP_SUCCESS:
 			mdl = MDL(self.mcl, response.mdlid, 0)
 			self.pending_active_mdl = mdl
+			self.reconn = reconn
 			self.mcl.add_mdl(mdl)
 			self.mcl.state = MCAP_MCL_STATE_PENDING
+			self.mcl.observer.mdlgranted_mcl(self.mcl, mdl)
 		else:
 			if self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_ACTIVE
@@ -382,7 +384,7 @@ class MCLStateMachine:
 			
 		return True			
 	
-	def process_reconnect_response(self, response):
+	def process_reconnect_response(self, response, True):
 		return self.process_create_response(response)
 
 	def process_delete_response(self, response):		
@@ -417,16 +419,17 @@ class MCLStateMachine:
 
 	def incoming_mdl_socket(self, sk):
 		# Called by DPSM listener
+		mdl = self.pending_passive_mdl
+		self.pending_passive_mdl = None
 		ok = self.mcl.state == MCAP_MCL_STATE_PENDING
-		ok = ok and not not self.pending_passive_mdl
+		ok = ok and not not mdl
+
 		if ok:
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
-			self.pending_passive_mdl.accept(sk)
-			# FIXME feedback
+			mdl.accept(sk)
+			self.mcl.observer.mdlconnected_mcl(mdl, self.reconn)
 		else:
 			sk.close()
-
-		self.pending_passive_mdl = None
 
 		return ok
 
@@ -434,12 +437,13 @@ class MCLStateMachine:
 		# Called by MDL object itself
 		ok = self.mcl.state == MCAP_MCL_STATE_PENDING
 		ok = ok and self.pending_active_mdl == mdl
+		self.pending_active_mdl = None
+
 		if ok:
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
-			# FIXME feedback
-			pass
-
-		self.pending_active_mdl = None
+			self.mcl.observer.mdlconnected_mcl(mdl, self.reconn)
+		else:
+			mdl.close()
 
 		return ok
 
@@ -482,16 +486,17 @@ class MCLStateMachine:
 		elif not self.is_valid_configuration(request.conf):
 			rspcode = MCAP_RSP_CONFIGURATION_REJECTED
 
-		rsp_params = 0x00
+		config = 0x00
 		if rspcode == MCAP_RSP_SUCCESS:
-			rsp_params = request.conf
+			config = request.conf
 		
-		createResponse = CreateMDLResponse(rspcode, request.mdlid, rsp_params)
+		createResponse = CreateMDLResponse(rspcode, request.mdlid, config)
 		success = self.send_response(createResponse)
 
 		if success and (rspcode == MCAP_RSP_SUCCESS):
 			mdl = MDL(self.mcl, request.mdlid, 0)
 			self.pending_passive_mdl = mdl
+			self.reconn = False
 			self.mcl.add_mdl(mdl)
 			self.mcl.state = MCAP_MCL_STATE_PENDING
 		
@@ -516,6 +521,7 @@ class MCLStateMachine:
 		if success and (rspcode == MCAP_RSP_SUCCESS):
 			mdl = MDL(self.mcl, request.mdlid, 0)
 			self.pending_passive_mdl = mdl
+			self.reconn = True
 			self.mcl.add_mdl(mdl)
 			self.mcl.state = MCAP_MCL_STATE_PENDING
 
@@ -611,17 +617,12 @@ class MCLStateMachine:
 			print "Unknown error rsp code %d" % error_rsp_code
 
 
-# FIXME MDLReady
-# FIXME MDLReady
 # FIXME MDLRequested
 # FIXME MDLAborted 
 # FIXME MDLAborted 
-# FIXME MDLConnected
-# FIXME MDLConnected
 # FIXME MDLDeleted
 # FIXME MDLDeleted
 # FIXME MDLClosed
-# FIXME MDLReconnected
 # FIXME MDL watch request - read (in instance, Recv)
 # FIXME MDL watch request - error
 # FIXME update test scripts

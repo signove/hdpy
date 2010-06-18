@@ -152,7 +152,7 @@ class MCAPInstance:
 	def MCLUncached(self, mcl):
 		raise Exception("Not implemented")
 	
-	def MDLReady(self, mdl):
+	def MDLReady(self, mcl, mdl):
 		''' Async confirmation of MDLCreate/MDLReconnect method '''
 		raise Exception("Not implemented")
 
@@ -229,6 +229,19 @@ class MCAPInstance:
 			self.RecvDump(mcl, message)
 		else:
 			self.SendDump(mcl, message)
+
+	def mdlconnected_mcl(self, mdl, reconn):
+		if reconn:
+			self.MDLReconnected(mdl)
+		else:
+			self.MDLConnected(mdl)
+
+	def mdlgranted_mcl(self, mcl, mdl):
+		'''
+		Only called as async response to active CreateMDL or
+		ReconnectMDL
+		'''
+		self.MDLReady(mcl, mdl)
 
 	def watch_dc(self, listener, fd, activity_cb, error_cb):
 		self.Watch(fd, activity_cb, error_cb)
