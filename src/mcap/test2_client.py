@@ -9,10 +9,12 @@ import glib
 loop = glib.MainLoop()
 
 class MyInstance(MCAPInstance):
-	def Watch(self, fd, activity_cb, error_cb):
-		glib.io_add_watch(fd, glib.IO_IN, activity_cb)
-		glib.io_add_watch(fd, glib.IO_ERR, error_cb)
-		glib.io_add_watch(fd, glib.IO_HUP, error_cb)
+	def Watch(self, fd, activity_cb, error_cb, arg):
+		if activity_cb:
+			glib.io_add_watch(fd, glib.IO_IN, activity_cb, arg)
+		if error_cb:
+			glib.io_add_watch(fd, glib.IO_ERR, error_cb, arg)
+			glib.io_add_watch(fd, glib.IO_HUP, error_cb, arg)
 
 	def MCLConnected(self, mcl):
 		print "MCL has connected"

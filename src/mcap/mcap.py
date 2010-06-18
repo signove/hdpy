@@ -64,6 +64,7 @@ class MDL(object):
 			except IOError:
 				pass
 			self.sk = None
+			self.mcl.closed_mdl(self)
 
 	def accept(self, sk):
 		if self.state != MCAP_MDL_STATE_CLOSED:
@@ -259,6 +260,9 @@ class MCL(object):
 	def connected_mdl_socket(self, mdl):
 		return self.sm.connected_mdl_socket(mdl)
 
+	def closed_mdl(self, mdl):
+		return self.sm.closed_mdl(mdl)
+
 
 class MCLStateMachine:
 
@@ -392,10 +396,17 @@ class MCLStateMachine:
 
 			mdlid = response.mdlid
 			if mdlid == MCAP_MDL_ID_ALL:
+				for mdl in self.mcl.mdl_list:
+					self.mcl.observer.mdldeleted_mcl(mdl)
 				self.mcl.delete_all_mdls()
 			else:
+				if self.contains_mdlid(response.mdlid):
+					mdl = self.mcl.get_mdl(response.mdlid)
+					self.mcl.observer.mdldeleted_mcl(mdl)
+
 				self.mcl.delete_mdl(response.mdlid)
 			
+
 			if not self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
 			else:
@@ -411,7 +422,11 @@ class MCLStateMachine:
 			if not self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
 			else:
-				self.mcl.state = MCAP_MCL_STATE_ACTIVE		
+				self.mcl.state = MCAP_MCL_STATE_ACTIVE
+
+			if self.contains_mdlid(response.mdlid):
+				mdl = self.mcl.get_mdl(response.mdlid)
+				self.mcl.observer.mdlaborted_mcl(mdl)
 		else:
 			self.print_error_message( response.rspcode )
 
@@ -427,6 +442,8 @@ class MCLStateMachine:
 		if ok:
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 			mdl.accept(sk)
+			self.mcl.observer.watch_mdl_errors(mdl, sk,
+				self.mdl_socket_error)
 			self.mcl.observer.mdlconnected_mcl(mdl, self.reconn)
 		else:
 			sk.close()
@@ -441,11 +458,20 @@ class MCLStateMachine:
 
 		if ok:
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
+			self.mcl.observer.watch_mdl_errors(mdl, mdl.sk,
+				self.mdl_socket_error)
 			self.mcl.observer.mdlconnected_mcl(mdl, self.reconn)
 		else:
 			mdl.close()
 
 		return ok
+
+	def mdl_socket_error(self, mdl, *args):
+		mdl.close()
+
+	def closed_mdl(self, mdl):
+		''' called back by MDL itself '''
+		self.mcl.observer.mdlclosed_mcl(mdl)
 
 
 ## PROCESS REQUEST METHODS
@@ -499,6 +525,8 @@ class MCLStateMachine:
 			self.reconn = False
 			self.mcl.add_mdl(mdl)
 			self.mcl.state = MCAP_MCL_STATE_PENDING
+			self.mcl.observer.mdlrequested_mcl(self.mcl, mdl,
+				request.mdepid, config)
 		
 		return success
 
@@ -524,6 +552,7 @@ class MCLStateMachine:
 			self.reconn = True
 			self.mcl.add_mdl(mdl)
 			self.mcl.state = MCAP_MCL_STATE_PENDING
+			self.mcl.observer.mdlreconn_mcl(mdl)
 
 		return success
 
@@ -547,8 +576,12 @@ class MCLStateMachine:
 		if success and (rspcode == MCAP_RSP_SUCCESS):
 			self.pending_passive_mdl = None
 			if request.mdlid == MCAP_MDL_ID_ALL:
+				for mdl in self.mcl.mcl_list:
+					self.mcl.observer.mdldeleted_mcl(mdl)
 				self.mcl.delete_all_mdls()
 			else:
+				mdl = self.mcl.get_mdl(request.mdlid)
+				self.mcl.observer.mdldeleted_mcl(mdl)
 				self.mcl.delete_mdl(request.mdlid)
 
 			if not self.mcl.has_mdls():
@@ -569,6 +602,8 @@ class MCLStateMachine:
 				self.mcl.state = MCAP_MCL_STATE_ACTIVE
 			else:
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
+			mdl = self.mcl.get_mdl(request.mdlid)
+			self.mcl.observer.mdlaborted_mcl(mdl)
 
 ## UTILITY METHODS
 
@@ -617,14 +652,6 @@ class MCLStateMachine:
 			print "Unknown error rsp code %d" % error_rsp_code
 
 
-# FIXME MDLRequested
-# FIXME MDLAborted 
-# FIXME MDLAborted 
-# FIXME MDLDeleted
-# FIXME MDLDeleted
-# FIXME MDLClosed
-# FIXME MDL watch request - read (in instance, Recv)
-# FIXME MDL watch request - error
 # FIXME update test scripts
 # FIXME test3
 # FIXME test against bluez

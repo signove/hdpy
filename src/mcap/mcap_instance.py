@@ -6,6 +6,8 @@ from mcap import *
 # and D-BUS signals are callback methods implemented by a subclass of
 # MCAPInstance.
 #
+# Differences from D-BUS API:
+# 
 # The major difference is that methods don't have async responses. If there
 # is any async feedback, it comes via callbacks/signals. (In D-BUS API, only
 # "passive", unprovoked events come via signals.)
@@ -16,6 +18,9 @@ from mcap import *
 # CreateMDL is an special case that can not work without an async response,
 # so this API has a "MDLReady" signal just to supply this need.
 # The same for ReconnectMDL.
+#
+# MDLRequested yields (mcl, mdl, mdep_id, config) because MDL object is already
+# known, while D-BUS does not reurn MDL handle at this signal.
 
 
 class MCAPInstance:
@@ -156,7 +161,7 @@ class MCAPInstance:
 		''' Async confirmation of MDLCreate/MDLReconnect method '''
 		raise Exception("Not implemented")
 
-	def MDLRequested(self, mcl, mdep_id, conf):
+	def MDLRequested(self, mcl, mdl, mdep_id, conf):
 		''' Followed by MDLAborted or MDLConnected '''
 		raise Exception("Not implemented")
 
@@ -195,7 +200,7 @@ class MCAPInstance:
 ### Internal callbacks
 
 	def watch_cc(self, listener, fd, activity_cb, error_cb):
-		self.Watch(fd, activity_cb, error_cb)
+		self.Watch(fd, activity_cb, error_cb, self)
 
 	def new_cc(self, listener, sk, addr):
 		event = self.MCLConnected
@@ -219,7 +224,7 @@ class MCAPInstance:
 		raise Exception("Error in control PSM listener, bailing out")
 
 	def watch_mcl(self, mcl, fd, activity_cb, error_cb):
-		self.Watch(fd, activity_cb, error_cb)
+		self.Watch(fd, activity_cb, error_cb, mcl)
 
 	def closed_mcl(self, mcl):
 		self.MCLDisconnected(mcl)
@@ -231,10 +236,16 @@ class MCAPInstance:
 			self.SendDump(mcl, message)
 
 	def mdlconnected_mcl(self, mdl, reconn):
+		self.Watch(fd, self.mdl_activity, None, mdl)
 		if reconn:
 			self.MDLReconnected(mdl)
 		else:
 			self.MDLConnected(mdl)
+
+	def mdl_activity(self, mdl):
+		data = mdl.read()
+		if data:
+			self.Recv(mdl, data)
 
 	def mdlgranted_mcl(self, mcl, mdl):
 		'''
@@ -243,8 +254,23 @@ class MCAPInstance:
 		'''
 		self.MDLReady(mcl, mdl)
 
+	def mdlrequested_mcl(self, mcl, mdl, mdepid, config):
+		self.MDLRequested(mcl, mdl, mdepid, config)
+
+	def mdlreconn_mcl(self, mcl, mdl):
+		self.MDLReconnected(mcl, mdl)
+
+	def mdlaborted_mcl(self, mcl, mdl):
+		self.MDLAborted(mcl, mdl)
+
+	def mdldeleted_mcl(self, mdl):
+		self.MDLDeleted(mdl)
+
+	def mdlclosed_mcl(self, mdl):
+		self.MDLClosed(mdl)
+
 	def watch_dc(self, listener, fd, activity_cb, error_cb):
-		self.Watch(fd, activity_cb, error_cb)
+		self.Watch(fd, activity_cb, error_cb, listener)
 
 	def new_dc(self, listener, sk, addr):
 		if not self.peer_connected(addr):
@@ -255,6 +281,10 @@ class MCAPInstance:
 
 	def error_dc(self, listener):
 		raise Exception("Error in data PSM listener, bailing out")
+
+	def watch_mdl_errors(self, mdl, fd, error_cb):
+		self.Watch(fd, None, error_cb, mdl)
+
 
 # TODO non-blocking connect + async CreateMCL() feedback
 # TODO Uncache timeout for idle MCLs
