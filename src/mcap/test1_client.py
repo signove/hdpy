@@ -76,28 +76,28 @@ class MCAPSessionClientStub:
 	def check_asserts(self, mcl):
 		if (self.counter == 2):
 			assert(mcl.count_mdls() == 1)
-			assert(mcl.sm.state == MCAP_STATE_READY)
-			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
+			assert(mcl.sm.request_in_flight == 0)
+			assert(mcl.state == MCAP_MCL_STATE_PENDING)
 		elif (self.counter == 3):
 			assert(mcl.count_mdls() == 2)
-			assert(mcl.sm.state == MCAP_STATE_READY)
+			assert(mcl.sm.request_in_flight == 0)
 			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)		
 		elif (self.counter == 4):
 			assert(mcl.count_mdls() == 3)
-			assert(mcl.sm.state == MCAP_STATE_READY)
+			assert(mcl.sm.request_in_flight == 0)
 			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
 		elif (self.counter == 5):
 			assert(mcl.count_mdls() == 3)
 			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
-			assert(mcl.sm.state == MCAP_STATE_READY)
+			assert(mcl.sm.request_in_flight == 0)
 		elif (self.counter == 6):			
 			assert(mcl.count_mdls() == 2)
 			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
-			assert(mcl.sm.state == MCAP_STATE_READY)
+			assert(mcl.sm.request_in_flight == 0)
 		elif (self.counter == 7):
 			assert(mcl.count_mdls() == 0)
 			assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
-			assert(mcl.sm.state == MCAP_STATE_READY)
+			assert(mcl.sm.request_in_flight == 0)
 		
 
 if __name__=='__main__':

@@ -197,7 +197,10 @@ class MCL(object):
 			self.observer.activity_mcl(self, False, message)
 		except IOError:
 			l = 0
-		return l > 0
+		ok = l > 0
+		if not ok:
+			self.close()
+		return ok
 
 	def count_mdls(self):
 		return len(self.mdl_list)
@@ -261,7 +264,7 @@ class MCLStateMachine:
 
 	def __init__(self, mcl):
 		self.parser = MessageParser()
-		self.state = MCAP_STATE_READY
+		self.request_in_flight = 0
 		self.mcl = mcl
 		self.pending_active_mdl = None
 		self.pending_passive_mdl = None
@@ -274,10 +277,10 @@ class MCLStateMachine:
 		return success
 
 	def send_raw_message(self, message):
-		if (self.state == MCAP_STATE_WAITING):
+		if self.request_in_flight:
                         raise InvalidOperation('Still waiting for response')
                 else:
-                        self.state = MCAP_STATE_WAITING
+                        self.request_in_flight = ord(message[0])
                         try:
                                 # do whatever you want
                                 self.mcl.write(message)
@@ -293,16 +296,11 @@ class MCLStateMachine:
 			return self.send_response(message)
 
 	def send_request(self, request):
-		if (self.state == MCAP_STATE_WAITING):
+		if self.request_in_flight:
 			raise InvalidOperation('Still waiting for response')
 		else:
 			opcode = request.opcode
-
-			if opcode in (MCAP_MD_CREATE_MDL_REQ,
-					MCAP_MD_RECONNECT_MDL_REQ):
-				self.mcl.state = MCAP_MCL_STATE_PENDING
-			
-			self.state = MCAP_STATE_WAITING
+			self.request_in_flight = opcode
 			return self.send_mcap_command(request)
 	
 	def send_response(self, response):
@@ -330,7 +328,7 @@ class MCLStateMachine:
 	def receive_request(self, request):
 		# if a request is received when a response is expected, only process if 
 		# it is received by the Acceptor; otherwise, just ignore
-		if (self.state == MCAP_STATE_WAITING):
+		if self.request_in_flight:
 			if (self.mcl.role == MCAP_MCL_ROLE_INITIATOR):
 				return False
 			else:
@@ -340,7 +338,7 @@ class MCLStateMachine:
 
 	def receive_response(self, response):
 		# if a response is received when no request is outstanding, just ignore
-		if (self.state == MCAP_STATE_WAITING):
+		if self.request_in_flight:
 			return self.process_response(response)
 		else:
 			return False
@@ -348,9 +346,17 @@ class MCLStateMachine:
 ## PROCESS RESPONSE METHODS
 
 	def process_response(self, response):
+		expected = self.request_in_flight + 1
+		if not self.request_in_flight:
+			expected = -1
+		self.request_in_flight = 0
+
 		responseMessage = self.parser.parse(response)
 
-		self.state = MCAP_STATE_READY
+		if not expected or responseMessage.opcode != expected:
+			print "Expected response for %d, got %d" % \
+				(expected, responseMessage.opcode)
+			return
 
 		self.pending_active_mdl = None
 		if responseMessage.opcode == MCAP_MD_CREATE_MDL_RSP:
@@ -369,7 +375,7 @@ class MCLStateMachine:
 			mdl = MDL(self.mcl, response.mdlid, 0)
 			self.pending_active_mdl = mdl
 			self.mcl.add_mdl(mdl)
-			self.mcl.state = MCAP_MCL_STATE_ACTIVE
+			self.mcl.state = MCAP_MCL_STATE_PENDING
 		else:
 			if self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_ACTIVE
@@ -413,21 +419,31 @@ class MCLStateMachine:
 		return True
 
 	def incoming_mdl_socket(self, sk):
-		ok = not not self.pending_passive_mdl
+		# Called by DPSM listener
+		ok = self.mcl.state == MCAP_MCL_STATE_PENDING
+		ok = ok and not not self.pending_passive_mdl
 		if ok:
+			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 			self.pending_passive_mdl.accept(sk)
 			# FIXME feedback
 		else:
 			sk.close()
+
 		self.pending_passive_mdl = None
+
 		return ok
 
 	def connected_mdl_socket(self, mdl):
-		ok = self.pending_active_mdl == mdl
+		# Called by MDL object itself
+		ok = self.mcl.state == MCAP_MCL_STATE_PENDING
+		ok = ok and self.pending_active_mdl == mdl
 		if ok:
+			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 			# FIXME feedback
 			pass
+
 		self.pending_active_mdl = None
+
 		return ok
 
 
@@ -435,7 +451,6 @@ class MCLStateMachine:
 
 	def process_request(self, request):
 		try:
-			self.pending_passive_mdl = None
 			request = self.parser.parse(request)
 			if request.opcode == MCAP_MD_CREATE_MDL_REQ:
 				return self.process_create_request(request)
@@ -464,7 +479,8 @@ class MCLStateMachine:
 			rspcode = MCAP_RSP_INVALID_MDEP
 		elif not self.support_more_mdeps():
 			rspcode = MCAP_RSP_MDEP_BUSY
-		elif self.state == MCAP_MCL_STATE_PENDING:
+		elif self.mcl.state == MCAP_MCL_STATE_PENDING:
+			print "Pending MDL connection"
 			rspcode = MCAP_RSP_INVALID_OPERATION
 		elif not self.is_valid_configuration(request.conf):
 			rspcode = MCAP_RSP_CONFIGURATION_REJECTED
@@ -480,7 +496,7 @@ class MCLStateMachine:
 			mdl = MDL(self.mcl, request.mdlid, 0)
 			self.pending_passive_mdl = mdl
 			self.mcl.add_mdl(mdl)
-			self.mcl.state = MCAP_MCL_STATE_ACTIVE
+			self.mcl.state = MCAP_MCL_STATE_PENDING
 		
 		return success
 
@@ -493,7 +509,8 @@ class MCLStateMachine:
 			rspcode = MCAP_RSP_MDL_BUSY
 		elif not self.support_more_mdeps():
 			rspcode = MCAP_RSP_MDEP_BUSY
-		elif self.state == MCAP_MCL_STATE_PENDING:
+		elif self.mcl.state == MCAP_MCL_STATE_PENDING:
+			print "Pending MDL connection"
 			rspcode = MCAP_RSP_INVALID_OPERATION
 
 		reconnectResponse = ReconnectMDLResponse(rspcode, request.mdlid)
@@ -503,7 +520,7 @@ class MCLStateMachine:
 			mdl = MDL(self.mcl, request.mdlid, 0)
 			self.pending_passive_mdl = mdl
 			self.mcl.add_mdl(mdl)
-			self.mcl.state = MCAP_MCL_STATE_ACTIVE
+			self.mcl.state = MCAP_MCL_STATE_PENDING
 
 		return success
 
@@ -517,13 +534,15 @@ class MCLStateMachine:
 		elif not self.support_more_mdls():
 			rspcode = MCAP_RSP_MDL_BUSY
 
-		elif self.state == MCAP_MCL_STATE_PENDING:
+		elif self.mcl.state == MCAP_MCL_STATE_PENDING:
+			print "Pending MDL connection"
 			rspcode = MCAP_RSP_INVALID_OPERATION
 
 		deleteResponse = DeleteMDLResponse(rspcode, request.mdlid)
 		success = self.send_response(deleteResponse)
 
 		if success and (rspcode == MCAP_RSP_SUCCESS):
+			self.pending_passive_mdl = None
 			if request.mdlid == MCAP_MDL_ID_ALL:
 				self.mcl.delete_all_mdls()
 			else:
@@ -537,13 +556,12 @@ class MCLStateMachine:
 
 		if not self.is_valid_mdlid(request.mdlid, False):
 			rspcode = MCAP_RSP_INVALID_MDL
-		elif self.state != MCAP_MCL_STATE_PENDING:
-			rspcode = MCAP_RSP_INVALID_OPERATION
 		
 		abortResponse = AbortMDLResponse(rspcode, request.mdlid)
 		success = self.send_response(abortResponse)
 
 		if success and ( rspcode == MCAP_RSP_SUCCESS ):
+			self.pending_passive_mdl = None
 			if self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_ACTIVE
 			else:
@@ -609,3 +627,4 @@ class MCLStateMachine:
 # FIXME is_valid_configuration should be call back upper layer to question
 # FIXME MDL configuration handling upon creation
 # FIXME MDL streaming or ertm channel?
+# FIXME error feedback (for requests we had made)
