@@ -14,7 +14,8 @@ from mcap import *
 # about locally generated events, in order to avoid infinite loops.
 #
 # CreateMDL is an special case that can not work without an async response,
-# so this API has a "MDLCreated" signal just to supply this need.
+# so this API has a "MDLReady" signal just to supply this need.
+# The same for ReconnectMDL.
 
 
 class MCAPInstance:
@@ -89,9 +90,13 @@ class MCAPInstance:
 	def CloseMCL(self, mcl):
 		mcl.close()
 
+	def CreateMDLID(self, mcl):
+		''' returns a new mdlid unique for the MCL '''
+		return mcl.create_mdlid()
+
 	def CreateMDL(self, mcl, mdlid, mdepid, conf):
 		''' followed by ConnectMDL/AbortMDL, which should be '''
-		''' invoked when MDLCreated callback is triggered '''
+		''' invoked when MDLReady callback is triggered '''
 		req = CreateMDLRequest(mdlid, mdepid, conf)
 		mcl.sm.send_request(req)
 
@@ -100,16 +105,14 @@ class MCAPInstance:
 		mcl.sm.send_request(req)
 
 	def ConnectMDL(self, mdl):
-		# FIXME connection feedback?
-		pass
+		if mdl.state == MCAP_MDL_STATE_CLOSED:
+			mdl.connect()
 
-	# feedback via callback
 	def DeleteMDL(self, mdl):
 		mcl = mdl.mcl
 		req = DeleteMDLRequest(mdl.mdlid)
 		mcl.sm.send_request(req)
 
-	# feedback via callback
 	def DeleteAll(self, mcl):
 		req = DeleteMDLRequest(MCAP_MDL_ID_ALL)
 		mcl.sm.send_request(req)
@@ -117,12 +120,13 @@ class MCAPInstance:
 	def CloseMDL(self, mdl):
 		mcl = mdl.mcl
 		mdl.close()
-		pass # FIXME mdl deletion feebacok?
 
-	# feedback via callback
 	def ReconnectMDL(mdl):
+		''' followed by ConnectMDL/AbortMDL, which should be '''
+		''' invoked when MDLReady callback is triggered '''
 		mcl = mdl.mcl
-		pass # FIXME
+		req = ReconnectMDLRequest(mdl.mdlid)
+		mcl.sm.send_request(req)
 
 	def Send(self, mdl, data):
 		return mdl.send(data)
@@ -148,8 +152,8 @@ class MCAPInstance:
 	def MCLUncached(self, mcl):
 		raise Exception("Not implemented")
 	
-	def MDLCreated(self, mdl):
-		''' Async confirmation of MDLCreate method '''
+	def MDLReady(self, mdl):
+		''' Async confirmation of MDLCreate/MDLReconnect method '''
 		raise Exception("Not implemented")
 
 	def MDLRequested(self, mcl, mdep_id, conf):
@@ -239,8 +243,7 @@ class MCAPInstance:
 	def error_dc(self, listener):
 		raise Exception("Error in data PSM listener, bailing out")
 
-# FIXME call the callbacks
-# FIXME mcl.create_mdl() method
+# FIXME call the callbacks (list in nb)
 # FIXME Crossed connections protection (MDL)
 # FIXME MDL observer read / error separate
 # FIXME notify close MDL sk
