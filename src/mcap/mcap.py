@@ -310,8 +310,6 @@ class MCLStateMachine:
 		return success
 
 	def send_mcap_command(self, message):
-		# convert __command to raw representation
-		# use CC to send command
 		self.last_sent = message
 		return self.mcl.write(message.encode())
 			
@@ -489,8 +487,6 @@ class MCLStateMachine:
 	def process_reconnect_request(self, request):
 		rspcode = MCAP_RSP_SUCCESS
 
-		#       if ( not request.has_valid_length() )
-		#               rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 		if not self.is_valid_mdlid(request.mdlid, False):
 			rspcode = MCAP_RSP_INVALID_MDL
 		elif not self.support_more_mdls():
@@ -514,8 +510,6 @@ class MCLStateMachine:
 	def process_delete_request(self, request):
 		rspcode = MCAP_RSP_SUCCESS
 
-		#       if ( not request.has_valid_length() )
-		#               rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 		if (not self.is_valid_mdlid(request.mdlid, True)) or \
 			(not self.contains_mdlid(request.mdlid)):
 			rspcode = MCAP_RSP_INVALID_MDL
@@ -541,8 +535,6 @@ class MCLStateMachine:
 	def process_abort_request(self, request):
 		rspcode = MCAP_RSP_SUCCESS
 
-		#       if not request.has_valid_length()
-		#               rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 		if not self.is_valid_mdlid(request.mdlid, False):
 			rspcode = MCAP_RSP_INVALID_MDL
 		elif self.state != MCAP_MCL_STATE_PENDING:
@@ -615,3 +607,5 @@ class MCLStateMachine:
 # FIXME abort removes pending - active
 # FIXME abort removes pending - passive
 # FIXME is_valid_configuration should be call back upper layer to question
+# FIXME MDL configuration handling upon creation
+# FIXME MDL streaming or ertm channel?
