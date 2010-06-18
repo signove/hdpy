@@ -51,15 +51,18 @@ class MCAPSessionClientStub:
 			assert(message == expected_msg)
 			self.check_asserts(mcl)
 			self.counter += 1
-			self.take_initiative(mcl)
+			if message[0:2] != "\x02\x00":
+				self.take_initiative(mcl)
 		else:
 			print "Sent raw msg", repr(message)
 		return True
 
 	def take_initiative(self, mcl):
+		print "Scheduling next command"
 		glib.idle_add(self.take_initiative_cb, mcl)
 
 	def take_initiative_cb(self, mcl, *args):
+		print "About to send next command"
 		if self.counter >= len(self.sent):
 			self.stop_session()
 		else:
@@ -81,11 +84,11 @@ class MCAPSessionClientStub:
 		elif (self.counter == 3):
 			assert(mcl.count_mdls() == 2)
 			assert(mcl.sm.request_in_flight == 0)
-			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)		
+			assert(mcl.state == MCAP_MCL_STATE_PENDING)		
 		elif (self.counter == 4):
 			assert(mcl.count_mdls() == 3)
 			assert(mcl.sm.request_in_flight == 0)
-			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
+			assert(mcl.state == MCAP_MCL_STATE_PENDING)
 		elif (self.counter == 5):
 			assert(mcl.count_mdls() == 3)
 			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
@@ -102,12 +105,22 @@ class MCAPSessionClientStub:
 	def mdlgranted_mcl(self, mcl, mdl):
 		# An MDL we requested has been granted. Now it is expected
 		# that we connect.
-		# TODO do not connect sometimes (to inject an error)
-		# TODO counting on a synchronous connect()
+		# TODO do not connect sometimes (inject an error)
 		print "MDL granted:", id(mdl)
-		mdl.connect()
-		glib.idle_add(self.take_initiative_cb, mcl)
 
+		# Postpone connection so asserts see PENDING state
+		glib.idle_add(self.mdl_do_connect, mdl)
+
+	def mdl_do_connect(self, mdl):
+		mdl.connect()
+		return False
+
+	def mdlconnected_mcl(self, mdl, reconnection):
+		print "MDL connected"
+		assert(mdl.mcl.state == MCAP_MCL_STATE_ACTIVE)
+		mdl.write("bla")
+		self.take_initiative(mdl.mcl)
+		
 	def watch_mdl_errors(self, mdl, fd, error_cb):
 		glib.io_add_watch(fd, glib.IO_ERR, error_cb, mdl)
 		glib.io_add_watch(fd, glib.IO_HUP, error_cb, mdl)

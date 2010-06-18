@@ -469,6 +469,7 @@ class MCLStateMachine:
 
 	def mdl_socket_error(self, mdl, *args):
 		mdl.close()
+		return True
 
 	def closed_mdl(self, mdl):
 		''' called back by MDL itself '''
