@@ -66,8 +66,11 @@ class MCAPInstance:
 ### Commands
 
 	def CreateMCL(self, addr):
+		event = self.MCLConnected
+
 		if self.peer_connected(addr):
 			mcl = self.peer_mcl(addr)
+			event = self.MCLReconnected
 		else:
 			mcl = MCL(self, self.adapter, MCAP_MCL_ROLE_INITIATOR,
 				addr)
@@ -75,8 +78,8 @@ class MCAPInstance:
 
 		if mcl.state == MCAP_MCL_STATE_IDLE:
 			mcl.connect()
+			event(mcl)
 
-		self.MCLConnected(mcl)
 		return mcl
 	
 	def DeleteMCL(self, mcl):
@@ -95,10 +98,8 @@ class MCAPInstance:
 	def AbortMDL(self, mcl, mdlid):
 		req = AbortMDLRequest(mdlid)
 		mcl.sm.send_request(req)
-		# FIXME abortion feedback?
 
 	def ConnectMDL(self, mdl):
-		# FIXME test if mdl exist
 		# FIXME connection feedback?
 		pass
 
@@ -107,13 +108,11 @@ class MCAPInstance:
 		mcl = mdl.mcl
 		req = DeleteMDLRequest(mdl.mdlid)
 		mcl.sm.send_request(req)
-		# FIXME mdl deletion feeback?
 
 	# feedback via callback
 	def DeleteAll(self, mcl):
 		req = DeleteMDLRequest(MCAP_MDL_ID_ALL)
 		mcl.sm.send_request(req)
-		pass # FIXME feeback?
 
 	def CloseMDL(self, mdl):
 		mcl = mdl.mcl
@@ -189,16 +188,17 @@ class MCAPInstance:
 	def SendDump(self, mcl, message):
 		pass
 	
-### Internal machinery
-
 ### Internal callbacks
 
 	def watch_cc(self, listener, fd, activity_cb, error_cb):
 		self.Watch(fd, activity_cb, error_cb)
 
 	def new_cc(self, listener, sk, addr):
+		event = self.MCLConnected
+
 		if self.peer_connected(addr):
 			mcl = self.peer_mcl(addr)
+			event = self.MCLReconnected
 		else:
 			mcl = MCL(self, self.adapter, MCAP_MCL_ROLE_ACCEPTOR,
 				addr)
@@ -206,7 +206,7 @@ class MCAPInstance:
 
 		if mcl.state == MCAP_MCL_STATE_IDLE:
 			mcl.accept(sk)
-			self.MCLConnected(mcl)
+			event(mcl)
 		else:
 			# crossed or duplicated connection, reject
 			sk.close()
@@ -229,8 +229,12 @@ class MCAPInstance:
 	def watch_dc(self, listener, fd, activity_cb, error_cb):
 		self.Watch(fd, activity_cb, error_cb)
 
-	def new_dc(self, listener, sk):
-		pass # FIXME
+	def new_dc(self, listener, sk, addr):
+		if not self.peer_connected(addr):
+			# unknown peer
+			sk.close()
+		mcl = self.peer_mcl(addr)
+		mcl.sm.incoming_mdl_socket(sk)
 
 	def error_dc(self, listener):
 		raise Exception("Error in data PSM listener, bailing out")
@@ -238,11 +242,10 @@ class MCAPInstance:
 # FIXME call the callbacks
 # FIXME mcl.create_mdl() method
 # FIXME Crossed connections protection (MDL)
-# FIXME incoming MDLs
 # FIXME MDL observer read / error separate
 # FIXME notify close MDL sk
 # FIXME test existing MDL ID
 # FIXME CreateMCL() x connect() blockage x feedback
 # FIXME remove direct refs to state machine
 # FIXME Recv for MDLs - connect watcher
-# Uncache timeout
+# FIXME Uncache timeout
