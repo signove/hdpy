@@ -322,16 +322,11 @@ class MCLStateMachine:
 
 		try:
 			opcode = self.parser.get_opcode(message)
-		except InvalidMessage:
-			return self.send_mdl_error_response()
-	
-		try:
 			if (opcode % 2):
 				return self.receive_request(message)
 			else:
 				return self.receive_response(message)
 		except InvalidMessage:
-			# FIXME shouldn't be harsher response if invalid msg?
 			return self.send_mdl_error_response()
 	
 	def receive_request(self, request):
@@ -456,16 +451,13 @@ class MCLStateMachine:
 				raise InvalidOperation("Should not happen")
 
 		except InvalidMessage:
-			# FIXME: damaged messages should have a harsher response?
 			opcodeRsp = request.opcode + 1
-			rsp = MDLResponse(opcodeRsp, MCAP_RSP_REQUEST_NOT_SUPPORTED, 0x0000)
+			rsp = MDLResponse(opcodeRsp, MCAP_RSP_INVALID_PARAMETER_VALUE, 0x0000)
 			return self.send_response(rsp)
 
 	def process_create_request(self, request):
 		rspcode = MCAP_RSP_SUCCESS
 
-	#	if not request.has_valid_length():
-	#		rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 		if not self.is_valid_mdlid(request.mdlid, False):
 			rspcode = MCAP_RSP_INVALID_MDL
 		elif not self.support_more_mdls():
@@ -479,9 +471,8 @@ class MCLStateMachine:
 		elif not self.is_valid_configuration(request.conf):
 			rspcode = MCAP_RSP_CONFIGURATION_REJECTED
 
-		# TODO - not sure about which value we should return - see page 26
 		rsp_params = 0x00
-		if rspcode != MCAP_RSP_CONFIGURATION_REJECTED:
+		if rspcode == MCAP_RSP_SUCCESS:
 			rsp_params = request.conf
 		
 		createResponse = CreateMDLResponse(rspcode, request.mdlid, rsp_params)
@@ -623,3 +614,4 @@ class MCLStateMachine:
 # FIXME MDL watch request - error
 # FIXME abort removes pending - active
 # FIXME abort removes pending - passive
+# FIXME is_valid_configuration should be call back upper layer to question
