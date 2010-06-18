@@ -243,6 +243,11 @@ class MCL(object):
 		self.last_mdlid += 1
 		return mdlid
 
+	def send_request(self, msg):
+		self.sm.send_request(msg)
+
+	def incoming_mdl_socket(self, sk):
+		self.sm.incoming_mdl_socket(sk)
 
 
 class MCLStateMachine:

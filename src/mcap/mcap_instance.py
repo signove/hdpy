@@ -98,11 +98,11 @@ class MCAPInstance:
 		''' followed by ConnectMDL/AbortMDL, which should be '''
 		''' invoked when MDLReady callback is triggered '''
 		req = CreateMDLRequest(mdlid, mdepid, conf)
-		mcl.sm.send_request(req)
+		mcl.send_request(req)
 
 	def AbortMDL(self, mcl, mdlid):
 		req = AbortMDLRequest(mdlid)
-		mcl.sm.send_request(req)
+		mcl.send_request(req)
 
 	def ConnectMDL(self, mdl):
 		if mdl.state == MCAP_MDL_STATE_CLOSED:
@@ -111,11 +111,11 @@ class MCAPInstance:
 	def DeleteMDL(self, mdl):
 		mcl = mdl.mcl
 		req = DeleteMDLRequest(mdl.mdlid)
-		mcl.sm.send_request(req)
+		mcl.send_request(req)
 
 	def DeleteAll(self, mcl):
 		req = DeleteMDLRequest(MCAP_MDL_ID_ALL)
-		mcl.sm.send_request(req)
+		mcl.send_request(req)
 
 	def CloseMDL(self, mdl):
 		mcl = mdl.mcl
@@ -126,14 +126,14 @@ class MCAPInstance:
 		''' invoked when MDLReady callback is triggered '''
 		mcl = mdl.mcl
 		req = ReconnectMDLRequest(mdl.mdlid)
-		mcl.sm.send_request(req)
+		mcl.send_request(req)
 
 	def Send(self, mdl, data):
 		return mdl.send(data)
 
 	def SendRawRequest(self, mcl, *chars):
 		req = RawRequest(*chars)
-		mcl.sm.send_request(req)
+		mcl.send_request(req)
 
 ### Callback methods that must be implemented by subclass
 
@@ -238,7 +238,7 @@ class MCAPInstance:
 			# unknown peer
 			sk.close()
 		mcl = self.peer_mcl(addr)
-		mcl.sm.incoming_mdl_socket(sk)
+		mcl.incoming_mdl_socket(sk)
 
 	def error_dc(self, listener):
 		raise Exception("Error in data PSM listener, bailing out")
@@ -249,6 +249,5 @@ class MCAPInstance:
 # FIXME notify close MDL sk
 # FIXME test existing MDL ID
 # FIXME CreateMCL() x connect() blockage x feedback
-# FIXME remove direct refs to state machine
 # FIXME Recv for MDLs - connect watcher
 # FIXME Uncache timeout
