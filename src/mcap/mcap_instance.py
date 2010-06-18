@@ -6,12 +6,15 @@ from mcap import *
 # and D-BUS signals are callback methods implemented by a subclass of
 # MCAPInstance.
 #
-# The major difference is that there are no async command methods; 
-# the async feedback comes via callbacks, while in D-BUS API only "passive"
-# events provoked by remote side come via signals.
-
+# The major difference is that methods don't have async responses. If there
+# is any async feedback, it comes via callbacks/signals. (In D-BUS API, only
+# "passive", unprovoked events come via signals.)
+#
 # So, the application must take into account that it will receive callbacks
-# upon events it started by itself, otherwise there might be infinite loops.
+# about locally generated events, in order to avoid infinite loops.
+#
+# CreateMDL is an special case that can not work without an async response,
+# so this API has a "MDLCreated" signal just to supply this need.
 
 
 class MCAPInstance:
@@ -73,23 +76,21 @@ class MCAPInstance:
 		if mcl.state == MCAP_MCL_STATE_IDLE:
 			mcl.connect()
 
-		self.MCLConnected(mcl) # FIXME async
+		self.MCLConnected(mcl)
 		return mcl
 	
 	def DeleteMCL(self, mcl):
 		self.remove_mcl(mcl)
-		# FIXME deletion feedback?
+		self.MCLUncached(mcl)
 
 	def CloseMCL(self, mcl):
 		mcl.close()
 
 	def CreateMDL(self, mcl, mdlid, mdepid, conf):
 		''' followed by ConnectMDL/AbortMDL, which should be '''
-		''' invoked when MDLRequested callback is triggered '''
+		''' invoked when MDLCreated callback is triggered '''
 		req = CreateMDLRequest(mdlid, mdepid, conf)
 		mcl.sm.send_request(req)
-		pass # FIXME
-		# return mdl
 
 	def AbortMDL(self, mcl, mdlid):
 		req = AbortMDLRequest(mdlid)
@@ -148,6 +149,10 @@ class MCAPInstance:
 	def MCLUncached(self, mcl):
 		raise Exception("Not implemented")
 	
+	def MDLCreated(self, mdl):
+		''' Async confirmation of MDLCreate method '''
+		raise Exception("Not implemented")
+
 	def MDLRequested(self, mcl, mdep_id, conf):
 		''' Followed by MDLAborted or MDLConnected '''
 		raise Exception("Not implemented")
