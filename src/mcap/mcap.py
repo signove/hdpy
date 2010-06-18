@@ -279,15 +279,12 @@ class MCLStateMachine:
 	def send_raw_message(self, message):
 		if self.request_in_flight:
                         raise InvalidOperation('Still waiting for response')
-                else:
-                        self.request_in_flight = ord(message[0])
-                        try:
-                                # do whatever you want
-                                self.mcl.write(message)
-                                return True
-                        except Exception as msg:
-                                print "CANNOT WRITE: " + str(msg)
-                                return False
+
+		self.request_in_flight = ord(message[0])
+		ok = self.mcl.write(message)
+		if not ok:
+			print "CANNOT WRITE: " + str(msg)
+		return ok
 
 	def send_message(self, message):
 		if (message.opcode % 2) != 0:
@@ -298,10 +295,10 @@ class MCLStateMachine:
 	def send_request(self, request):
 		if self.request_in_flight:
 			raise InvalidOperation('Still waiting for response')
-		else:
-			opcode = request.opcode
-			self.request_in_flight = opcode
-			return self.send_mcap_command(request)
+
+		opcode = request.opcode
+		self.request_in_flight = opcode
+		return self.send_mcap_command(request)
 	
 	def send_response(self, response):
 		success = self.send_mcap_command(response)
@@ -614,17 +611,27 @@ class MCLStateMachine:
 			print "Unknown error rsp code %d" % error_rsp_code
 
 
+# FIXME MDLReady
+# FIXME MDLReady
+# FIXME MDLRequested
+# FIXME MDLAborted 
+# FIXME MDLAborted 
+# FIXME MDLConnected
+# FIXME MDLConnected
+# FIXME MDLDeleted
+# FIXME MDLDeleted
+# FIXME MDLClosed
+# FIXME MDLReconnected
+# FIXME MDL watch request - read (in instance, Recv)
+# FIXME MDL watch request - error
+# FIXME update test scripts
+# FIXME test3
+# FIXME test against bluez
+
 # FIXME pre-existent MDL in case of active reconnect?
 # FIXME pre-existent MDL in case of passive reconnect? x 2
-# FIXME Pending state X new mdl?
-# FIXME Pending state X new mdl? (passive case)
 # FIXME MDL crossing protection
-# FIXME SM feedback to upper layers?
-# FIXME MDL watch request - read
-# FIXME MDL watch request - error
-# FIXME abort removes pending - active
-# FIXME abort removes pending - passive
 # FIXME is_valid_configuration should be call back upper layer to question
-# FIXME MDL configuration handling upon creation
 # FIXME MDL streaming or ertm channel?
 # FIXME error feedback (for requests we had made)
+# FIXME MDL mdep id attribution?
