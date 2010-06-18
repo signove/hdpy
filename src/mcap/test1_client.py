@@ -98,27 +98,39 @@ class MCAPSessionClientStub:
 			assert(mcl.count_mdls() == 0)
 			assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
 			assert(mcl.sm.request_in_flight == 0)
-		
 
-if __name__=='__main__':
-	try:
-		remote_addr = (sys.argv[1], int(sys.argv[2]))
-	except:
-		print "Usage: %s <remote addr> <remote control PSM>" % sys.argv[0]
-		sys.exit(1)
+	def mdlgranted_mcl(self, mcl, mdl):
+		# An MDL we requested has been granted. Now it is expected
+		# that we connect.
+		# TODO do not connect sometimes (to inject an error)
+		# TODO counting on a synchronous connect()
+		print "MDL granted:", id(mdl)
+		mdl.connect()
+		glib.idle_add(self.take_initiative_cb, mcl)
 
-	session = MCAPSessionClientStub()
-	mcl = MCL(session, "00:00:00:00:00:00", MCAP_MCL_ROLE_INITIATOR, remote_addr)
+	def watch_mdl_errors(self, mdl, fd, error_cb):
+		glib.io_add_watch(fd, glib.IO_ERR, error_cb, mdl)
+		glib.io_add_watch(fd, glib.IO_HUP, error_cb, mdl)
 
-	assert(mcl.state == MCAP_MCL_STATE_IDLE)
+try:
+	remote_addr = (sys.argv[1], int(sys.argv[2]))
+	dpsm = int(sys.argv[3])
+except:
+	print "Usage: %s <remote addr> <control PSM> <data PSM>" % sys.argv[0]
+	sys.exit(1)
 
-	print "Requesting connection..."
-	mcl.connect()
+session = MCAPSessionClientStub()
+mcl = MCL(session, "00:00:00:00:00:00", MCAP_MCL_ROLE_INITIATOR, remote_addr, dpsm)
 
-	print "Connected!"
-	assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
+assert(mcl.state == MCAP_MCL_STATE_IDLE)
 
-	session.take_initiative(mcl)
-	session.loop()
+print "Requesting connection..."
+mcl.connect()
 
-	print 'TESTS OK' 
+print "Connected!"
+assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
+
+session.take_initiative(mcl)
+session.loop()
+
+print 'TESTS OK' 

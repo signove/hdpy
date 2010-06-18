@@ -79,7 +79,7 @@ class MDL(object):
 
 		socket = create_data_socket(self.mcl.adapter, None, True, 512)
 		self.sk = socket
-		self.sk.connect(self.mcl.remote_addr)
+		self.sk.connect(self.mcl.remote_addr_dc)
 		self.state = MCAP_MDL_STATE_ACTIVE
 
 		if not self.mcl.connected_mdl_socket(self):
@@ -109,11 +109,12 @@ class MDL(object):
 
 class MCL(object):
 
-	def __init__(self, observer, adapter, role, remote_addr):
+	def __init__(self, observer, adapter, role, remote_addr, dpsm):
 		self.observer = observer
 		self.adapter = adapter 
 		self.role = role
 		self.remote_addr = remote_addr
+		self.remote_addr_dc = (remote_addr[0], dpsm)
 		self.invalidated = False
 
 		self.state = MCAP_MCL_STATE_IDLE
@@ -446,6 +447,7 @@ class MCLStateMachine:
 				self.mdl_socket_error)
 			self.mcl.observer.mdlconnected_mcl(mdl, self.reconn)
 		else:
+			# FIXME refuse, not close
 			sk.close()
 
 		return ok
@@ -461,9 +463,8 @@ class MCLStateMachine:
 			self.mcl.observer.watch_mdl_errors(mdl, mdl.sk,
 				self.mdl_socket_error)
 			self.mcl.observer.mdlconnected_mcl(mdl, self.reconn)
-		else:
-			mdl.close()
 
+		# MDL is responsible by closing socket if not ok
 		return ok
 
 	def mdl_socket_error(self, mdl, *args):
