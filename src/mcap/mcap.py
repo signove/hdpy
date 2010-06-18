@@ -318,7 +318,7 @@ class MCLStateMachine:
 		self.last_received = message
 
 		try:
-			opcode = self.parser.get_opcode(message)
+			opcode, rspcode = self.parser.get_opcode(message)
 			if (opcode % 2):
 				return self.receive_request(message)
 			else:
