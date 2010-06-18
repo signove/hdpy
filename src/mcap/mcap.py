@@ -27,8 +27,6 @@ class ControlChannelListener(object):
 		self.psm = 0
 		self.observer.error_cc(self)
 
-
-
 class DataChannelListener(object):
 	def __init__(self, adapter, observer):
 		socket, psm = create_control_listening_socket(adapter)
@@ -82,6 +80,11 @@ class MDL(object):
 		self.sk = socket
 		self.sk.connect(self.mcl.remote_addr)
 		self.state = MCAP_MDL_STATE_ACTIVE
+
+		if not self.mcl.connected_mdl_socket(self):
+			self.state = MCAP_MDL_STATE_CLOSED
+			self.sk.close()
+			self.sk = None
 
 	def read(self):
 		try:
@@ -144,6 +147,7 @@ class MCL(object):
 			self.observer.closed_mcl(self)
 
 		self.state = MCAP_MCL_STATE_IDLE
+		self.sm = MCLStateMachine(self)
 
 	def connect(self):
 		if self.state != MCAP_MCL_STATE_IDLE:
@@ -249,6 +253,9 @@ class MCL(object):
 	def incoming_mdl_socket(self, sk):
 		self.sm.incoming_mdl_socket(sk)
 
+	def connected_mdl_socket(self, mdl):
+		return self.sm.connected_mdl_socket(mdl)
+
 
 class MCLStateMachine:
 
@@ -256,6 +263,8 @@ class MCLStateMachine:
 		self.parser = MessageParser()
 		self.state = MCAP_STATE_READY
 		self.mcl = mcl
+		self.pending_active_mdl = None
+		self.pending_passive_mdl = None
 
 ## SEND METHODS
 
@@ -293,7 +302,7 @@ class MCLStateMachine:
 					MCAP_MD_RECONNECT_MDL_REQ):
 				self.mcl.state = MCAP_MCL_STATE_PENDING
 			
-			self.state = MCAP_STATE_WAITING			
+			self.state = MCAP_STATE_WAITING
 			return self.send_mcap_command(request)
 	
 	def send_response(self, response):
@@ -350,6 +359,7 @@ class MCLStateMachine:
 
 		self.state = MCAP_STATE_READY
 
+		self.pending_active_mdl = None
 		if responseMessage.opcode == MCAP_MD_CREATE_MDL_RSP:
 			return self.process_create_response(responseMessage)
 		elif responseMessage.opcode == MCAP_MD_RECONNECT_MDL_RSP:
@@ -363,7 +373,9 @@ class MCLStateMachine:
 
 	def process_create_response(self, response):
 		if response.rspcode == MCAP_RSP_SUCCESS:
-			self.mcl.add_mdl( MDL(self.mcl, response.mdlid, 0) )
+			mdl = MDL(self.mcl, response.mdlid, 0)
+			self.pending_active_mdl = mdl
+			self.mcl.add_mdl(mdl)
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 		else:
 			if self.mcl.has_mdls():
@@ -407,10 +419,30 @@ class MCLStateMachine:
 
 		return True
 
+	def incoming_mdl_socket(self, sk):
+		ok = not not self.pending_passive_mdl
+		if ok:
+			self.pending_passive_mdl.accept(sk)
+			# FIXME feedback
+		else:
+			sk.close()
+		self.pending_passive_mdl = None
+		return ok
+
+	def connected_mdl_socket(self, mdl):
+		ok = self.pending_active_mdl == mdl
+		if ok:
+			# FIXME feedback
+			pass
+		self.pending_active_mdl = None
+		return ok
+
+
 ## PROCESS REQUEST METHODS
 
 	def process_request(self, request):
 		try:
+			self.pending_passive_mdl = None
 			request = self.parser.parse(request)
 			if request.opcode == MCAP_MD_CREATE_MDL_REQ:
 				return self.process_create_request(request)
@@ -456,7 +488,9 @@ class MCLStateMachine:
 		success = self.send_response(createResponse)
 
 		if success and (rspcode == MCAP_RSP_SUCCESS):
-			self.mcl.add_mdl(MDL(self.mcl, request.mdlid, 0))
+			mdl = MDL(self.mcl, request.mdlid, 0)
+			self.pending_passive_mdl = mdl
+			self.mcl.add_mdl(mdl)
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 		
 		return success
@@ -479,7 +513,9 @@ class MCLStateMachine:
 		success = self.send_response(reconnectResponse)
 
 		if success and (rspcode == MCAP_RSP_SUCCESS):
-			self.mcl.add_mdl( MDL(self.mcl, request.mdlid, 0) )
+			mdl = MDL(self.mcl, request.mdlid, 0)
+			self.pending_passive_mdl = mdl
+			self.mcl.add_mdl(mdl)
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 
 		return success
@@ -575,3 +611,15 @@ class MCLStateMachine:
 			print error_rsp_messages[error_rsp_code]
 		else:
 			print "Unknown error rsp code %d" % error_rsp_code
+
+
+# FIXME pre-existent MDL in case of active reconnect?
+# FIXME pre-existent MDL in case of passive reconnect? x 2
+# FIXME Pending state X new mdl?
+# FIXME Pending state X new mdl? (passive case)
+# FIXME MDL crossing protection
+# FIXME SM feedback to upper layers?
+# FIXME MDL watch request - read
+# FIXME MDL watch request - error
+# FIXME abort removes pending - active
+# FIXME abort removes pending - passive

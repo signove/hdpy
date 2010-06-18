@@ -243,11 +243,5 @@ class MCAPInstance:
 	def error_dc(self, listener):
 		raise Exception("Error in data PSM listener, bailing out")
 
-# FIXME call the callbacks (list in nb)
-# FIXME Crossed connections protection (MDL)
-# FIXME MDL observer read / error separate
-# FIXME notify close MDL sk
-# FIXME test existing MDL ID
-# FIXME CreateMCL() x connect() blockage x feedback
-# FIXME Recv for MDLs - connect watcher
-# FIXME Uncache timeout
+# TODO non-blocking connect + async CreateMCL() feedback
+# TODO Uncache timeout for idle MCLs
