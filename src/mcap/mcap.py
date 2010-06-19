@@ -59,6 +59,8 @@ class MDL(object):
 		self.state = MCAP_MDL_STATE_CLOSED
 		if self.sk:
 			try:
+				# shutdown = connection closed even if fd
+				# copied to another process
 				self.sk.shutdown(2)
 				self.sk.close()
 			except IOError:
@@ -141,7 +143,6 @@ class MCL(object):
 		if self.sk:
 			self.close_all_mdls()
 			try:
-				self.sk.shutdown(2)
 				self.sk.close()
 			except IOError:
 				pass
@@ -663,6 +664,9 @@ class MCLStateMachine:
 # FIXME is_valid_configuration should be call back upper layer to question
 # FIXME MDL streaming or ertm channel?
 # FIXME error feedback (for requests we had made)
+# FIXME Refuse untimely MDL connection using BT_DEFER_SETUP
+#	get addr via L2CAP_OPTIONS
+#	definitive accept using poll OUT ; if !OUT, read 1 byte
 # FIXME MDL mdep id attribution?
 # FIXME MCAP capabilities?
 # FIXME do not trust parameters in response (chk against local copy)

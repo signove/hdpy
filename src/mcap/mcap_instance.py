@@ -218,6 +218,7 @@ class MCAPInstance:
 			event(mcl)
 		else:
 			# crossed or duplicated connection, reject
+			# FIXME refuse using BT_DEFER_SETUP		
 			sk.close()
 
 	def error_cc(self, listener):
