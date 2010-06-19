@@ -668,6 +668,5 @@ class MCLStateMachine:
 #	get addr via L2CAP_OPTIONS
 #	definitive accept using poll OUT ; if !OUT, read 1 byte
 # FIXME MDL mdep id attribution?
-# FIXME MCAP capabilities?
 # FIXME do not trust parameters in response (chk against local copy)
 # 	note: this invalidates usage of send_raw_messasge
