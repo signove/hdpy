@@ -434,12 +434,24 @@ class MCLStateMachine:
 
 		return True
 
+	def mdl_crossing_protection(self, mdl):
+		# TODO revise policy against MCAP spec and
+		# future async connect()
+		#
+		# for now, policy is: if same MDL is being connected
+		# in both directions, we are going to connect()
+		# synchronously, so drop passive connection
+
+		return self.pending_passive_mdl == self.pending_active_mdl
+
 	def incoming_mdl_socket(self, sk):
 		# Called by DPSM listener
 		mdl = self.pending_passive_mdl
-		self.pending_passive_mdl = None
 		ok = self.mcl.state == MCAP_MCL_STATE_PENDING
 		ok = ok and not not mdl
+		if ok:
+			ok = ok and self.mdl_crossing_protection(mdl)
+		self.pending_passive_mdl = None
 
 		if ok:
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
@@ -660,7 +672,6 @@ class MCLStateMachine:
 # FIXME test against bluez
 # FIXME if new active/passive connect, discard old MDL w/ same MDLID
 # FIXME get old MDL by MDLID upon reconnection (active/passive)
-# FIXME MDL crossing protection
 # FIXME is_valid_configuration should be call back upper layer to question
 # FIXME MDL streaming or ertm channel?
 # FIXME error feedback (for requests we had made)
