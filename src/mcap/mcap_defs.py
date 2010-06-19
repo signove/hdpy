@@ -474,7 +474,7 @@ class DeleteMDLResponse( MDLResponse ):
 class CSPCapabilitiesResponse( CSPResponse ):
 	mask2 = ">BBHHH"
 	mask2_size = struct.calcsize(mask2)
-	# FIXME error msg has different size
+	# CSP responses don't change length even in case of error
 
 	def __init__(self, rspcode, btclockres, synclead, tmstampres,
 			tmstampacc):
@@ -505,7 +505,7 @@ class CSPCapabilitiesResponse( CSPResponse ):
 class CSPSetResponse( CSPResponse ):
 	mask2 = ">BIQH"
 	mask2_size = struct.calcsize(mask2)
-	# FIXME error msg has different size
+	# CSP responses don't change length even in case of error
 
 	def __init__(self, rspcode, btclock, timestamp, tmstampacc):
 		CSPResponse.__init__(self, MCAP_MD_SYNC_SET_REQ, rspcode)
