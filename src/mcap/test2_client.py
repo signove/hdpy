@@ -95,7 +95,7 @@ class MyInstance(MCAPInstance):
 	
 	
 sent = [ 
-	"0AFF000ABC", # send an invalid message (Op Code does not exist)
+	"0BFF000ABC", # send an invalid message (Op Code does not exist)
 	"01FF000ABC", # send a CREATE_MD_REQ (0x01) with invalid MDLID == 0xFF00 (DO NOT ACCEPT)
        	"0100230ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC (ACCEPT)
 	"0100240ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0024 CONF = 0xBC (ACCEPT)
@@ -106,7 +106,7 @@ sent = [
 	]
 
 send_script = [
-	(MyInstance.SendRawRequest, 0x0a, 0xff, 0x00, 0x0a, 0xbc),
+	(MyInstance.SendRawRequest, 0x0b, 0xff, 0x00, 0x0a, 0xbc),
 	(MyInstance.CreateMDL, 0xff00, 0x0a, 0xbc),
 	(MyInstance.CreateMDL, 0x0023, 0x0a, 0xbc),
 	(MyInstance.CreateMDL, 0x0024, 0x0a, 0xbc),

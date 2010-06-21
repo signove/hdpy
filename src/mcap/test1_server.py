@@ -9,7 +9,7 @@ import glib
 class MCAPSessionServerStub:
 
 	received = [
-		"0AFF000ABC", # send an invalid message (Op Code does not exist)
+		"0BFF000ABC", # send an invalid message (Op Code does not exist)
 		"01FF000ABC", # send a CREATE_MD_REQ (0x01) with invalid MDLID == 0xFF00 (DO NOT ACCEPT)
         	"0100230ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC (ACCEPT)
 		"0100240ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0024 CONF = 0xBC (ACCEPT)
