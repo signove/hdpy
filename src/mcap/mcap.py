@@ -59,6 +59,8 @@ class MDL(object):
 		self.state = MCAP_MDL_STATE_CLOSED
 		if self.sk:
 			try:
+				# shutdown = connection closed even if fd
+				# copied to another process
 				self.sk.shutdown(2)
 				self.sk.close()
 			except IOError:
@@ -79,7 +81,7 @@ class MDL(object):
 
 		socket = create_data_socket(self.mcl.adapter, None, True, 512)
 		self.sk = socket
-		self.sk.connect(self.mcl.remote_addr)
+		self.sk.connect(self.mcl.remote_addr_dc)
 		self.state = MCAP_MDL_STATE_ACTIVE
 
 		if not self.mcl.connected_mdl_socket(self):
@@ -109,11 +111,12 @@ class MDL(object):
 
 class MCL(object):
 
-	def __init__(self, observer, adapter, role, remote_addr):
+	def __init__(self, observer, adapter, role, remote_addr, dpsm):
 		self.observer = observer
 		self.adapter = adapter 
 		self.role = role
 		self.remote_addr = remote_addr
+		self.remote_addr_dc = (remote_addr[0], dpsm)
 		self.invalidated = False
 
 		self.state = MCAP_MCL_STATE_IDLE
@@ -140,7 +143,6 @@ class MCL(object):
 		if self.sk:
 			self.close_all_mdls()
 			try:
-				self.sk.shutdown(2)
 				self.sk.close()
 			except IOError:
 				pass
@@ -432,12 +434,24 @@ class MCLStateMachine:
 
 		return True
 
+	def mdl_crossing_protection(self, mdl):
+		# TODO revise policy against MCAP spec and
+		# future async connect()
+		#
+		# for now, policy is: if same MDL is being connected
+		# in both directions, we are going to connect()
+		# synchronously, so drop passive connection
+
+		return self.pending_passive_mdl == self.pending_active_mdl
+
 	def incoming_mdl_socket(self, sk):
 		# Called by DPSM listener
 		mdl = self.pending_passive_mdl
-		self.pending_passive_mdl = None
 		ok = self.mcl.state == MCAP_MCL_STATE_PENDING
 		ok = ok and not not mdl
+		if ok:
+			ok = ok and self.mdl_crossing_protection(mdl)
+		self.pending_passive_mdl = None
 
 		if ok:
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
@@ -446,6 +460,7 @@ class MCLStateMachine:
 				self.mdl_socket_error)
 			self.mcl.observer.mdlconnected_mcl(mdl, self.reconn)
 		else:
+			# FIXME refuse, not close
 			sk.close()
 
 		return ok
@@ -461,13 +476,13 @@ class MCLStateMachine:
 			self.mcl.observer.watch_mdl_errors(mdl, mdl.sk,
 				self.mdl_socket_error)
 			self.mcl.observer.mdlconnected_mcl(mdl, self.reconn)
-		else:
-			mdl.close()
 
+		# MDL is responsible by closing socket if not ok
 		return ok
 
 	def mdl_socket_error(self, mdl, *args):
 		mdl.close()
+		return True
 
 	def closed_mdl(self, mdl):
 		''' called back by MDL itself '''
@@ -655,11 +670,14 @@ class MCLStateMachine:
 # FIXME update test scripts
 # FIXME test3
 # FIXME test against bluez
-
-# FIXME pre-existent MDL in case of active reconnect?
-# FIXME pre-existent MDL in case of passive reconnect? x 2
-# FIXME MDL crossing protection
+# FIXME if new active/passive connect, discard old MDL w/ same MDLID
+# FIXME get old MDL by MDLID upon reconnection (active/passive)
 # FIXME is_valid_configuration should be call back upper layer to question
 # FIXME MDL streaming or ertm channel?
 # FIXME error feedback (for requests we had made)
+# FIXME Refuse untimely MDL connection using BT_DEFER_SETUP
+#	get addr via L2CAP_OPTIONS
+#	definitive accept using poll OUT ; if !OUT, read 1 byte
 # FIXME MDL mdep id attribution?
+# FIXME do not trust parameters in response (chk against local copy)
+# 	note: this invalidates usage of send_raw_messasge

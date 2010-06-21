@@ -71,7 +71,7 @@ class MCAPInstance:
 
 ### Commands
 
-	def CreateMCL(self, addr):
+	def CreateMCL(self, addr, dpsm):
 		event = self.MCLConnected
 
 		if self.peer_connected(addr):
@@ -79,7 +79,7 @@ class MCAPInstance:
 			event = self.MCLReconnected
 		else:
 			mcl = MCL(self, self.adapter, MCAP_MCL_ROLE_INITIATOR,
-				addr)
+				addr, dpsm)
 			self.add_mcl(mcl)
 
 		if mcl.state == MCAP_MCL_STATE_IDLE:
@@ -210,7 +210,7 @@ class MCAPInstance:
 			event = self.MCLReconnected
 		else:
 			mcl = MCL(self, self.adapter, MCAP_MCL_ROLE_ACCEPTOR,
-				addr)
+				addr, 0)
 			self.add_mcl(mcl)
 
 		if mcl.state == MCAP_MCL_STATE_IDLE:
@@ -218,6 +218,7 @@ class MCAPInstance:
 			event(mcl)
 		else:
 			# crossed or duplicated connection, reject
+			# FIXME refuse using BT_DEFER_SETUP		
 			sk.close()
 
 	def error_cc(self, listener):
