@@ -67,11 +67,18 @@ class MCAPSessionServerStub:
 	def mdlaborted_mcl(self, mcl, mdl):
 		print "MDL aborted"
 
+	def mdldeleted_mcl(self, mdl):
+		print "MDL deleted"
+
 	def mdlclosed_mcl(self, mdl):
 		pass
 
 	def recvdata(self, sk, evt, mdl):
 		data = mdl.read()
+		if not data:
+			mdl.close()
+			return False
+
 		print "MDL", id(mdl), "data", data
 		mdl.write(data + " PONG1 " + data)
 		return True
