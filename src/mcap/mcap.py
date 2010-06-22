@@ -50,10 +50,11 @@ class DataChannelListener(object):
 
 class MDL(object):
 
-	def __init__(self, mcl, mdlid, mdepid):
+	def __init__(self, mcl, mdlid, mdepid, config):
 		self.mcl = mcl
 		self.mdlid = mdlid
 		self.mdepid = mdepid
+		self.config = config
 		self.sk = None
 		self.state = MCAP_MDL_STATE_CLOSED
 
@@ -148,7 +149,7 @@ class MCL(object):
 
 		self.sk = None
 
-		self.mdl_list = []
+		self.mdl_list = {}
 		self.is_channel_open = False
 
 		self.index = 0
@@ -232,29 +233,29 @@ class MCL(object):
 		return len(self.mdl_list)
 
 	def has_mdls(self):
-		return self.count_mdls() > 0
+		return not not self.mdl_list
 
 	def get_mdl(self, mdlid):
-		found = None
-		i = -1
-		for pos, mdl in enumerate(self.mdl_list):
-			if mdl.mdlid == mdlid:
-				i = pos
-				found = mdl
-				break
-		return found, i
+		try:
+			mdl = self.mdl_list[mdlid]
+		except KeyError:
+			mdl = None
+		return mdl
 
 	def contains_mdl(self, mdlid):
-		mdl, i = self.get_mdl(mdlid)
-		return mdl is not None
+		return mdlid in self.mdl_list
 
-	def add_mdl(self, mdl):
-		self.mdl_list.append(mdl)
+	def add_mdl(self, mdl, reconn):
+		if mdl.mdlid in self.mdl_list:
+			if reconn:
+				print "Bug: MDL %d: MDLID %d already in list" \
+					% (id(mdl), mdl.mdlid)
+		self.mdl_list[mdl.mdlid] = mdl
 
 	def delete_mdl(self, mdlid):
-		mdl, i = self.get_mdl(mdlid)
+		mdl = self.get_mdl(mdlid)
 		if mdl:
-			del self.mdl_list[i]
+			del self.mdl_list[mdlid]
 			mdl.close()
 			# change state so if someone holds a reference to
 			# this MDL, will see that it has been deleted
@@ -262,12 +263,12 @@ class MCL(object):
 		return mdl is not None
 	
 	def close_all_mdls(self):
-		for mdl in self.mdl_list:
+		for mdlid, mdl in self.mdl_list.items():
 			mdl.close()
 
 	def delete_all_mdls(self):
-		while self.mdl_list:
-			self.delete_mdl(self.mdl_list[0].mdlid)
+		for mdlid in self.mdl_list.keys():
+			self.delete_mdl(mdlid)
 	
 	def create_mdlid(self):
 		mdlid = self.last_mdlid
@@ -306,10 +307,23 @@ class MCLStateMachine:
 		return success
 
 	def send_raw_message(self, message):
+		'''
+		For testing purposes only: sends an arbitrary stream of bytes
+		via MCL control channel
+		'''
 		if self.request_in_flight:
                         raise InvalidOperation('Still waiting for response')
 
 		self.request_in_flight = ord(message[0])
+		# Hack to keep a copy of last request
+		try:
+			request = None
+			if self.request_in_flight % 2:
+				request = self.parser.parse(message)
+				self.last_request = request
+		except InvalidMessage:
+			self.last_request = None
+
 		ok = self.mcl.write(message)
 		if not ok:
 			print "CANNOT WRITE: " + str(msg)
@@ -327,6 +341,7 @@ class MCLStateMachine:
 
 		opcode = request.opcode
 		self.request_in_flight = opcode
+		self.last_request = request
 		return self.send_mcap_command(request)
 	
 	def send_response(self, response):
@@ -401,10 +416,37 @@ class MCLStateMachine:
 
 	def process_create_response(self, response, reconn=False):
 		if response.rspcode == MCAP_RSP_SUCCESS:
-			mdl = MDL(self.mcl, response.mdlid, 0)
+			mdlid = response.mdlid
+			if reconn:
+				mdl = self.mcl.get_mdl(response.mdlid)
+				if not mdl:
+					print "Reconn resp to unknown MDLID"
+					return
+			else:
+				config = response.config
+				# TODO: submit response config to upper layers
+
+				if self.last_request.mdlid != mdlid:
+					print "Conn resp of different MDLID"
+					return
+
+				if config and config != \
+					self.last_request.config:
+					print "Conn resp of different config"
+					return
+				
+				mdl = self.mcl.get_mdl(response.mdlid)
+				if mdl:
+					self.mcl.delete_mdl(mdl)
+					self.mcl.observer.mdldeleted_mcl(mdl)
+
+				mdl = MDL(self.mcl, mdlid,
+					self.last_request.mdepid, config)
+
+				self.mcl.add_mdl(mdl, reconn)
+
 			self.pending_active_mdl = mdl
 			self.reconn = reconn
-			self.mcl.add_mdl(mdl)
 			self.mcl.state = MCAP_MCL_STATE_PENDING
 			self.mcl.observer.mdlgranted_mcl(self.mcl, mdl)
 		else:
@@ -423,8 +465,8 @@ class MCLStateMachine:
 		if response.rspcode == MCAP_RSP_SUCCESS:
 
 			mdlid = response.mdlid
-			if mdlid == MCAP_MDL_ID_ALL:
-				for mdl in self.mcl.mdl_list:
+			if self.is_mdlid_all(mdlid):
+				for mdlid, mdl in self.mcl.mdl_list.items():
 					self.mcl.observer.mdldeleted_mcl(mdl)
 				self.mcl.delete_all_mdls()
 			else:
@@ -433,7 +475,6 @@ class MCLStateMachine:
 					self.mcl.observer.mdldeleted_mcl(mdl)
 
 				self.mcl.delete_mdl(response.mdlid)
-			
 
 			if not self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
@@ -533,74 +574,83 @@ class MCLStateMachine:
 			rsp = MDLResponse(opcodeRsp, MCAP_RSP_INVALID_PARAMETER_VALUE, 0x0000)
 			return self.send_response(rsp)
 
-	def process_create_request(self, request):
+	def process_create_request(self, request, reconn=False):
 		rspcode = MCAP_RSP_SUCCESS
+		mdlid = request.mdlid
+		config = 0x00
+		mdl = None
 
 		if not self.is_valid_mdlid(request.mdlid, False):
 			rspcode = MCAP_RSP_INVALID_MDL
-		elif not self.support_more_mdls():
-			rspcode = MCAP_RSP_MDL_BUSY
-		elif not self.is_valid_mdepid(request.mdepid):
-			rspcode = MCAP_RSP_INVALID_MDEP
-		elif not self.support_more_mdeps():
-			rspcode = MCAP_RSP_MDEP_BUSY
+
 		elif self.mcl.state == MCAP_MCL_STATE_PENDING:
 			print "Pending MDL connection",
 			rspcode = MCAP_RSP_INVALID_OPERATION
-		elif not self.is_valid_configuration(request.conf):
-			rspcode = MCAP_RSP_CONFIGURATION_REJECTED
-
-		config = 0x00
-		if rspcode == MCAP_RSP_SUCCESS:
-			config = request.conf
 		else:
+			if reconn:
+				if not self.mcl.get_mdl(mdlid):
+					rspcode = MCAP_RSP_INVALID_MDL
+			else:
+				if not self.support_more_mdls():
+					rspcode = MCAP_RSP_MDL_BUSY
+				elif not self.is_valid_mdepid(request.mdepid):
+					rspcode = MCAP_RSP_INVALID_MDEP
+				elif not self.support_more_mdeps():
+					rspcode = MCAP_RSP_MDEP_BUSY
+				elif not self.is_valid_configuration(request.config):
+					rspcode = MCAP_RSP_CONFIGURATION_REJECTED
+	
+				if rspcode == MCAP_RSP_SUCCESS:
+					config = request.config
+		
+		if rspcode != MCAP_RSP_SUCCESS:
 			self.print_error_message(rspcode)
 		
-		createResponse = CreateMDLResponse(rspcode, request.mdlid, config)
-		success = self.send_response(createResponse)
+		if reconn:
+			response = ReconnectMDLResponse(rspcode, mdlid)
+		else:
+			response = CreateMDLResponse(rspcode, mdlid, config)
+
+		success = self.send_response(response)
 
 		if success and (rspcode == MCAP_RSP_SUCCESS):
-			mdl = MDL(self.mcl, request.mdlid, 0)
+			if not reconn:
+				mdl = self.mcl.get_mdl(mdlid)
+				if mdl:
+					self.mcl.delete_mdl(mdl)
+					self.mcl.observer.mdldeleted_mcl(mdl)
+
+				mdl = MDL(self.mcl, mdlid,
+					request.mdepid, request.config)
+
+				self.mcl.add_mdl(mdl, reconn)
+			else:
+				mdl = self.mcl.get_mdl(mdlid)
+
 			self.pending_passive_mdl = mdl
-			self.reconn = False
-			self.mcl.add_mdl(mdl)
+			self.reconn = reconn
+
 			self.mcl.state = MCAP_MCL_STATE_PENDING
-			self.mcl.observer.mdlrequested_mcl(self.mcl, mdl,
-				request.mdepid, config)
+			if reconn:
+				self.mcl.observer.mdlreconn_mcl(mdl)
+			else:
+				self.mcl.observer.mdlrequested_mcl(self.mcl, mdl,
+					request.mdepid, config)
 		
 		return success
 
 	def process_reconnect_request(self, request):
-		rspcode = MCAP_RSP_SUCCESS
-
-		if not self.is_valid_mdlid(request.mdlid, False):
-			rspcode = MCAP_RSP_INVALID_MDL
-		elif not self.support_more_mdls():
-			rspcode = MCAP_RSP_MDL_BUSY
-		elif not self.support_more_mdeps():
-			rspcode = MCAP_RSP_MDEP_BUSY
-		elif self.mcl.state == MCAP_MCL_STATE_PENDING:
-			print "Pending MDL connection"
-			rspcode = MCAP_RSP_INVALID_OPERATION
-
-		reconnectResponse = ReconnectMDLResponse(rspcode, request.mdlid)
-		success = self.send_response(reconnectResponse)
-
-		if success and (rspcode == MCAP_RSP_SUCCESS):
-			mdl = MDL(self.mcl, request.mdlid, 0)
-			self.pending_passive_mdl = mdl
-			self.reconn = True
-			self.mcl.add_mdl(mdl)
-			self.mcl.state = MCAP_MCL_STATE_PENDING
-			self.mcl.observer.mdlreconn_mcl(mdl)
-
-		return success
+		return self.process_create_request(self, True)
 
 	def process_delete_request(self, request):
 		rspcode = MCAP_RSP_SUCCESS
+		mdlid = request.mdlid
 
-		if (not self.is_valid_mdlid(request.mdlid, True)) or \
-			(not self.contains_mdlid(request.mdlid)):
+		if not self.is_valid_mdlid(mdlid, True):
+			rspcode = MCAP_RSP_INVALID_MDL
+
+		elif not self.is_mdlid_all(mdlid) and \
+		   not self.contains_mdlid(mdlid):
 			rspcode = MCAP_RSP_INVALID_MDL
 
 		elif not self.support_more_mdls():
@@ -610,19 +660,19 @@ class MCLStateMachine:
 			print "Pending MDL connection"
 			rspcode = MCAP_RSP_INVALID_OPERATION
 
-		deleteResponse = DeleteMDLResponse(rspcode, request.mdlid)
+		deleteResponse = DeleteMDLResponse(rspcode, mdlid)
 		success = self.send_response(deleteResponse)
 
 		if success and (rspcode == MCAP_RSP_SUCCESS):
 			self.pending_passive_mdl = None
-			if request.mdlid == MCAP_MDL_ID_ALL:
-				for mdl in self.mcl.mdl_list:
+			if self.is_mdlid_all(mdlid):
+				for mdlid, mdl in self.mcl.mdl_list.items():
 					self.mcl.observer.mdldeleted_mcl(mdl)
 				self.mcl.delete_all_mdls()
 			else:
-				mdl = self.mcl.get_mdl(request.mdlid)
+				mdl = self.mcl.get_mdl(mdlid)
 				self.mcl.observer.mdldeleted_mcl(mdl)
-				self.mcl.delete_mdl(request.mdlid)
+				self.mcl.delete_mdl(mdlid)
 
 			if not self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED	
@@ -648,10 +698,10 @@ class MCLStateMachine:
 ## UTILITY METHODS
 
 	def contains_mdlid(self, mdlid):
-		if (mdlid == MCAP_MDL_ID_ALL):
-			return True
-		
 		return self.mcl.contains_mdl(mdlid)
+
+	def is_mdlid_all(self, mdlid):
+		return mdlid == MCAP_MDL_ID_ALL
 
 	def is_valid_mdlid(self, mdlid, accept_all):
 		# has 16 bits
@@ -692,17 +742,11 @@ class MCLStateMachine:
 			print "Unknown error rsp code %d" % error_rsp_code
 
 
-# FIXME assert no two MDLs w/ same MDLID in MCL
-# FIXME if new active/passive connect, discard old MDL w/ same MDLID
-# FIXME get old MDL by MDLID upon reconnection (active/passive)
 # FIXME is_valid_configuration should be called back upper layer to question
 # FIXME MDL streaming or ertm channel?
-# FIXME MDL store/keep config, compare in reconnection
 # FIXME error feedback (for requests we had made)
 # FIXME Refuse untimely MDL connection using BT_DEFER_SETUP
 #	get addr via L2CAP_OPTIONS to decide upon acceptance
 #	definitive accept using poll OUT ; if !OUT, read 1 byte
-# FIXME MDL mdep id store/keep
-# FIXME do not trust parameters in response (chk against local copy)
-# 	note: this invalidates usage of send_raw_messasge
 # FIXME async connect()
+# FIXME async observer notifications to avoid reentrancy

@@ -22,6 +22,9 @@ class MyInstance(MCAPInstance):
 	def MDLClosed(self, mdl):
 		print "MDL closed", id(mdl)
 
+	def MDLDeleted(self, mdl):
+		print "MDL deleted", id(mdl)
+
 	def RecvDump(self, mcl, message):
 		print "Received command ", repr(message)
 		return True

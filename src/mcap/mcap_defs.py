@@ -187,14 +187,14 @@ class CreateMDLRequest( MDLRequest ):
 	mask2 = ">BB"
 	mask2_size = struct.calcsize(mask2)
 
-	def __init__(self, mdlid, mdepid, conf):
+	def __init__(self, mdlid, mdepid, config):
 		MDLRequest.__init__(self, MCAP_MD_CREATE_MDL_REQ, mdlid)
 		self.mdepid = mdepid
-		self.conf = conf
+		self.config = config
 
 	def encode(self):
 		return MDLRequest.encode(self) + \
-			struct.pack(self.mask2, self.mdepid, self.conf)
+			struct.pack(self.mask2, self.mdepid, self.config)
 
 	@staticmethod
 	def length(rspcode):
@@ -607,7 +607,7 @@ def test():
 	assert(msgObj.opcode == MCAP_MD_CREATE_MDL_REQ)
 	assert(msgObj.mdlid == 0x0023)
 	assert(msgObj.mdepid == 0x0A)
-	assert(msgObj.conf == 0xBC)
+	assert(msgObj.config == 0xBC)
 	assert(msgObj.encode() == msg)
 	
 	
