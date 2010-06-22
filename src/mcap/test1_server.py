@@ -33,11 +33,6 @@ class MCAPSessionServerStub:
 	def __init__(self):
 		pass
 
-	def watch_cc(self, listener, fd, activity_cb, error_cb):
-		glib.io_add_watch(fd, glib.IO_IN, activity_cb)
-		glib.io_add_watch(fd, glib.IO_ERR, error_cb)
-		glib.io_add_watch(fd, glib.IO_HUP, error_cb)
-
 	def new_cc(self, listener, sk, remote_addr):
 		self.mcl = MCL(self, "00:00:00:00:00:00", MCAP_MCL_ROLE_ACCEPTOR, remote_addr, 0)
 		assert(self.mcl.state == MCAP_MCL_STATE_IDLE)
@@ -48,11 +43,6 @@ class MCAPSessionServerStub:
 
 	def error_cc(eslf, listener):
 		self.stop_session()
-
-	def watch_mcl(self, mcl, fd, activity_cb, error_cb):
-		glib.io_add_watch(fd, glib.IO_IN, activity_cb)
-		glib.io_add_watch(fd, glib.IO_ERR, error_cb)
-		glib.io_add_watch(fd, glib.IO_HUP, error_cb)
 
 	def closed_mcl(self, socket, *args):
 		self.stop_session()

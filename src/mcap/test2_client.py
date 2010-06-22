@@ -9,13 +9,6 @@ import glib
 loop = glib.MainLoop()
 
 class MyInstance(MCAPInstance):
-	def Watch(self, fd, activity_cb, error_cb, arg):
-		if activity_cb:
-			glib.io_add_watch(fd, glib.IO_IN, activity_cb, arg)
-		if error_cb:
-			glib.io_add_watch(fd, glib.IO_ERR, error_cb, arg)
-			glib.io_add_watch(fd, glib.IO_HUP, error_cb, arg)
-
 	def MCLConnected(self, mcl):
 		print "MCL has connected"
 		self.take_initiative(mcl)
@@ -37,17 +30,17 @@ class MyInstance(MCAPInstance):
 
 	def take_initiative(self, mcl):
 		if self.counter >= len(sent):
-			self.bye()
+			pass
 		else:
-			glib.idle_add(self.take_initiative_cb, mcl)
+			to = 1000
+			print "############ counter", self.counter
+			if self.counter == 4:
+				to = 10000
+			glib.timeout_add(to, self.take_initiative_cb, mcl)
 
 	def take_initiative_cb(self, mcl, *args):
-		if self.counter >= len(sent):
-			print 'TESTS OK' 
-			self.bye()
-		else:
-			action = send_script[self.counter]
-			action[0](self, mcl, *action[1:])
+		action = send_script[self.counter]
+		action[0](self, mcl, *action[1:])
 
 		# It is important to return False.
 		return False
@@ -58,7 +51,11 @@ class MyInstance(MCAPInstance):
 		assert(message == expected_msg)
 		self.check_asserts(mcl)
 		self.counter += 1
-		self.take_initiative(mcl)
+		if message[0:2] != "\x02\x00":
+			self.take_initiative(mcl)
+		else:
+			# delay until we open MDL
+			pass
 		return True
 
 	def SendDump(self, mcl, message):
@@ -75,11 +72,11 @@ class MyInstance(MCAPInstance):
 		elif (self.counter == 3):
 			assert(mcl.count_mdls() == 2)
 			assert(mcl.sm.request_in_flight == 0)
-			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)		
+			assert(mcl.state == MCAP_MCL_STATE_PENDING)
 		elif (self.counter == 4):
 			assert(mcl.count_mdls() == 3)
 			assert(mcl.sm.request_in_flight == 0)
-			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
+			assert(mcl.state == MCAP_MCL_STATE_PENDING)
 		elif (self.counter == 5):
 			assert(mcl.count_mdls() == 3)
 			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
@@ -93,6 +90,36 @@ class MyInstance(MCAPInstance):
 			assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
 			assert(mcl.sm.request_in_flight == 0)
 	
+	def MDLReady(self, mcl, mdl):
+		if mdl.mdlid == 0x27:
+			print "MDL ready but not connecting"
+			self.take_initiative(mdl.mcl)
+		else:
+			print "MDL ready, connecting"
+			glib.timeout_add(0, self.MDLReady_post, mdl)
+
+	def MDLReady_post(self, mdl):
+		instance.ConnectMDL(mdl)
+
+	def MDLConnected(self, mdl):
+		print "MDL connected"
+		glib.timeout_add(1500, self.ping, mdl)
+		self.take_initiative(mdl.mcl)
+
+	def MDLClosed(self, mdl):
+		print "MDL closed"
+
+	def ping(self, mdl):
+		if not mdl.active():
+			return False
+		print mdl.write("hdpy ping ")
+		return True
+
+	def Recv(self, mdl, data):
+		print "MDL", mdl,
+		print "data", data
+		return True
+		
 	
 sent = [ 
 	"0BFF000ABC", # send an invalid message (Op Code does not exist)

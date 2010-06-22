@@ -1,5 +1,6 @@
 from mcap_defs import *
 from mcap import *
+from mcap_loop import *
 
 # The API of MCAPInstance mimics closely the mcap_test_plugin implemented
 # for BlueZ / OpenHealth HDP and MCAP. D-BUS methods are normal methods,
@@ -180,15 +181,6 @@ class MCAPInstance:
 	def MDLReconnected(self, mdl):
 		raise Exception("Not implemented")
 
-	def Watch(self, fd, activity_cb, error_cb):
-		raise Exception("Not implemented")
-
-	def Timeout(self, to, cb, *args):
-		raise Exception("Not implemented")
-
-	def Idle(self, cb, *args):
-		raise Exception("Not implemented")
-
 ### Callback methods that may be reimplemented if subclass is interested
 
 	def RecvDump(self, mcl, message):
@@ -198,9 +190,6 @@ class MCAPInstance:
 		pass
 	
 ### Internal callbacks
-
-	def watch_cc(self, listener, fd, activity_cb, error_cb):
-		self.Watch(fd, activity_cb, error_cb, self)
 
 	def new_cc(self, listener, sk, addr):
 		event = self.MCLConnected
@@ -224,9 +213,6 @@ class MCAPInstance:
 	def error_cc(self, listener):
 		raise Exception("Error in control PSM listener, bailing out")
 
-	def watch_mcl(self, mcl, fd, activity_cb, error_cb):
-		self.Watch(fd, activity_cb, error_cb, mcl)
-
 	def closed_mcl(self, mcl):
 		self.MCLDisconnected(mcl)
 
@@ -237,16 +223,23 @@ class MCAPInstance:
 			self.SendDump(mcl, message)
 
 	def mdlconnected_mcl(self, mdl, reconn):
-		self.Watch(fd, self.mdl_activity, None, mdl)
+		watch_fd(mdl.sk, self.mdl_activity, mdl)
 		if reconn:
 			self.MDLReconnected(mdl)
 		else:
 			self.MDLConnected(mdl)
 
-	def mdl_activity(self, mdl):
+	def mdl_activity(self, sk, event, mdl):
+		if io_err(event):
+			return False
+
 		data = mdl.read()
-		if data:
-			self.Recv(mdl, data)
+		if not data:
+			mdl.close()
+			return False
+
+		self.Recv(mdl, data)
+		return True
 
 	def mdlgranted_mcl(self, mcl, mdl):
 		'''
@@ -270,9 +263,6 @@ class MCAPInstance:
 	def mdlclosed_mcl(self, mdl):
 		self.MDLClosed(mdl)
 
-	def watch_dc(self, listener, fd, activity_cb, error_cb):
-		self.Watch(fd, activity_cb, error_cb, listener)
-
 	def new_dc(self, listener, sk, addr):
 		if not self.peer_connected(addr):
 			# unknown peer
@@ -282,9 +272,6 @@ class MCAPInstance:
 
 	def error_dc(self, listener):
 		raise Exception("Error in data PSM listener, bailing out")
-
-	def watch_mdl_errors(self, mdl, fd, error_cb):
-		self.Watch(fd, None, error_cb, mdl)
 
 
 # TODO non-blocking connect + async CreateMCL() feedback
