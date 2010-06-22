@@ -58,17 +58,24 @@ class MDL(object):
 		self.state = MCAP_MDL_STATE_CLOSED
 
 	def close(self):
-		self.state = MCAP_MDL_STATE_CLOSED
-		if self.sk:
-			try:
-				# shutdown = connection closed even if fd
-				# copied to another process
-				self.sk.shutdown(2)
-				self.sk.close()
-			except IOError:
-				pass
-			self.sk = None
+		if self.abort():
+			self.state = MCAP_MDL_STATE_CLOSED
 			self.mcl.closed_mdl(self)
+
+	def abort(self):
+		if not self.sk:
+			return False
+
+		sk, self.sk = self.sk, None
+		try:
+			# shutdown = connection closed even if fd
+			# copied to another process
+			sk.shutdown(2)
+			sk.close()
+		except IOError:
+			pass
+
+		return True
 
 	def accept(self, sk):
 		if self.state != MCAP_MDL_STATE_CLOSED:
@@ -81,19 +88,20 @@ class MDL(object):
 		if self.state != MCAP_MDL_STATE_CLOSED:
 			raise InvalidOperation("Trying to connect a non-closed MDL")
 
-		self.sk = create_data_socket(self.mcl.adapter, None, True, 512)
+		sk = create_data_socket(self.mcl.adapter, None, True, 512)
 
 		try:
-			self.sk.connect(self.mcl.remote_addr_dc)
-			self.state = MCAP_MDL_STATE_ACTIVE
-
-			if not self.mcl.connected_mdl_socket(self):
-				raise IOError("")
-
+			sk.connect(self.mcl.remote_addr_dc)
 		except IOError:
-			self.sk.close()
-			self.sk = None
-			self.state = MCAP_MDL_STATE_CLOSED
+			sk.close()
+			return
+
+		self.sk = sk
+		self.state = MCAP_MDL_STATE_ACTIVE
+
+		if not self.mcl.connected_mdl_socket(self):
+			self.abort()
+
 
 	def active(self):
 		return self.state == MCAP_MDL_STATE_ACTIVE
@@ -246,11 +254,11 @@ class MCL(object):
 	def delete_mdl(self, mdlid):
 		mdl, i = self.get_mdl(mdlid)
 		if mdl:
+			del self.mdl_list[i]
 			mdl.close()
 			# change state so if someone holds a reference to
 			# this MDL, will see that it has been deleted
 			mdl.state = MCAP_MDL_STATE_DELETED
-			del self.mdl_list[i]
 		return mdl is not None
 	
 	def close_all_mdls(self):
@@ -483,7 +491,7 @@ class MCLStateMachine:
 	def connected_mdl_socket(self, mdl):
 		# Called by MDL object itself
 		ok = self.mcl.state == MCAP_MCL_STATE_PENDING
-		ok = ok and self.pending_active_mdl == mdl
+		ok = ok and self.pending_active_mdl.mdlid == mdl.mdlid
 		self.pending_active_mdl = None
 
 		if ok:
@@ -608,7 +616,7 @@ class MCLStateMachine:
 		if success and (rspcode == MCAP_RSP_SUCCESS):
 			self.pending_passive_mdl = None
 			if request.mdlid == MCAP_MDL_ID_ALL:
-				for mdl in self.mcl.mcl_list:
+				for mdl in self.mcl.mdl_list:
 					self.mcl.observer.mdldeleted_mcl(mdl)
 				self.mcl.delete_all_mdls()
 			else:
@@ -684,15 +692,17 @@ class MCLStateMachine:
 			print "Unknown error rsp code %d" % error_rsp_code
 
 
+# FIXME assert no two MDLs w/ same MDLID in MCL
 # FIXME if new active/passive connect, discard old MDL w/ same MDLID
 # FIXME get old MDL by MDLID upon reconnection (active/passive)
 # FIXME is_valid_configuration should be called back upper layer to question
 # FIXME MDL streaming or ertm channel?
+# FIXME MDL store/keep config, compare in reconnection
 # FIXME error feedback (for requests we had made)
 # FIXME Refuse untimely MDL connection using BT_DEFER_SETUP
 #	get addr via L2CAP_OPTIONS to decide upon acceptance
 #	definitive accept using poll OUT ; if !OUT, read 1 byte
-# FIXME MDL mdep id attribution?
+# FIXME MDL mdep id store/keep
 # FIXME do not trust parameters in response (chk against local copy)
 # 	note: this invalidates usage of send_raw_messasge
 # FIXME async connect()

@@ -9,12 +9,12 @@ import glib
 class MCAPSessionClientStub:
 
 	sent = [ 
-		"0BFF000ABC", # send an invalid message (Op Code does not exist)
+		"0BFF", # send an invalid message (Op Code does not exist)
 		"01FF000ABC", # send a CREATE_MD_REQ (0x01) with invalid MDLID == 0xFF00 (DO NOT ACCEPT)
         	"0100230ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC (ACCEPT)
 		"0100240ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0024 CONF = 0xBC (ACCEPT)
         	"0100270ABC",  # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0027 CONF = 0xBC (ACCEPT)
-        	"050027", # send valid ABORT_MD_REQ (0x05) MDLID == 0x0027 (DO NOT ACCEPT - not on PENDING state)
+        	"050027", # send valid ABORT_MD_REQ (0x05) MDLID == 0x0027
         	"070030", # send an invalid DELETE_MD_REQ (0x07) MDLID == 0x0030
         	"07FFFF", # send a valid DELETE_MD_REQ (0x07) MDLID == MDL_ID_ALL (0XFFFF)
 		]
@@ -54,16 +54,14 @@ class MCAPSessionClientStub:
 		return True
 
 	def take_initiative(self, mcl):
-		print "Scheduling next command"
 		to = 1000
 		if self.counter >= 4:
-			to = 10000
+			to = 2000 
 		glib.timeout_add(to, self.take_initiative_cb, mcl)
 
 	def take_initiative_cb(self, mcl, *args):
-		print "About to send next command"
 		if self.counter >= len(self.sent):
-			pass
+			self.stop_session(mcl)
 		else:
 			msg = testmsg(self.sent[self.counter])
 			print "Sending ", repr(msg)
@@ -93,7 +91,7 @@ class MCAPSessionClientStub:
 			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
 			assert(mcl.sm.request_in_flight == 0)
 		elif (self.counter == 6):			
-			assert(mcl.count_mdls() == 2)
+			assert(mcl.count_mdls() == 3)
 			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
 			assert(mcl.sm.request_in_flight == 0)
 		elif (self.counter == 7):
@@ -125,16 +123,22 @@ class MCAPSessionClientStub:
 		glib.timeout_add(1500, self.ping, mdl)
 		self.take_initiative(mdl.mcl)
 		
+	def mdlaborted_mcl(self, mcl, mdl):
+		pass
+
+	def mdldeleted_mcl(self, mdl):
+		pass
+
 	def ping(self, mdl):
 		if not mdl.active():
 			return False
-		print mdl.write("hdpy ping ")
+		mdl.write("hdpy ping ")
 		return True
 
 	def recvdata(self, sk, evt, mdl):
 		if evt != glib.IO_IN:
 			return False
-		print "MDL", mdl,
+		print "MDL", id(mdl),
 		data = mdl.read()
 		print "data", data
 		return True

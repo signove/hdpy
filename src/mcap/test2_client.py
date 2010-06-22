@@ -20,6 +20,7 @@ class MyInstance(MCAPInstance):
 	def __init__(self, adapter, listener):
 		MCAPInstance.__init__(self, adapter, listener)
  		self.counter = 0
+		self.ping_counter = 50
 
 	def bye(self):
 		if self.counter >= len(sent):
@@ -30,17 +31,22 @@ class MyInstance(MCAPInstance):
 
 	def take_initiative(self, mcl):
 		if self.counter >= len(sent):
-			pass
+			self.bye()
 		else:
 			to = 1000
 			print "############ counter", self.counter
 			if self.counter == 4:
-				to = 10000
+				to = 2000
 			glib.timeout_add(to, self.take_initiative_cb, mcl)
 
 	def take_initiative_cb(self, mcl, *args):
 		action = send_script[self.counter]
-		action[0](self, mcl, *action[1:])
+		method = action[0]
+		if method in [MyInstance.DeleteMDL, MyInstance.ConnectMDL,
+				MyInstance.ReconnectMDL]:
+			method(self, mdl)
+		else:
+			method(self, mcl, *action[1:])
 
 		# It is important to return False.
 		return False
@@ -81,11 +87,7 @@ class MyInstance(MCAPInstance):
 			assert(mcl.count_mdls() == 3)
 			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
 			assert(mcl.sm.request_in_flight == 0)
-		elif (self.counter == 6):			
-			assert(mcl.count_mdls() == 2)
-			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
-			assert(mcl.sm.request_in_flight == 0)
-		elif (self.counter == 7):
+		elif (self.counter == 6):
 			assert(mcl.count_mdls() == 0)
 			assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
 			assert(mcl.sm.request_in_flight == 0)
@@ -110,14 +112,18 @@ class MyInstance(MCAPInstance):
 		print "MDL closed"
 
 	def ping(self, mdl):
+		self.ping_counter -= 1
+		if self.ping_counter < 0:
+			instance.CloseMDL(mdl)
+			return False
+
 		if not mdl.active():
 			return False
-		print mdl.write("hdpy ping ")
+		mdl.write("hdpy ping ")
 		return True
 
 	def Recv(self, mdl, data):
-		print "MDL", mdl,
-		print "data", data
+		print "MDL", id(mdl), "data", data
 		return True
 		
 	
@@ -128,7 +134,6 @@ sent = [
 	"0100240ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0024 CONF = 0xBC (ACCEPT)
        	"0100270ABC",  # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0027 CONF = 0xBC (ACCEPT)
        	"050027", # send valid ABORT_MD_REQ (0x05) MDLID == 0x0027 (DO NOT ACCEPT - not on PENDING state)
-       	"070030", # send an invalid DELETE_MD_REQ (0x07) MDLID == 0x0030
        	"07FFFF", # send a valid DELETE_MD_REQ (0x07) MDLID == MDL_ID_ALL (0XFFFF)
 	]
 
@@ -139,8 +144,7 @@ send_script = [
 	(MyInstance.CreateMDL, 0x0024, 0x0a, 0xbc),
 	(MyInstance.CreateMDL, 0x0027, 0x0a, 0xbc),
 	(MyInstance.AbortMDL, 0x0027),
-	(MyInstance.DeleteMDL, 0x0030),
-	(MyInstance.DeleteAll),
+	(MyInstance.DeleteAll, ),
 	]
 
 received = [
@@ -150,7 +154,6 @@ received = [
 	"02000024BC", # receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
        	"02000027BC", # receive a CREATE_MD_RSP (0x02) with RSP Sucess (0x00)
        	"06000027", # receive a ABORT_MD_RSP (0x06) with RSP Sucess
-       	"08050030", # receive an invalid DELETE_MD_RSP (0x08) 
        	"0800FFFF", # receive a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
 	]
 
