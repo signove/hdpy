@@ -163,7 +163,7 @@ class MCAPInstance:
 		raise Exception("Not implemented")
 
 	def MDLRequested(self, mcl, mdl, mdep_id, conf):
-		''' Followed by MDLAborted or MDLConnected '''
+		''' Followed by eDLAborted or MDLConnected '''
 		print "MDLRequested not implemented"
 
 	def MDLAborted(self, mcl, mdl):

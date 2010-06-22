@@ -99,6 +99,8 @@ class MDL(object):
 		return self.state == MCAP_MDL_STATE_ACTIVE
 
 	def read(self):
+		if not self.sk:
+			return ""
 		try:
 			message = self.sk.recv(1024)
 		except IOError:
@@ -108,6 +110,8 @@ class MDL(object):
 		return message
 
 	def write(self, message):
+		if not self.sk:
+			return False
 		try:
 			l = self.sk.send(message)
 		except IOError:
@@ -222,7 +226,7 @@ class MCL(object):
 	def has_mdls(self):
 		return self.count_mdls() > 0
 
-	def get_mdl(mdlid):
+	def get_mdl(self, mdlid):
 		found = None
 		i = -1
 		for pos, mdl in enumerate(self.mdl_list):
@@ -333,33 +337,33 @@ class MCLStateMachine:
 		try:
 			opcode, rspcode = self.parser.get_opcode(message)
 			if (opcode % 2):
-				return self.receive_request(message)
+				return self.receive_request(opcode, message)
 			else:
-				return self.receive_response(message)
+				return self.receive_response(opcode, message)
 		except InvalidMessage:
 			return self.send_mdl_error_response()
 	
-	def receive_request(self, request):
+	def receive_request(self, opcode, request):
 		# if a request is received when a response is expected, only process if 
 		# it is received by the Acceptor; otherwise, just ignore
 		if self.request_in_flight:
 			if (self.mcl.role == MCAP_MCL_ROLE_INITIATOR):
 				return False
 			else:
-				return self.process_request(request)
+				return self.process_request(opcode, request)
 		else:
-			return self.process_request(request)
+			return self.process_request(opcode, request)
 
-	def receive_response(self, response):
+	def receive_response(self, opcode, response):
 		# if a response is received when no request is outstanding, just ignore
 		if self.request_in_flight:
-			return self.process_response(response)
+			return self.process_response(opcode, response)
 		else:
 			return False
 
 ## PROCESS RESPONSE METHODS
 
-	def process_response(self, response):
+	def process_response(self, opcode, response):
 		expected = self.request_in_flight + 1
 		if not self.request_in_flight:
 			expected = -1
@@ -367,22 +371,25 @@ class MCLStateMachine:
 
 		responseMessage = self.parser.parse(response)
 
-		if not expected or responseMessage.opcode != expected:
+		if not expected or opcode != expected:
 			print "Expected response for %d, got %d" % \
-				(expected, responseMessage.opcode)
+				(expected, opcode)
 			return
 
 		self.pending_active_mdl = None
-		if responseMessage.opcode == MCAP_MD_CREATE_MDL_RSP:
+		# TODO make this look more like a state machine
+		if opcode == MCAP_MD_CREATE_MDL_RSP:
 			return self.process_create_response(responseMessage)
-		elif responseMessage.opcode == MCAP_MD_RECONNECT_MDL_RSP:
+		elif opcode == MCAP_MD_RECONNECT_MDL_RSP:
 			return self.process_reconnect_response(responseMessage)
-		elif responseMessage.opcode == MCAP_MD_DELETE_MDL_RSP:
+		elif opcode == MCAP_MD_DELETE_MDL_RSP:
 			return self.process_delete_response(responseMessage)
-		elif responseMessage.opcode == MCAP_MD_ABORT_MDL_RSP:
+		elif opcode == MCAP_MD_ABORT_MDL_RSP:
 			return self.process_abort_response(responseMessage)
-		elif responseMessage.opcode == MCAP_ERROR_RSP:
+		elif opcode == MCAP_ERROR_RSP:
 			self.print_error_message(responseMessage.rspcode)
+		else:
+			raise InvalidOperation("Should not happen")
 
 	def process_create_response(self, response, reconn=False):
 		if response.rspcode == MCAP_RSP_SUCCESS:
@@ -439,7 +446,7 @@ class MCLStateMachine:
 
 			if self.contains_mdlid(response.mdlid):
 				mdl = self.mcl.get_mdl(response.mdlid)
-				self.mcl.observer.mdlaborted_mcl(mdl)
+				self.mcl.observer.mdlaborted_mcl(self.mcl, mdl)
 		else:
 			self.print_error_message( response.rspcode )
 
@@ -498,22 +505,23 @@ class MCLStateMachine:
 
 ## PROCESS REQUEST METHODS
 
-	def process_request(self, request):
+	def process_request(self, opcode, request):
 		try:
+			# TODO improve this, making it more like a state machine
 			request = self.parser.parse(request)
-			if request.opcode == MCAP_MD_CREATE_MDL_REQ:
+			if opcode == MCAP_MD_CREATE_MDL_REQ:
 				return self.process_create_request(request)
-			elif request.opcode == MCAP_MD_RECONNECT_MDL_REQ:
+			elif opcode == MCAP_MD_RECONNECT_MDL_REQ:
 				return self.process_reconnect_request(request)
-			elif request.opcode == MCAP_MD_DELETE_MDL_REQ:
+			elif opcode == MCAP_MD_DELETE_MDL_REQ:
 				return self.process_delete_request(request)
-			elif request.opcode == MCAP_MD_ABORT_MDL_REQ:
+			elif opcode == MCAP_MD_ABORT_MDL_REQ:
 				return self.process_abort_request(request)
 			else:
 				raise InvalidOperation("Should not happen")
 
 		except InvalidMessage:
-			opcodeRsp = request.opcode + 1
+			opcodeRsp = opcode + 1
 			rsp = MDLResponse(opcodeRsp, MCAP_RSP_INVALID_PARAMETER_VALUE, 0x0000)
 			return self.send_response(rsp)
 
@@ -627,7 +635,7 @@ class MCLStateMachine:
 			else:
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
 			mdl = self.mcl.get_mdl(request.mdlid)
-			self.mcl.observer.mdlaborted_mcl(mdl)
+			self.mcl.observer.mdlaborted_mcl(self.mcl, mdl)
 
 ## UTILITY METHODS
 

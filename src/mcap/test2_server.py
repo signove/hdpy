@@ -17,10 +17,10 @@ class MyInstance(MCAPInstance):
 		print "MDL requested MDEP", mdepid, "config", config
 
 	def MDLConnected(self, mdl):
-		print "MDL connected", mdl
+		print "MDL connected", id(mdl)
 
 	def MDLClosed(self, mdl):
-		print "MDL closed", mdl
+		print "MDL closed", id(mdl)
 
 	def RecvDump(self, mcl, message):
 		print "Received command ", repr(message)
@@ -31,7 +31,7 @@ class MyInstance(MCAPInstance):
 		return True
 
 	def Recv(self, mdl, data):
-		print mdl, "data", data
+		print "MDL", id(mdl), "data", data
 		instance.Send(mdl, data + " PONG " + data)
 		return True
 

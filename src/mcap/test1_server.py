@@ -64,12 +64,15 @@ class MCAPSessionServerStub:
 	def mdlconnected_mcl(self, mdl, reconn):
 		glib.io_add_watch(mdl.sk, glib.IO_IN, self.recvdata, mdl)
 
+	def mdlaborted_mcl(self, mcl, mdl):
+		print "MDL aborted"
+
 	def mdlclosed_mcl(self, mdl):
 		pass
 
 	def recvdata(self, sk, evt, mdl):
 		data = mdl.read()
-		print mdl, "data", data
+		print "MDL", id(mdl), "data", data
 		mdl.write(data + " PONG1 " + data)
 		return True
 
