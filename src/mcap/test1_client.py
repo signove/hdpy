@@ -9,7 +9,7 @@ import glib
 class MCAPSessionClientStub:
 
 	sent = [ 
-		"0AFF000ABC", # send an invalid message (Op Code does not exist)
+		"0BFF000ABC", # send an invalid message (Op Code does not exist)
 		"01FF000ABC", # send a CREATE_MD_REQ (0x01) with invalid MDLID == 0xFF00 (DO NOT ACCEPT)
         	"0100230ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0023 CONF = 0xBC (ACCEPT)
 		"0100240ABC", # send a CREATE_MD_REQ (0x01) MDEPID == 0x0A MDLID == 0x0024 CONF = 0xBC (ACCEPT)
@@ -36,12 +36,8 @@ class MCAPSessionClientStub:
 	def stop_session(self, mcl):
 		glib.MainLoop.quit(self.inLoop)
 
-	def watch_mcl(self, mcl, fd, activity_cb, error_cb):
-		glib.io_add_watch(fd, glib.IO_IN, activity_cb)
-		glib.io_add_watch(fd, glib.IO_ERR, error_cb)
-		glib.io_add_watch(fd, glib.IO_HUP, error_cb)
-
 	def closed_mcl(self, mcl, *args):
+		print "Closed MCL!"
 		self.stop_session(mcl)
 
 	def activity_mcl(self, mcl, recv, message, *args):
@@ -59,12 +55,15 @@ class MCAPSessionClientStub:
 
 	def take_initiative(self, mcl):
 		print "Scheduling next command"
-		glib.idle_add(self.take_initiative_cb, mcl)
+		to = 1000
+		if self.counter >= 4:
+			to = 10000
+		glib.timeout_add(to, self.take_initiative_cb, mcl)
 
 	def take_initiative_cb(self, mcl, *args):
 		print "About to send next command"
 		if self.counter >= len(self.sent):
-			self.stop_session()
+			pass
 		else:
 			msg = testmsg(self.sent[self.counter])
 			print "Sending ", repr(msg)
@@ -105,11 +104,14 @@ class MCAPSessionClientStub:
 	def mdlgranted_mcl(self, mcl, mdl):
 		# An MDL we requested has been granted. Now it is expected
 		# that we connect.
-		# TODO do not connect sometimes (inject an error)
 		print "MDL granted:", id(mdl)
 
-		# Postpone connection so asserts see PENDING state
-		glib.idle_add(self.mdl_do_connect, mdl)
+		if mdl.mdlid == 0x27:
+			# this one we will abort
+			self.take_initiative(mcl)
+		else:
+			# Postpone connection so asserts see PENDING state
+			glib.timeout_add(1000, self.mdl_do_connect, mdl)
 
 	def mdl_do_connect(self, mdl):
 		mdl.connect()
@@ -118,12 +120,27 @@ class MCAPSessionClientStub:
 	def mdlconnected_mcl(self, mdl, reconnection):
 		print "MDL connected"
 		assert(mdl.mcl.state == MCAP_MCL_STATE_ACTIVE)
-		mdl.write("bla")
+		glib.io_add_watch(mdl.sk, glib.IO_IN | glib.IO_ERR | glib.IO_HUP,
+						self.recvdata, mdl)
+		glib.timeout_add(1500, self.ping, mdl)
 		self.take_initiative(mdl.mcl)
 		
-	def watch_mdl_errors(self, mdl, fd, error_cb):
-		glib.io_add_watch(fd, glib.IO_ERR, error_cb, mdl)
-		glib.io_add_watch(fd, glib.IO_HUP, error_cb, mdl)
+	def ping(self, mdl):
+		if not mdl.active():
+			return False
+		print mdl.write("hdpy ping ")
+		return True
+
+	def recvdata(self, sk, evt, mdl):
+		if evt != glib.IO_IN:
+			return False
+		print "MDL", mdl,
+		data = mdl.read()
+		print "data", data
+		return True
+		
+	def mdlclosed_mcl(self, mdl):
+		print "MDL closed"
 
 try:
 	remote_addr = (sys.argv[1], int(sys.argv[2]))

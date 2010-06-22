@@ -2,6 +2,7 @@
 
 from mcap_defs import *
 from mcap_sock import *
+from mcap_loop import *
 import time
 
 
@@ -15,17 +16,18 @@ class ControlChannelListener(object):
 		socket, psm = create_data_listening_socket(adapter, True, 512)
 		self.sk = socket
 		self.psm = psm
-		observer.watch_cc(self, self.sk, self.activity, self.error)
+		watch_fd(self.sk, self.activity)
 
-	def activity(self, *args):
+	def activity(self, sk, event):
+		if io_err(event):
+			self.sk = None
+			self.psm = 0
+			self.observer.error_cc(self)
+			return False
 		sk, address = self.sk.accept()
 		self.observer.new_cc(self, sk, address)
 		return True
 
-	def error(self, *args):
-		self.sk = None
-		self.psm = 0
-		self.observer.error_cc(self)
 
 class DataChannelListener(object):
 	def __init__(self, adapter, observer):
@@ -33,17 +35,17 @@ class DataChannelListener(object):
 		self.observer = observer
 		self.sk = socket
 		self.psm = psm
-		observer.watch_dc(self, self.sk, self.activity, self.error)
+		watch_fd(self.sk, self.activity, self.error)
 
-	def activity(self, *args):
+	def activity(self, sk, event):
+		if io_err(event):
+			self.sk = None
+			self.psm = 0
+			self.observer.error_dc(self)
+			return False
 		sk, address = self.sk.accept()
 		self.observer.new_dc(self, sk, address)
 		return True
-
-	def error(self, *args):
-		self.sk = None
-		self.psm = 0
-		self.observer.error_dc(self)
 
 
 class MDL(object):
@@ -79,15 +81,22 @@ class MDL(object):
 		if self.state != MCAP_MDL_STATE_CLOSED:
 			raise InvalidOperation("Trying to connect a non-closed MDL")
 
-		socket = create_data_socket(self.mcl.adapter, None, True, 512)
-		self.sk = socket
-		self.sk.connect(self.mcl.remote_addr_dc)
-		self.state = MCAP_MDL_STATE_ACTIVE
+		self.sk = create_data_socket(self.mcl.adapter, None, True, 512)
 
-		if not self.mcl.connected_mdl_socket(self):
-			self.state = MCAP_MDL_STATE_CLOSED
+		try:
+			self.sk.connect(self.mcl.remote_addr_dc)
+			self.state = MCAP_MDL_STATE_ACTIVE
+
+			if not self.mcl.connected_mdl_socket(self):
+				raise IOError("")
+
+		except IOError:
 			self.sk.close()
 			self.sk = None
+			self.state = MCAP_MDL_STATE_CLOSED
+
+	def active(self):
+		return self.state == MCAP_MDL_STATE_ACTIVE
 
 	def read(self):
 		try:
@@ -137,12 +146,13 @@ class MCL(object):
 	def accept(self, sk):
 		self.sk = sk
 		self.state = MCAP_MCL_STATE_CONNECTED
-		self.observer.watch_mcl(self, sk, self.activity, self.error)
+		watch_fd(sk, self.activity)
 
 	def close(self):
 		if self.sk:
 			self.close_all_mdls()
 			try:
+				self.sk.shutdown(2)
 				self.sk.close()
 			except IOError:
 				pass
@@ -161,19 +171,20 @@ class MCL(object):
 
 		self.sk = sk
 		self.state = MCAP_MCL_STATE_CONNECTED
-		self.observer.watch_mcl(self, sk, self.activity, self.error)
+		watch_fd(sk, self.activity)
 
-	def activity(self, *args):
-		message = self.read()
-		if message:
-			self.sm.receive_message(message)
-			self.observer.activity_mcl(self, True, message)
-		else:
+	def activity(self, sk, event):
+		if io_err(event):
 			self.close()
-		return True
+			return False
 
-	def error(self, *args):
-		self.close()
+		message = self.read()
+		if not message:
+			self.close()
+			return False
+
+		self.sm.receive_message(message)
+		self.observer.activity_mcl(self, True, message)
 		return True
 
 	def get_csp_timestamp(self):
@@ -456,8 +467,7 @@ class MCLStateMachine:
 		if ok:
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 			mdl.accept(sk)
-			self.mcl.observer.watch_mdl_errors(mdl, sk,
-				self.mdl_socket_error)
+			watch_fd_err(sk, self.mdl_socket_error, mdl)
 			self.mcl.observer.mdlconnected_mcl(mdl, self.reconn)
 		else:
 			# FIXME refuse, not close
@@ -473,16 +483,15 @@ class MCLStateMachine:
 
 		if ok:
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
-			self.mcl.observer.watch_mdl_errors(mdl, mdl.sk,
-				self.mdl_socket_error)
+			watch_fd_err(mdl.sk, self.mdl_socket_error, mdl)
 			self.mcl.observer.mdlconnected_mcl(mdl, self.reconn)
 
 		# MDL is responsible by closing socket if not ok
 		return ok
 
-	def mdl_socket_error(self, mdl, *args):
+	def mdl_socket_error(self, sk, event, mdl):
 		mdl.close()
-		return True
+		return False
 
 	def closed_mdl(self, mdl):
 		''' called back by MDL itself '''
@@ -667,17 +676,15 @@ class MCLStateMachine:
 			print "Unknown error rsp code %d" % error_rsp_code
 
 
-# FIXME update test scripts
-# FIXME test3
-# FIXME test against bluez
 # FIXME if new active/passive connect, discard old MDL w/ same MDLID
 # FIXME get old MDL by MDLID upon reconnection (active/passive)
-# FIXME is_valid_configuration should be call back upper layer to question
+# FIXME is_valid_configuration should be called back upper layer to question
 # FIXME MDL streaming or ertm channel?
 # FIXME error feedback (for requests we had made)
 # FIXME Refuse untimely MDL connection using BT_DEFER_SETUP
-#	get addr via L2CAP_OPTIONS
+#	get addr via L2CAP_OPTIONS to decide upon acceptance
 #	definitive accept using poll OUT ; if !OUT, read 1 byte
 # FIXME MDL mdep id attribution?
 # FIXME do not trust parameters in response (chk against local copy)
 # 	note: this invalidates usage of send_raw_messasge
+# FIXME async connect()
