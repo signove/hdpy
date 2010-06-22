@@ -524,7 +524,7 @@ class MCLStateMachine:
 			watch_fd_err(sk, self.mdl_socket_error, mdl)
 			self.mcl.observer.mdlconnected_mcl(mdl, self.reconn)
 		else:
-			# FIXME refuse, not close
+			# TODO refuse, not close
 			sk.close()
 
 		return ok
@@ -745,8 +745,9 @@ class MCLStateMachine:
 # FIXME is_valid_configuration should be called back upper layer to question
 # FIXME MDL streaming or ertm channel?
 # FIXME error feedback (for requests we had made)
-# FIXME Refuse untimely MDL connection using BT_DEFER_SETUP
-#	get addr via L2CAP_OPTIONS to decide upon acceptance
-#	definitive accept using poll OUT ; if !OUT, read 1 byte
 # FIXME async connect()
 # FIXME async observer notifications to avoid reentrancy
+
+# TODO Refuse untimely MDL connection using BT_DEFER_SETUP
+#	get addr via L2CAP_OPTIONS to decide upon acceptance
+#	definitive accept using poll OUT ; if !OUT, read 1 byte
