@@ -135,28 +135,28 @@ class MCAPInstance:
 		mcl.send_request(req)
 
 	def Send(self, mdl, data):
-		return mdl.send(data)
+		return mdl.write(data)
 
 	def SendRawRequest(self, mcl, *chars):
 		req = RawRequest(*chars)
 		mcl.send_request(req)
 
-### Callback methods that must be implemented by subclass
+### Callback methods that must/may be implemented by subclass
 
 	def Recv(self, mdl, data):
-		raise Exception("Not implemented")
+		print "Recv (mdl data) not implemented"
 
 	def MCLConnected(self, mcl):
-		raise Exception("Not implemented")
+		print "MCLConnected not implemented"
 
 	def MCLDisconnected(self, mcl):
-		raise Exception("Not implemented")
+		print "MCLDisconnected not implemented"
 
 	def MCLReconnected(self, mcl):
-		raise Exception("Not implemented")
+		print "MCLReconnected not implemented"
 
 	def MCLUncached(self, mcl):
-		raise Exception("Not implemented")
+		print "MCLUncached not implemented"
 	
 	def MDLReady(self, mcl, mdl):
 		''' Async confirmation of MDLCreate/MDLReconnect method '''
@@ -164,24 +164,22 @@ class MCAPInstance:
 
 	def MDLRequested(self, mcl, mdl, mdep_id, conf):
 		''' Followed by MDLAborted or MDLConnected '''
-		raise Exception("Not implemented")
+		print "MDLRequested not implemented"
 
 	def MDLAborted(self, mcl, mdl):
-		raise Exception("Not implemented")
+		print "MDLAborted not implemented"
 
 	def MDLConnected(self, mcl, mdl):
-		raise Exception("Not implemented")
+		print "MDLConnected not implemented"
 
 	def MDLDeleted(self, mdl):
-		raise Exception("Not implemented")
+		print "MDLDeleted not implemented"
 
 	def MDLClosed(self, mdl):
-		raise Exception("Not implemented")
+		print "MDLReconnected not implemented"
 
 	def MDLReconnected(self, mdl):
-		raise Exception("Not implemented")
-
-### Callback methods that may be reimplemented if subclass is interested
+		print "MDLReconnected not implemented"
 
 	def RecvDump(self, mcl, message):
 		pass
@@ -267,6 +265,7 @@ class MCAPInstance:
 		if not self.peer_connected(addr):
 			# unknown peer
 			sk.close()
+			return
 		mcl = self.peer_mcl(addr)
 		mcl.incoming_mdl_socket(sk)
 

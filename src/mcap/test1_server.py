@@ -42,19 +42,35 @@ class MCAPSessionServerStub:
 		print "Connected!"
 
 	def error_cc(eslf, listener):
-		self.stop_session()
+		pass
 
 	def closed_mcl(self, socket, *args):
-		self.stop_session()
-
-	def stop_session(self):
-		glib.MainLoop.quit(self.inLoop)
+		pass
 
 	def activity_mcl(self, mcl, recv, message, *args):
 		if recv:
 			print "Received", repr(message)
 		else:
 			print "Sent", repr(message)
+		return True
+
+	def mdlrequested_mcl(self, mcl, mdl, mdepid, config):
+		self.mcl = mcl
+		print "MDL requested"
+
+	def new_dc(self, listener, sk, addr):
+		self.mcl.incoming_mdl_socket(sk)
+
+	def mdlconnected_mcl(self, mdl, reconn):
+		glib.io_add_watch(mdl.sk, glib.IO_IN, self.recvdata, mdl)
+
+	def mdlclosed_mcl(self, mdl):
+		pass
+
+	def recvdata(self, sk, evt, mdl):
+		data = mdl.read()
+		print mdl, "data", data
+		mdl.write(data + " PONG1 " + data)
 		return True
 
 	def loop(self):
@@ -65,9 +81,7 @@ class MCAPSessionServerStub:
 if __name__=='__main__':
 	session = MCAPSessionServerStub()
 	mcl_listener = ControlChannelListener("00:00:00:00:00:00", session)
+	mdl_listener = DataChannelListener("00:00:00:00:00:00", session)
 
 	print "Waiting for connections on default dev"
 	session.loop()
-
-	print "Main loop finished."
-	print 'TESTS OK' 

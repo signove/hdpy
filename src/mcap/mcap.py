@@ -35,7 +35,7 @@ class DataChannelListener(object):
 		self.observer = observer
 		self.sk = socket
 		self.psm = psm
-		watch_fd(self.sk, self.activity, self.error)
+		watch_fd(self.sk, self.activity)
 
 	def activity(self, sk, event):
 		if io_err(event):
@@ -445,23 +445,21 @@ class MCLStateMachine:
 
 		return True
 
-	def mdl_crossing_protection(self, mdl):
-		# TODO revise policy against MCAP spec and
-		# future async connect()
-		#
-		# for now, policy is: if same MDL is being connected
-		# in both directions, we are going to connect()
-		# synchronously, so drop passive connection
+	def mdl_crossing(self):
+		psv = self.pending_passive_mdl
+		act = self.pending_active_mdl
 
-		return self.pending_passive_mdl == self.pending_active_mdl
+		return psv is not None and act is not None and \
+			psv.mdlid == act.mdlid
 
 	def incoming_mdl_socket(self, sk):
 		# Called by DPSM listener
+	
+		ok = self.mcl.state == MCAP_MCL_STATE_PENDING \
+			and self.pending_passive_mdl \
+			and not self.mdl_crossing()
+
 		mdl = self.pending_passive_mdl
-		ok = self.mcl.state == MCAP_MCL_STATE_PENDING
-		ok = ok and not not mdl
-		if ok:
-			ok = ok and self.mdl_crossing_protection(mdl)
 		self.pending_passive_mdl = None
 
 		if ok:
@@ -531,7 +529,7 @@ class MCLStateMachine:
 		elif not self.support_more_mdeps():
 			rspcode = MCAP_RSP_MDEP_BUSY
 		elif self.mcl.state == MCAP_MCL_STATE_PENDING:
-			print "Pending MDL connection"
+			print "Pending MDL connection",
 			rspcode = MCAP_RSP_INVALID_OPERATION
 		elif not self.is_valid_configuration(request.conf):
 			rspcode = MCAP_RSP_CONFIGURATION_REJECTED
@@ -539,6 +537,8 @@ class MCLStateMachine:
 		config = 0x00
 		if rspcode == MCAP_RSP_SUCCESS:
 			config = request.conf
+		else:
+			self.print_error_message(rspcode)
 		
 		createResponse = CreateMDLResponse(rspcode, request.mdlid, config)
 		success = self.send_response(createResponse)
