@@ -73,25 +73,25 @@ class MCAPInstance:
 ### Commands
 
 	def CreateMCL(self, addr, dpsm):
-		event = self.MCLConnected
-
 		if self.peer_connected(addr):
 			mcl = self.peer_mcl(addr)
-			event = self.MCLReconnected
+			mcl.virgin = False
 		else:
 			mcl = MCL(self, self.adapter, MCAP_MCL_ROLE_INITIATOR,
 				addr, dpsm)
 			self.add_mcl(mcl)
+			mcl.virgin = True
 
 		if mcl.state == MCAP_MCL_STATE_IDLE:
 			mcl.connect()
-			event(mcl)
+		else:
+			schedule(self.mclconnected_mcl, mcl)
 
 		return mcl
 	
 	def DeleteMCL(self, mcl):
 		self.remove_mcl(mcl)
-		self.MCLUncached(mcl)
+		schedule(self.MCLUncached, mcl)
 
 	def CloseMCL(self, mcl):
 		mcl.close()
@@ -272,6 +272,11 @@ class MCAPInstance:
 	def error_dc(self, listener):
 		raise Exception("Error in data PSM listener, bailing out")
 
+	def mclconnected_mcl(self, mcl):
+		if mcl.virgin:
+			event = self.MCLConnected
+		else:
+			event = self.MCLReconnected
+		event(mcl)
 
-# TODO non-blocking connect + async CreateMCL() feedback
 # TODO Uncache timeout for idle MCLs

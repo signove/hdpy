@@ -19,6 +19,10 @@ def watch_fd(sk, cb, *args):
 	return glib.io_add_watch(sk, IO_IN | IO_ERR | IO_HUP | IO_NVAL,
 					cb, *args)
 
+def watch_fd_connect(sk, cb, *args):
+	return glib.io_add_watch(sk, IO_OUT | IO_ERR | IO_HUP | IO_NVAL,
+					cb, *args)
+
 def watch_fd_err(sk, cb, *args):
 	return glib.io_add_watch(sk, IO_ERR | IO_HUP | IO_NVAL,
 					cb, *args)
@@ -28,3 +32,17 @@ def timeout_call(to, cb, *args):
 
 def idle_call(cb, *args):
 	return glib.idle_add(cb, *args)
+
+sync_events = False
+
+# Enable this if you want to debug events synchonously
+# sync_events = True
+
+def schedule(cb, *args):
+	if sync_events:
+		cb(*args)
+		return
+	def closure():
+		cb(*args)
+		return False
+	return idle_call(closure)

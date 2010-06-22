@@ -5,13 +5,13 @@ import glib
 
 class MyInstance(MCAPInstance):
 	def MCLConnected(self, mcl):
-		print "MCL has connected", mcl
+		print "MCL has connected", id(mcl)
 
 	def MCLReconnected(self, mcl):
-		print "MCL has reconnected", mcl
+		print "MCL has reconnected", id(mcl)
 
 	def MCLDisconnected(self, mcl):
-		print "MCL has disconnected", mcl
+		print "MCL has disconnected", id(mcl)
 
 	def MDLRequested(self, mcl, mdl, mdepid, config):
 		print "MDL requested MDEP", mdepid, "config", config

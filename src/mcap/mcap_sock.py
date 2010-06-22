@@ -1,6 +1,12 @@
 import time
 from bluetooth import *
 import bluetooth._bluetooth as bz
+import errno
+import socket
+
+
+DC_MTU = 512
+
 
 L2CAP_MODE_ERTM = 0x03
 L2CAP_MODE_STREAMING = 0x04
@@ -66,43 +72,68 @@ def get_available_psm():
 	raise Exception("No free PSM could be found")
 
 
-def create_socket(btaddr, psm, reliable):
+def create_socket(btaddr, psm):
 	if psm is None:
 		psm = 0
 	s = BluetoothSocket(proto=L2CAP)
+	s.bind((btaddr, psm))
+	return s
+
+def set_reliable(s, reliable):
 	if reliable:
 		set_ertm(s)
 	else:
 		set_streaming(s)
-	s.setblocking(True)
-	s.bind((btaddr, psm))
-	return s
-
 
 def create_control_socket(btaddr, psm=None):
-	s = create_socket(btaddr, psm, True)
+	s = create_socket(btaddr, psm)
+	set_reliable(s, True)
 	set_mtu(s, 48)
 	return s
 
 
-def create_data_socket(btaddr, psm, reliable, mtu):
-	s = create_socket(btaddr, psm, reliable)
-	set_mtu(s, mtu)
+def create_data_socket(btaddr, psm, reliable):
+	s = create_socket(btaddr, psm)
+	set_reliable(s, reliable)
+	set_mtu(s, DC_MTU)
 	return s
 
 
 def create_control_listening_socket(btaddr):
 	psm = get_available_psm()
 	s = create_control_socket(btaddr, psm)
+	set_reliable(s, True)
 	s.listen(5)
 	return (s, psm)
 
 
-def create_data_listening_socket(btaddr, reliable, mtu):
+def create_data_listening_socket(btaddr):
 	psm = get_available_psm()
-	s = create_data_socket(btaddr, psm, reliable, mtu)
+	s = create_data_socket(btaddr, psm, DC_MTU)
 	s.listen(5)
 	return (s, psm)
+
+
+def async_connect(sk, addr):
+	sk.setblocking(False)
+	try:
+		sk.connect(addr)
+	except IOError, e:
+		# damn BluetoothError!
+		e = eval(e[0])
+		if e[0] == errno.EINPROGRESS:
+			pass
+		else:
+			print "async connect() failed:", e[0]
+			raise
+
+def connection_ok(sk):
+	''' Check if async connection went ok '''
+	try:
+		err = sk.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+	except IOError:
+		err = -1
+	return not err
 
 
 def hci_open_dev(dev_id):
@@ -173,23 +204,19 @@ def test():
 	print "Listening control socket at PSM %d" % psm
 	print "Options", get_options(s)
 
-	t, psm = create_data_listening_socket("00:00:00:00:00:00", True, 512)
-	print "Listening reliable data socket at PSM %d" % psm
+	t, psm = create_data_listening_socket("00:00:00:00:00:00")
+	print "Listening data socket at PSM %d" % psm
 	print "Options", get_options(t)
-
-	u, psm = create_data_listening_socket("00:00:00:00:00:00", False, 512)
-	print "Listening streaming data socket at PSM %d" % psm
-	print "Options", get_options(u)
 
 	v = create_control_socket("00:00:00:00:00:00")
 	print "Control socket"
 	print "Options", get_options(v)
 
-	w = create_data_socket("00:00:00:00:00:00", None, True, 512)
+	w = create_data_socket("00:00:00:00:00:00", None, True)
 	print "Reliable data socket at PSM"
 	print "Options", get_options(w)
 
-	x = create_data_socket("00:00:00:00:00:00",  None, False, 512)
+	x = create_data_socket("00:00:00:00:00:00",  None, False)
 	print "Streaming data socket"
 	print "Options", get_options(x)
 

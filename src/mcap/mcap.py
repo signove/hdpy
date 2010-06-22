@@ -13,7 +13,7 @@ class InvalidOperation(Exception):
 class ControlChannelListener(object):
 	def __init__(self, adapter, observer):
 		self.observer = observer
-		socket, psm = create_data_listening_socket(adapter, True, 512)
+		socket, psm = create_control_listening_socket(adapter)
 		self.sk = socket
 		self.psm = psm
 		watch_fd(self.sk, self.activity)
@@ -22,16 +22,17 @@ class ControlChannelListener(object):
 		if io_err(event):
 			self.sk = None
 			self.psm = 0
-			self.observer.error_cc(self)
+			schedule(self.observer.error_cc, self)
 			return False
+
 		sk, address = self.sk.accept()
-		self.observer.new_cc(self, sk, address)
+		schedule(self.observer.new_cc, self, sk, address)
 		return True
 
 
 class DataChannelListener(object):
 	def __init__(self, adapter, observer):
-		socket, psm = create_control_listening_socket(adapter)
+		socket, psm = create_data_listening_socket(adapter)
 		self.observer = observer
 		self.sk = socket
 		self.psm = psm
@@ -41,22 +42,24 @@ class DataChannelListener(object):
 		if io_err(event):
 			self.sk = None
 			self.psm = 0
-			self.observer.error_dc(self)
+			schedule(self.observer.error_dc, self)
 			return False
+
 		sk, address = self.sk.accept()
-		self.observer.new_dc(self, sk, address)
+		schedule(self.observer.new_dc, self, sk, address)
 		return True
 
 
 class MDL(object):
 
-	def __init__(self, mcl, mdlid, mdepid, config):
+	def __init__(self, mcl, mdlid, mdepid, config, reliable):
 		self.mcl = mcl
 		self.mdlid = mdlid
 		self.mdepid = mdepid
 		self.config = config
 		self.sk = None
 		self.state = MCAP_MDL_STATE_CLOSED
+		self.reliable = reliable
 
 	def close(self):
 		if self.abort():
@@ -82,6 +85,8 @@ class MDL(object):
 		if self.state != MCAP_MDL_STATE_CLOSED:
 			raise InvalidOperation("Trying to accept over a non-closed MDL")
 
+		set_reliable(sk, self.reliable)
+		sk.setblocking(True)
 		self.sk = sk
 		self.state = MCAP_MDL_STATE_ACTIVE
 
@@ -89,20 +94,26 @@ class MDL(object):
 		if self.state != MCAP_MDL_STATE_CLOSED:
 			raise InvalidOperation("Trying to connect a non-closed MDL")
 
-		sk = create_data_socket(self.mcl.adapter, None, True, 512)
-
 		try:
-			sk.connect(self.mcl.remote_addr_dc)
+			sk = create_data_socket(self.mcl.adapter, None,
+						self.reliable)
+			set_reliable(sk, self.reliable)
+			async_connect(sk, self.mcl.remote_addr_dc)
+
+			watch_fd_connect(sk, self.connect_cb)
 		except IOError:
-			sk.close()
 			return
 
-		self.sk = sk
-		self.state = MCAP_MDL_STATE_ACTIVE
+	def connect_cb(self, sk, event):
+		if event == IO_OUT and connection_ok(sk):
+			self.sk = sk
+			self.state = MCAP_MDL_STATE_ACTIVE
 
-		if not self.mcl.connected_mdl_socket(self):
-			self.abort()
-
+			if not self.mcl.connected_mdl_socket(self):
+				self.abort()
+		else:
+			print "async mdl connect() failed"
+		return False
 
 	def active(self):
 		return self.state == MCAP_MDL_STATE_ACTIVE
@@ -158,6 +169,8 @@ class MCL(object):
 
 	def accept(self, sk):
 		self.sk = sk
+		set_reliable(sk, True)
+		sk.setblocking(True)
 		self.state = MCAP_MCL_STATE_CONNECTED
 		watch_fd(sk, self.activity)
 
@@ -170,7 +183,7 @@ class MCL(object):
 			except IOError:
 				pass
 			self.sk = None
-			self.observer.closed_mcl(self)
+			schedule(self.observer.closed_mcl, self)
 
 		self.state = MCAP_MCL_STATE_IDLE
 		self.sm = MCLStateMachine(self)
@@ -179,12 +192,24 @@ class MCL(object):
 		if self.state != MCAP_MCL_STATE_IDLE:
 			raise InvalidOperation("State is not idle (already open/connected")
 
-		sk = create_control_socket(self.adapter)
-		sk.connect(self.remote_addr)
+		try:
+			sk = create_control_socket(self.adapter)
+			async_connect(sk, self.remote_addr)
+			watch_fd_connect(sk, self.connect_cb)
+		except IOError:
+			return
 
-		self.sk = sk
-		self.state = MCAP_MCL_STATE_CONNECTED
-		watch_fd(sk, self.activity)
+	def connect_cb(self, sk, evt):
+		if evt == IO_OUT and connection_ok(sk):
+			self.sk = sk
+			sk.setblocking(True)
+			self.state = MCAP_MCL_STATE_CONNECTED
+			watch_fd(sk, self.activity)
+			schedule(self.observer.mclconnected_mcl, self)
+		else:
+			print "async mcl connect() failed"
+
+		return False
 
 	def activity(self, sk, event):
 		if io_err(event):
@@ -197,7 +222,7 @@ class MCL(object):
 			return False
 
 		self.sm.receive_message(message)
-		self.observer.activity_mcl(self, True, message)
+		schedule(self.observer.activity_mcl, self, True, message)
 		return True
 
 	def get_csp_timestamp(self):
@@ -221,7 +246,7 @@ class MCL(object):
 	def write(self, message):
 		try:
 			l = self.sk.send(message)
-			self.observer.activity_mcl(self, False, message)
+			schedule(self.observer.activity_mcl, self, False, message)
 		except IOError:
 			l = 0
 		ok = l > 0
@@ -424,7 +449,9 @@ class MCLStateMachine:
 					return
 			else:
 				config = response.config
+				reliable = True
 				# TODO: submit response config to upper layers
+				# TODO: get reliable/streaming from upper layers
 
 				if self.last_request.mdlid != mdlid:
 					print "Conn resp of different MDLID"
@@ -438,17 +465,18 @@ class MCLStateMachine:
 				mdl = self.mcl.get_mdl(response.mdlid)
 				if mdl:
 					self.mcl.delete_mdl(mdl)
-					self.mcl.observer.mdldeleted_mcl(mdl)
+					schedule(self.mcl.observer.mdldeleted_mcl, mdl)
 
 				mdl = MDL(self.mcl, mdlid,
-					self.last_request.mdepid, config)
+					self.last_request.mdepid, config,
+					reliable)
 
 				self.mcl.add_mdl(mdl, reconn)
 
 			self.pending_active_mdl = mdl
 			self.reconn = reconn
 			self.mcl.state = MCAP_MCL_STATE_PENDING
-			self.mcl.observer.mdlgranted_mcl(self.mcl, mdl)
+			schedule(self.mcl.observer.mdlgranted_mcl, self.mcl, mdl)
 		else:
 			if self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_ACTIVE
@@ -467,12 +495,12 @@ class MCLStateMachine:
 			mdlid = response.mdlid
 			if self.is_mdlid_all(mdlid):
 				for mdlid, mdl in self.mcl.mdl_list.items():
-					self.mcl.observer.mdldeleted_mcl(mdl)
+					schedule(self.mcl.observer.mdldeleted_mcl, mdl)
 				self.mcl.delete_all_mdls()
 			else:
 				if self.contains_mdlid(response.mdlid):
 					mdl = self.mcl.get_mdl(response.mdlid)
-					self.mcl.observer.mdldeleted_mcl(mdl)
+					schedule(self.mcl.observer.mdldeleted_mcl, mdl)
 
 				self.mcl.delete_mdl(response.mdlid)
 
@@ -495,7 +523,7 @@ class MCLStateMachine:
 
 			if self.contains_mdlid(response.mdlid):
 				mdl = self.mcl.get_mdl(response.mdlid)
-				self.mcl.observer.mdlaborted_mcl(self.mcl, mdl)
+				schedule(self.mcl.observer.mdlaborted_mcl, self.mcl, mdl)
 		else:
 			self.print_error_message( response.rspcode )
 
@@ -522,7 +550,7 @@ class MCLStateMachine:
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 			mdl.accept(sk)
 			watch_fd_err(sk, self.mdl_socket_error, mdl)
-			self.mcl.observer.mdlconnected_mcl(mdl, self.reconn)
+			schedule(self.mcl.observer.mdlconnected_mcl, mdl, self.reconn)
 		else:
 			# TODO refuse, not close
 			sk.close()
@@ -538,7 +566,7 @@ class MCLStateMachine:
 		if ok:
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 			watch_fd_err(mdl.sk, self.mdl_socket_error, mdl)
-			self.mcl.observer.mdlconnected_mcl(mdl, self.reconn)
+			schedule(self.mcl.observer.mdlconnected_mcl, mdl, self.reconn)
 
 		# MDL is responsible by closing socket if not ok
 		return ok
@@ -549,7 +577,7 @@ class MCLStateMachine:
 
 	def closed_mdl(self, mdl):
 		''' called back by MDL itself '''
-		self.mcl.observer.mdlclosed_mcl(mdl)
+		schedule(self.mcl.observer.mdlclosed_mcl, mdl)
 
 
 ## PROCESS REQUEST METHODS
@@ -579,6 +607,7 @@ class MCLStateMachine:
 		mdlid = request.mdlid
 		config = 0x00
 		mdl = None
+		reliable = True
 
 		if not self.is_valid_mdlid(request.mdlid, False):
 			rspcode = MCAP_RSP_INVALID_MDL
@@ -588,7 +617,10 @@ class MCLStateMachine:
 			rspcode = MCAP_RSP_INVALID_OPERATION
 		else:
 			if reconn:
-				if not self.mcl.get_mdl(mdlid):
+				mdl = self.mcl.get_mdl(mdlid)
+				if mdl:
+					reliable = mdl.reliable
+				else:
 					rspcode = MCAP_RSP_INVALID_MDL
 			else:
 				if not self.support_more_mdls():
@@ -597,8 +629,12 @@ class MCLStateMachine:
 					rspcode = MCAP_RSP_INVALID_MDEP
 				elif not self.support_more_mdeps():
 					rspcode = MCAP_RSP_MDEP_BUSY
-				elif not self.is_valid_configuration(request.config):
-					rspcode = MCAP_RSP_CONFIGURATION_REJECTED
+				else:
+					ok, reliable = \
+						self.inquire_mdep(request.mdepid,
+								request.config)
+					if not ok:
+						rspcode = MCAP_RSP_CONFIGURATION_REJECTED
 	
 				if rspcode == MCAP_RSP_SUCCESS:
 					config = request.config
@@ -618,24 +654,23 @@ class MCLStateMachine:
 				mdl = self.mcl.get_mdl(mdlid)
 				if mdl:
 					self.mcl.delete_mdl(mdl)
-					self.mcl.observer.mdldeleted_mcl(mdl)
+					schedule(self.mcl.observer.mdldeleted_mcl, mdl)
 
 				mdl = MDL(self.mcl, mdlid,
-					request.mdepid, request.config)
+					request.mdepid, request.config,
+					reliable)
 
 				self.mcl.add_mdl(mdl, reconn)
-			else:
-				mdl = self.mcl.get_mdl(mdlid)
 
 			self.pending_passive_mdl = mdl
 			self.reconn = reconn
 
 			self.mcl.state = MCAP_MCL_STATE_PENDING
 			if reconn:
-				self.mcl.observer.mdlreconn_mcl(mdl)
+				schedule(self.mcl.observer.mdlreconn_mcl, mdl)
 			else:
-				self.mcl.observer.mdlrequested_mcl(self.mcl, mdl,
-					request.mdepid, config)
+				schedule(self.mcl.observer.mdlrequested_mcl,
+					self.mcl, mdl, request.mdepid, config)
 		
 		return success
 
@@ -667,11 +702,12 @@ class MCLStateMachine:
 			self.pending_passive_mdl = None
 			if self.is_mdlid_all(mdlid):
 				for mdlid, mdl in self.mcl.mdl_list.items():
-					self.mcl.observer.mdldeleted_mcl(mdl)
+					schedule(self.mcl.observer.mdldeleted_mcl,
+						mdl)
 				self.mcl.delete_all_mdls()
 			else:
 				mdl = self.mcl.get_mdl(mdlid)
-				self.mcl.observer.mdldeleted_mcl(mdl)
+				schedule(self.mcl.observer.mdldeleted_mcl, mdl)
 				self.mcl.delete_mdl(mdlid)
 
 			if not self.mcl.has_mdls():
@@ -693,7 +729,7 @@ class MCLStateMachine:
 			else:
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
 			mdl = self.mcl.get_mdl(request.mdlid)
-			self.mcl.observer.mdlaborted_mcl(self.mcl, mdl)
+			schedule(self.mcl.observer.mdlaborted_mcl, self.mcl, mdl)
 
 ## UTILITY METHODS
 
@@ -732,8 +768,8 @@ class MCLStateMachine:
 	def support_more_mdeps(self):
 		return True
 
-	def is_valid_configuration(self, config):
-		return True
+	def inquire_mdep(self, mdepid, config):
+		return True, True
 
 	def print_error_message(self, error_rsp_code):
 		if error_rsp_code in error_rsp_messages:
@@ -742,12 +778,12 @@ class MCLStateMachine:
 			print "Unknown error rsp code %d" % error_rsp_code
 
 
-# FIXME is_valid_configuration should be called back upper layer to question
-# FIXME MDL streaming or ertm channel?
+# FIXME inquire_mdep should call upper layer
+# FIXME MDL streaming or ertm channel? <-- via inquire_mdep
 # FIXME error feedback (for requests we had made)
-# FIXME async connect()
-# FIXME async observer notifications to avoid reentrancy
 
 # TODO Refuse untimely MDL connection using BT_DEFER_SETUP
 #	get addr via L2CAP_OPTIONS to decide upon acceptance
 #	definitive accept using poll OUT ; if !OUT, read 1 byte
+
+# TODO async writes (here and at instance)

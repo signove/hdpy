@@ -115,6 +115,11 @@ class MCAPSessionClientStub:
 		mdl.connect()
 		return False
 
+	def mclconnected_mcl(self, mcl):
+		print "Connected!"
+		session.take_initiative(mcl)
+		assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
+
 	def mdlconnected_mcl(self, mdl, reconnection):
 		print "MDL connected"
 		assert(mdl.mcl.state == MCAP_MCL_STATE_ACTIVE)
@@ -161,10 +166,6 @@ assert(mcl.state == MCAP_MCL_STATE_IDLE)
 print "Requesting connection..."
 mcl.connect()
 
-print "Connected!"
-assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
-
-session.take_initiative(mcl)
 session.loop()
 
 print 'TESTS OK' 
