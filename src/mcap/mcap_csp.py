@@ -61,9 +61,14 @@ class BluetoothClock:
 class CSPStateMachine(object):
 	def __init__(self, mainsm, mcl):
 		self.mainsm = mainsm
+		self.parser = mainsm.parser
 		self.mcl = mcl
+		self.observer = mcl.observer
 		self.csp_base_time = time.time()
 		self.csp_base_counter = 0
+		self.request_in_flight = 0
+		self.enabled = True
+		self.indication_expected = False
 
 	def is_mine(self, opcode):
 		return opcode >= MCAP_MD_SYNC_MIN and \
@@ -80,9 +85,107 @@ class CSPStateMachine(object):
 		self.csp_base_time = time.time()
 		self.csp_base_counter = counter
 
+	def send_response(self, message):
+		self.mainsm.send_response(message)
+
+	def send_request(self, message):
+		if self.request_in_flight:
+			raise InvalidOperation('Still waiting for response')
+
+		self.request_in_flight = message.opcode
+		self.last_request = request
+		return self.mainsm.send_mcap_command(request)
+
 	def receive_message(self, opcode, message):
+		if opcode % 2:
+			# request
+			return self.process_request(opcode, message)
+
+		# response
+		expected = self.request_in_flight + 1
+		if not expected or opcode != expected:
+			# unexpected response: ignore
+			return
+		self.request_in_flight = 0
+		self.process_response(opcode, message)
+
+	def process_request(self, opcode, message):
+		try:
+			message = self.parser.parse(message)
+
+		except InvalidMessage:
+			print "Invalid CSP request, rejecting"
+			opcodeRsp = opcode + 1
+			rsp = MDLResponse(opcodeRsp,
+					MCAP_RSP_INVALID_PARAMETER_VALUE,
+					0x0000)
+			return self.send_response(rsp)
+
+		self.handlers[opcode](self, message)
+
+	def process_response(self, opcode, message):
+		try:
+			message = self.parser.parse(message)
+
+		except InvalidMessage:
+			# TODO notify higher level about error
+			print "Invalid CSP response, ignoring"
+			return
+
+		self.handlers[opcode](self, message)
+
+	def capabilities_request(self, message):
+		btclockres = 0
+		synclead = 0
+		tmstampres = 0
+		tmstampacc = 0
+		rspcode = MCAP_RSP_SUCCESS
+		if not self.enabled:
+			rspcode = MCAP_RSP_REQUEST_NOT_SUPPORTED
+		# test reqaccuracy
+		# FIXME
+
+	def capabilities_response(self, message):
 		pass
-		
+		# btclockres, synclead, tmstampres, tmstampacc
+		# chk against request
+		# FIXME
+
+	def set_request(self, message):
+		btclock = 0
+		timestamp = 0
+		tmstampacc = 0
+		# test btclock, timestamp
+		# FIXME
+
+	def set_response(self, message):
+		pass
+		# btclock, timestamp, tmstampacc
+		# chk against request
+		# FIXME indication expected?
+		# FIXME
+	
+	def info_indication(self, message):
+		if not self.indication_expected:
+			return
+		# test btclock, timestamp, accuracy
+		# chk against request
+		# FIXME
+
+	handlers = {
+		MCAP_MD_SYNC_CAP_REQ: capabilities_request,
+		MCAP_MD_SYNC_CAP_RSP: capabilities_response,
+		MCAP_MD_SYNC_SET_REQ: set_request,
+		MCAP_MD_SYNC_SET_RSP: set_response,
+		MCAP_MD_SYNC_INFO_IND: info_indication,
+		}
+
+
+# FIXME singleton
+# FIXME IOErrors in singleton
+# FIXME failure response in case of IOError
+# FIXME how to set expected_indication
+# FIXME how to send msg (from upper layer)?
 
 def test(argv0, target=None, l2cap_port=None, ertm=None):
 	import time

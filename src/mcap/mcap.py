@@ -348,6 +348,11 @@ class MCLStateMachine:
 			raise InvalidOperation('Still waiting for response')
 
 		opcode = request.opcode
+
+		if self.csp.is_mine(opcode):
+			# not our problem
+			return self.csp.send_request(request)
+
 		self.request_in_flight = opcode
 		self.last_request = request
 		return self.send_mcap_command(request)
