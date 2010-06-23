@@ -316,7 +316,7 @@ class MCAPInstance:
 						tmstampres, tmstampacc)
 
 	def csp_set(self, mcl, err, btclock, timestamp, tmacc):
-		self.SyncSetResponse(err, mcl, btclock, timestamp, tmacc)
+		self.SyncSetResponse(mcl, err, btclock, timestamp, tmacc)
 
 	def csp_indication(self, mcl, btclock, timestamp, accuracy):
 		self.SyncInfoIndication(mcl, btclock, timestamp, accuracy)
