@@ -30,6 +30,9 @@ def watch_fd_err(sk, cb, *args):
 def timeout_call(to, cb, *args):
 	return glib.timeout_add(to, cb, *args)
 
+def timeout_cancel(handle):
+	return glib.source_remove(handle)
+
 def idle_call(cb, *args):
 	return glib.idle_add(cb, *args)
 

@@ -63,6 +63,12 @@ MCAP_MDL_STATE_ACTIVE		= 'ACTIVE'
 MCAP_MDL_STATE_CLOSED		= 'CLOSED'
 MCAP_MDL_STATE_DELETED		= 'DELETED'
 
+# CSP and Bluetooth clock special values
+
+btclock_immediate = 0xffffffff
+tmstamp_dontset   = 0xffffffffffffffff
+btclock_max       = 0xfffffff
+
 # Verbose error messages
 
 error_rsp_messages = { 
@@ -282,6 +288,19 @@ class CSPSetRequest( CSPRequest ):
 
 	def __init__(self, update, btclock, timestamp):
 		CSPRequest.__init__(self, MCAP_MD_SYNC_SET_REQ)
+
+		# Some coercions
+		if update:
+			update = 1
+		else:
+			update = 0
+
+		if btclock is None:
+			btclock = btclock_immediate
+
+		if timestamp is None:
+			timestamp = tmstamp_dontset
+
 		self.update = update
 		self.btclock = btclock
 		self.timestamp = timestamp
@@ -307,7 +326,7 @@ class CSPSyncInfoIndication( CSPRequest ):
 	mask2 = ">IQH"
 	mask2_size = struct.calcsize(mask2)
 
-	def __init__(self, update, btclock, timestamp, accuracy):
+	def __init__(self, btclock, timestamp, accuracy):
 		CSPRequest.__init__(self, MCAP_MD_SYNC_INFO_IND)
 		self.btclock = btclock
 		self.timestamp = timestamp

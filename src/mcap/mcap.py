@@ -301,6 +301,9 @@ class MCL(object):
 	def closed_mdl(self, mdl):
 		return self.sm.closed_mdl(mdl)
 
+	def get_timestamp(self):
+		return self.sm.get_timestamp()
+
 
 class MCLStateMachine:
 
@@ -772,6 +775,11 @@ class MCLStateMachine:
 		else:
 			print "Unknown error rsp code %d" % error_rsp_code
 
+	def get_timestamp(self):
+		return self.csp.get_timestamp()
+
+	def get_btclock(self):
+		return self.csp.get_btclock()
 
 # FIXME inquire_mdep should call upper layer
 # FIXME MDL streaming or ertm channel? <-- via inquire_mdep
@@ -782,3 +790,4 @@ class MCLStateMachine:
 #	definitive accept using poll OUT ; if !OUT, read 1 byte
 
 # TODO async writes (here and at instance)
+# TODO optional request security level
