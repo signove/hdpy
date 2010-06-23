@@ -274,13 +274,11 @@ class CSPStateMachine(object):
 			if to > (60*1000*1000 + 1):
 				# more than 60 seconds in the future
 				rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
+
 			elif to < self.latency:
 				# would never make it in time
 				rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 			
-			# convert to ms to satisfy scheduler
- 			to = to / 1000 + 1
-
 			ito = self.remote_reqaccuracy / self.tmstampacc # sec
 			ito = int(ito * 1000000) # us
 
@@ -289,6 +287,8 @@ class CSPStateMachine(object):
 				# low local precision or too high remote
 				# precision requirement
 				rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
+			else:
+				print "CSP: indication sent every %d us" % ito
 
 		if rspcode == MCAP_RSP_SUCCESS:
 			if self.indication_alarm:
@@ -303,7 +303,7 @@ class CSPStateMachine(object):
 							ito)
 			else:
 				# send response only when tmstamp is set
-				timeout_call(to, self.set_request_phase2,
+				timeout_call(to / 1000, self.set_request_phase2,
 					message.update, message.btclock,
 					message.timestamp, ito)
 			return True
@@ -340,7 +340,7 @@ class CSPStateMachine(object):
 
 		if update:
 			self.indication_alarm = \
-				timeout_call(ito, self.send_indication_cb)
+				timeout_call(ito / 1000, self.send_indication_cb)
 
 		rspcode = MCAP_RSP_SUCCESS
 		rsp = CSPSetResponse(rspcode, btclock, timestamp, tmstampacc)
@@ -479,3 +479,5 @@ def test(argv0, target=None, l2cap_psm=None, ertm=None):
 if __name__ == '__main__':
 	import sys
 	test(*sys.argv)
+
+# FIXME stop sending indication when closed

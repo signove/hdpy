@@ -224,6 +224,9 @@ class MCL(object):
 		return True
 
 	def read(self):
+		if not sk:
+			print "Trying to read command in disconected state"
+			return ''
 		try:
 			message = self.sk.recv(1024)
 		except IOError:
@@ -231,6 +234,9 @@ class MCL(object):
 		return message
 
 	def write(self, message):
+		if not sk:
+			print "Trying to send command in disconected state"
+			return False
 		try:
 			l = self.sk.send(message)
 			schedule(self.observer.activity_mcl, self, False, message)

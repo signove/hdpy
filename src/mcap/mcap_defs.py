@@ -324,7 +324,7 @@ class CSPSetRequest( CSPRequest ):
 		return CSPSetRequest(*data)
 
 
-class CSPSyncInfoIndication( CSPRequest ):
+class CSPInfoIndication( CSPRequest ):
 	mask2 = ">IQH"
 	mask2_size = struct.calcsize(mask2)
 
@@ -340,15 +340,15 @@ class CSPSyncInfoIndication( CSPRequest ):
 
 	@staticmethod
 	def length(rspcode):
-		return CSPRequest.length(rspcode) + CSPSyncInfoIndication.mask2_size
+		return CSPRequest.length(rspcode) + CSPInfoIndication.mask2_size
 
 	@staticmethod
 	def decode(message, rspcode):
-		if len(message) != CSPSyncInfoIndication.length(rspcode):
+		if len(message) != CSPInfoIndication.length(rspcode):
 			raise InvalidMessage("Invalid msg length")
-		data, message = CSPSyncInfoIndication._decode(message)
-		data.extend(struct.unpack(CSPSyncInfoIndication.mask2, message))
-		return CSPSyncInfoIndication(*data)
+		data, message = CSPInfoIndication._decode(message)
+		data.extend(struct.unpack(CSPInfoIndication.mask2, message))
+		return CSPInfoIndication(*data)
 
 
 # Specific response messages
@@ -563,7 +563,7 @@ class MessageParser:
 		MCAP_MD_DELETE_MDL_REQ: DeleteMDLRequest,
 		MCAP_MD_SYNC_CAP_REQ: CSPCapabilitiesRequest,
 		MCAP_MD_SYNC_SET_REQ: CSPSetRequest,
-		MCAP_MD_SYNC_INFO_IND: CSPSyncInfoIndication,
+		MCAP_MD_SYNC_INFO_IND: CSPInfoIndication,
 		MCAP_ERROR_RSP:	ErrorMDLResponse,
                	MCAP_MD_CREATE_MDL_RSP: CreateMDLResponse,
                	MCAP_MD_RECONNECT_MDL_RSP: ReconnectMDLResponse,
