@@ -1,6 +1,7 @@
 #!/usr/bin/env ptyhon
 
 import mcap_sock
+from mcap_defs import *
 import string
 import time
 
@@ -27,10 +28,16 @@ class BluetoothClock:
 		"""
 		# Exercise modules first
 		mcap_sock.hci_read_clock(self.raw_socket, None)
+		t = time.time()
+		mcap_sock.hci_read_clock(self.raw_socket, None)
+		t = time.time()
+		mcap_sock.hci_read_clock(self.raw_socket, None)
+		t = time.time()
 		# then measure
 		t1 = time.time()
 		mcap_sock.hci_read_clock(self.raw_socket, None)
 		t2 = time.time()
+		# FIXME how to detect that we have been preempted?
 		return int((t2 - t1) * 1000000)
 	
 	def get_clock(self, remote_addr=None):
@@ -50,6 +57,32 @@ class BluetoothClock:
 		"""
 		return mcap_sock.hci_read_clock(self.raw_socket, remote_addr)
 
+
+class CSPStateMachine(object):
+	def __init__(self, mainsm, mcl):
+		self.mainsm = mainsm
+		self.mcl = mcl
+		self.csp_base_time = time.time()
+		self.csp_base_counter = 0
+
+	def is_mine(self, opcode):
+		return opcode >= MCAP_MD_SYNC_MIN and \
+			opcode <= MCAP_MD_SYNC_MAX
+
+	def get_csp_timestamp(self):
+		now = time.time()
+		offset = now - self.csp_base_time
+		offset = int(1000000 * offset) # convert to microseconds
+		return self.csp_base_counter + offset
+
+	def set_csp_timestamp(self, counter):
+		# Reset counter to value provided by CSP-Master
+		self.csp_base_time = time.time()
+		self.csp_base_counter = counter
+
+	def receive_message(self, opcode, message):
+		pass
+		
 
 def test(argv0, target=None, l2cap_port=None, ertm=None):
 	import time

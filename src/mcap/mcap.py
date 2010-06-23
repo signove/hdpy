@@ -3,6 +3,7 @@
 from mcap_defs import *
 from mcap_sock import *
 from mcap_loop import *
+from mcap_csp import CSPStateMachine
 import time
 
 
@@ -155,9 +156,6 @@ class MCL(object):
 		self.state = MCAP_MCL_STATE_IDLE
 		self.last_mdlid = MCAP_MDL_ID_INITIAL
 
-		self.csp_base_time = time.time()
-		self.csp_base_counter = 0
-
 		self.sk = None
 
 		self.mdl_list = {}
@@ -224,17 +222,6 @@ class MCL(object):
 		self.sm.receive_message(message)
 		schedule(self.observer.activity_mcl, self, True, message)
 		return True
-
-	def get_csp_timestamp(self):
-		now = time.time()
-		offset = now - self.csp_base_time
-		offset = int(1000000 * offset) # convert to microseconds
-		return self.csp_base_counter + offset
-
-	def set_csp_timestamp(self, counter):
-		# Reset counter to value provided by CSP-Master
-		self.csp_base_time = time.time()
-		self.csp_base_counter = counter
 
 	def read(self):
 		try:
@@ -321,6 +308,7 @@ class MCLStateMachine:
 		self.parser = MessageParser()
 		self.request_in_flight = 0
 		self.mcl = mcl
+		self.csp = CSPStateMachine(self, self.mcl)
 		self.pending_active_mdl = None
 		self.pending_passive_mdl = None
 
@@ -384,6 +372,10 @@ class MCLStateMachine:
 
 		try:
 			opcode, rspcode = self.parser.get_opcode(message)
+			if self.csp.is_mine(opcode):
+				# shunt processing to CSP-specific machine
+				return self.csp.receive_message(opcode, message)
+				
 			if (opcode % 2):
 				return self.receive_request(opcode, message)
 			else:
