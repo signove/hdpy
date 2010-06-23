@@ -188,7 +188,7 @@ class CSPResponse(object):
 	@staticmethod
 	def _decode(message):
 		data = struct.unpack(CSPResponse.mask1,
-					message[0:mask1_size])
+					message[0:CSPResponse.mask1_size])
 		return list(data[1:]), message[CSPResponse.mask1_size:]
 
 

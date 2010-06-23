@@ -154,7 +154,7 @@ class MCAPInstance:
 		req = CSPCapabilitiesRequest(reqaccuracy)
 		mcl.send_request(req)
 
-	def SyncSet(self, update, btclock, timestamp):
+	def SyncSet(self, mcl, update, btclock, timestamp):
 		'''
 		btclock None means immediate update
 		timestamp None means do not update
@@ -312,7 +312,7 @@ class MCAPInstance:
 
 	def csp_capabilities(self, mcl, err, btclockres, synclead,
 				tmstampres, tmstampacc):
-		self.SyncCapabilitiesResponse(err, mcl, btclockres, synclead,
+		self.SyncCapabilitiesResponse(mcl, err, btclockres, synclead,
 						tmstampres, tmstampacc)
 
 	def csp_set(self, mcl, err, btclock, timestamp, tmacc):

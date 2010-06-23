@@ -304,6 +304,8 @@ class MCL(object):
 	def get_timestamp(self):
 		return self.sm.get_timestamp()
 
+	def get_btclock(self):
+		return self.sm.get_btclock()
 
 class MCLStateMachine:
 
@@ -784,6 +786,7 @@ class MCLStateMachine:
 # FIXME inquire_mdep should call upper layer
 # FIXME MDL streaming or ertm channel? <-- via inquire_mdep
 # FIXME error feedback (for requests we had made)
+# FIXME failed async connect notification error
 
 # TODO Refuse untimely MDL connection using BT_DEFER_SETUP
 #	get addr via L2CAP_OPTIONS to decide upon acceptance
@@ -791,3 +794,4 @@ class MCLStateMachine:
 
 # TODO async writes (here and at instance)
 # TODO optional request security level
+

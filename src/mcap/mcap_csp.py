@@ -4,6 +4,7 @@ import mcap_sock
 from mcap_defs import *
 import string
 import time
+from mcap_loop import *
 
 class BluetoothClock:
 	"""
@@ -180,7 +181,7 @@ class CSPStateMachine(object):
 	def process_invalid_request(self, opcode, message):
 		if opcode != MCAP_MD_SYNC_INFO_IND:
 			print "Invalid CSP request (but valid opcode), rejecting"
-			res = self.send_response(invalid_responses[opcode])
+			res = self.send_response(self.invalid_responses[opcode])
 		else:
 			print "Invalid CSP indication"
 			res = None
@@ -227,11 +228,11 @@ class CSPStateMachine(object):
 		if message.rspcode == MCAP_RSP_SUCCESS:
 			self.local_got_caps = True
 
-		schedule(self.observer.csp_capabilities(
+		schedule(self.observer.csp_capabilities,
 				self.mcl,
 				message.rspcode != MCAP_RSP_SUCCESS,
 				message.btclockres, message.synclead,
-				message.tmstampres, message.tmstampacc))
+				message.tmstampres, message.tmstampacc)
 
 	def set_request(self, message):
 		rspcode = MCAP_RSP_SUCCESS
@@ -352,11 +353,11 @@ class CSPStateMachine(object):
 
 		self.indication_expected = self.last_request.update
 
-		schedule(self.observer.csp_set(
+		schedule(self.observer.csp_set,
 				self.mcl,
 				message.rspcode != MCAP_RSP_SUCCESS,
 				message.btclock, message.timestamp,
-				message.tmstampacc))
+				message.tmstampacc)
 	
 	def info_indication(self, message):
 		if not self.indication_expected:
@@ -364,11 +365,11 @@ class CSPStateMachine(object):
 		elif not self.valid_btclock(message.btclock):
 			return
 
-		schedule(self.observer.csp_indication(
+		schedule(self.observer.csp_indication,
 					self.mcl,
 					message.btclock,
 					message.timestamp,
-					message.accuracy))
+					message.accuracy)
 
 	def send_indication_cb(self):
 		btclock = self.get_btclock()
@@ -383,6 +384,12 @@ class CSPStateMachine(object):
 		rsp = CSPInfoIndication(btclock, timestamp, tmstampacc)
 		self.send_request(rsp)
 		return True
+
+	def valid_btclock(self, btclock):
+		'''
+		Tests whether btclock is a 28-bit value
+		'''
+		return btclock >= 0 and btclock <= btclock_max
 
 	handlers = {
 		MCAP_MD_SYNC_CAP_REQ: capabilities_request,
@@ -405,11 +412,6 @@ class CSPStateMachine(object):
 				0, 0, 0)
 	}
 
-	def valid_btclock(self, btclock):
-		'''
-		Tests whether btclock is a 28-bit value
-		'''
-		return btclock >= 0 and btclock <= btclock_max
 
 def test(argv0, target=None, l2cap_psm=None, ertm=None):
 	assert(CSPStateMachine.btdiff(0, 1) == 1)
