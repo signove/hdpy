@@ -314,11 +314,6 @@ class MCLStateMachine:
 
 ## SEND METHODS
 
-	def send_mdl_error_response(self):
-		errorResponse = ErrorMDLResponse()
-		success = self.send_response(errorResponse)
-		return success
-
 	def send_raw_message(self, message):
 		'''
 		For testing purposes only: sends an arbitrary stream of bytes
@@ -381,7 +376,10 @@ class MCLStateMachine:
 			else:
 				return self.receive_response(opcode, message)
 		except InvalidMessage:
-			return self.send_mdl_error_response()
+			# we assume that higher-level errors are caught by
+			# receive_request/response methods
+			errorResponse = ErrorMDLResponse()
+			return self.send_response(errorResponse)
 	
 	def receive_request(self, opcode, request):
 		# if a request is received when a response is expected, only process if 
