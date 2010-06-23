@@ -144,42 +144,42 @@ class MCAPInstance:
 ### Callback methods that must/may be implemented by subclass
 
 	def Recv(self, mdl, data):
-		print "Recv (mdl data) not implemented"
+		print "Recv (mdl data) not overridden"
 
 	def MCLConnected(self, mcl):
-		print "MCLConnected not implemented"
+		print "MCLConnected not overridden"
 
 	def MCLDisconnected(self, mcl):
-		print "MCLDisconnected not implemented"
+		print "MCLDisconnected not overridden"
 
 	def MCLReconnected(self, mcl):
-		print "MCLReconnected not implemented"
+		print "MCLReconnected not overridden"
 
 	def MCLUncached(self, mcl):
-		print "MCLUncached not implemented"
+		print "MCLUncached not overridden"
 	
 	def MDLReady(self, mcl, mdl):
 		''' Async confirmation of MDLCreate/MDLReconnect method '''
-		raise Exception("Not implemented")
+		raise Exception("Not overridden, but it should have been")
 
 	def MDLRequested(self, mcl, mdl, mdep_id, conf):
-		''' Followed by eDLAborted or MDLConnected '''
-		print "MDLRequested not implemented"
+		''' Followed by MDLAborted or MDLConnected '''
+		print "MDLRequested not overridden"
 
 	def MDLAborted(self, mcl, mdl):
-		print "MDLAborted not implemented"
+		print "MDLAborted not overridden"
 
 	def MDLConnected(self, mcl, mdl):
-		print "MDLConnected not implemented"
+		print "MDLConnected not overridden"
 
 	def MDLDeleted(self, mdl):
-		print "MDLDeleted not implemented"
+		print "MDLDeleted not overridden"
 
 	def MDLClosed(self, mdl):
-		print "MDLReconnected not implemented"
+		print "MDLReconnected not overridden"
 
 	def MDLReconnected(self, mdl):
-		print "MDLReconnected not implemented"
+		print "MDLReconnected not overridden"
 
 	def RecvDump(self, mcl, message):
 		pass
