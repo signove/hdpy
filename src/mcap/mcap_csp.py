@@ -100,7 +100,7 @@ class CSPStateMachine(object):
 
 		self.latency = self.clock.latency() # us
 
-	def reset_timestamp(new_timestamp):
+	def reset_timestamp(self, new_timestamp):
 		self.base_time = time.time()
 		self.base_timestamp = new_timestamp
 
