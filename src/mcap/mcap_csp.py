@@ -152,9 +152,9 @@ class CSPStateMachine(object):
 			
 		if message.opcode != MCAP_MD_SYNC_INFO_IND:
 			self.request_in_flight = message.opcode
-			self.last_request = request
+			self.last_request = message
 
-		return self.mainsm.send_mcap_command(request)
+		return self.mainsm.send_mcap_command(message)
 
 	def receive_message(self, opcode, message):
 		if opcode % 2:
@@ -228,6 +228,7 @@ class CSPStateMachine(object):
 			self.local_got_caps = True
 
 		schedule(self.observer.csp_capabilities(
+				self.mcl,
 				message.rspcode != MCAP_RSP_SUCCESS,
 				message.btclockres, message.synclead,
 				message.tmstampres, message.tmstampacc))
@@ -352,6 +353,7 @@ class CSPStateMachine(object):
 		self.indication_expected = self.last_request.update
 
 		schedule(self.observer.csp_set(
+				self.mcl,
 				message.rspcode != MCAP_RSP_SUCCESS,
 				message.btclock, message.timestamp,
 				message.tmstampacc))
@@ -363,6 +365,7 @@ class CSPStateMachine(object):
 			return
 
 		schedule(self.observer.csp_indication(
+					self.mcl,
 					message.btclock,
 					message.timestamp,
 					message.accuracy))

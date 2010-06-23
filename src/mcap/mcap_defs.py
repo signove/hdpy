@@ -157,7 +157,7 @@ class CSPRequest(object):
 		self.opcode = opcode
 
 	def encode(self):
-		return struct.pack(mask1, self.opcode)
+		return struct.pack(self.mask1, self.opcode)
 
 	@staticmethod
 	def length(rspcode):
@@ -165,8 +165,9 @@ class CSPRequest(object):
 
 	@staticmethod
 	def _decode(message):
-		data = struct.unpack(mask1, message[0:mask1_size])
-		return list(data[1:]), message[mask1_size:]
+		data = struct.unpack(CSPRequest.mask1,
+					message[0:mask1_size])
+		return list(data[1:]), message[CSPRequest.mask1_size:]
 
 
 class CSPResponse(object):
@@ -178,16 +179,17 @@ class CSPResponse(object):
 		self.rspcode = rspcode
 
 	def encode(self):
-		return struct.pack(mask1, self.opcode, self.rspcode)
+		return struct.pack(self.mask1, self.opcode, self.rspcode)
 
 	@staticmethod
 	def length(rspcode):
-		return mask1_size
+		return CSPResponse.mask1_size
 
 	@staticmethod
 	def _decode(message):
-		data = struct.unpack(mask1, message[0:mask1_size])
-		return list(data[1:]), message[mask1_size:]
+		data = struct.unpack(CSPResponse.mask1,
+					message[0:mask1_size])
+		return list(data[1:]), message[CSPResponse.mask1_size:]
 
 
 # Specific request messages
