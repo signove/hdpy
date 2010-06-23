@@ -254,7 +254,7 @@ class CSPStateMachine(object):
 			rspcode = MCAP_RSP_UNSPECIFIED_ERROR
 			bt_now = message.btclock - 1
 		else:
-			bt_now = tp[0]
+			bt_now = bt_now[0]
 		
 		if message.btclock == btclock_immediate:
 			to = 0
@@ -262,7 +262,7 @@ class CSPStateMachine(object):
 			if not self.remote_got_caps:
 				rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 
-			to = self.tdiff(bt_now, message.btclock)
+			to = self.btdiff(bt_now, message.btclock)
 
 			if to < 0:
 				# can not update timestamp in the past :)

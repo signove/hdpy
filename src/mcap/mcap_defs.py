@@ -502,7 +502,7 @@ class CSPCapabilitiesResponse( CSPResponse ):
 
 	def __init__(self, rspcode, btclockres, synclead, tmstampres,
 			tmstampacc):
-		CSPResponse.__init__(self, MCAP_MD_SYNC_CAP_REQ, rspcode)
+		CSPResponse.__init__(self, MCAP_MD_SYNC_CAP_RSP, rspcode)
 		self.btclockres = btclockres # BT clock ticks
 		self.synclead = synclead # delay, ms
 		self.tmstampres = tmstampres # resolution, us
@@ -527,19 +527,20 @@ class CSPCapabilitiesResponse( CSPResponse ):
 
 
 class CSPSetResponse( CSPResponse ):
-	mask2 = ">BIQH"
+	mask2 = ">IQH"
 	mask2_size = struct.calcsize(mask2)
 	# CSP responses don't change length even in case of error
 
 	def __init__(self, rspcode, btclock, timestamp, tmstampacc):
-		CSPResponse.__init__(self, MCAP_MD_SYNC_SET_REQ, rspcode)
+		CSPResponse.__init__(self, MCAP_MD_SYNC_SET_RSP, rspcode)
 		self.btclock = btclock
 		self.timestamp = timestamp
 		self.tmstampacc = tmstampacc # accuracy, us
 
 	def encode(self):
 		return CSPResponse.encode(self) + \
-			struct.pack(self.mask2, self.btclock, self.timestamp, self.tmstampacc)
+			struct.pack(self.mask2, self.btclock, self.timestamp,
+				self.tmstampacc)
 	
 	@staticmethod
 	def length(rspcode):
