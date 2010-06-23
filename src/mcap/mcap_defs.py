@@ -161,12 +161,12 @@ class CSPRequest(object):
 
 	@staticmethod
 	def length(rspcode):
-		return mask1_size
+		return CSPRequest.mask1_size
 
 	@staticmethod
 	def _decode(message):
 		data = struct.unpack(CSPRequest.mask1,
-					message[0:mask1_size])
+					message[0:CSPRequest.mask1_size])
 		return list(data[1:]), message[CSPRequest.mask1_size:]
 
 
@@ -496,7 +496,7 @@ class DeleteMDLResponse( MDLResponse ):
 
 
 class CSPCapabilitiesResponse( CSPResponse ):
-	mask2 = ">BBHHH"
+	mask2 = ">BHHH"
 	mask2_size = struct.calcsize(mask2)
 	# CSP responses don't change length even in case of error
 
@@ -510,7 +510,7 @@ class CSPCapabilitiesResponse( CSPResponse ):
 
 	def encode(self):
 		return CSPResponse.encode(self) + \
-			struct.pack(self.mark2, self.btclockres, self.synclead,
+			struct.pack(self.mask2, self.btclockres, self.synclead,
 				self.tmstampres, self.tmstampacc)
 
 	@staticmethod

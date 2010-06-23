@@ -219,7 +219,7 @@ class CSPStateMachine(object):
 		
 		rsp = CSPCapabilitiesResponse(rspcode,
 				btclockres, synclead,
-				tmstampres, tmstampac)
+				tmstampres, tmstampacc)
 
 		return self.send_response(rsp)
 
