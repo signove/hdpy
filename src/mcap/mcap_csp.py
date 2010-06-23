@@ -311,13 +311,8 @@ class CSPStateMachine(object):
 		return self.send_response(rsp)
 
 	def set_request_phase2(self, update, sched_btclock, new_tmstamp, ito):
-		rspcode = MCAP_RSP_SUCCESS
-		if new_tmstamp != tmstamp_dontset:
-			self.reset_timestamp(new_tmstamp)
-
+		reset = new_tmstamp != tmstamp_dontset
 		btclock = self.get_btclock()
-		# FIXME detect preemption here
-		timestamp = self.get_timestamp()
 
 		if not btclock:
 			# damn!
@@ -328,18 +323,24 @@ class CSPStateMachine(object):
 
 		btclock = btclock[0]
 
+		# compensate timestamp for lateness of this callback
+		delay = self.bt2us(self.btdiff(sched_btclock, btclock))
+		new_tmstamp += delay
+	
+		if reset:
+			self.reset_timestamp(new_tmstamp)
+
+		timestamp = self.get_timestamp()
+
 		# this is different from timestamp accuracy;
 		# it needs to take latency into account
 		tmstampacc = self.latency + self.tmstampacc
 
-		# compensate timestamp for lateness of this callback
-		delay = self.bt2us(self.btdiff(sched_btclock, btclock))
-		timestamp += delay
-	
 		if update:
 			self.indication_alarm = \
 				timeout_call(ito, self.send_indication_cb)
 
+		rspcode = MCAP_RSP_SUCCESS
 		rsp = CSPSetResponse(rspcode, btclock, timestamp, tmstampacc)
 		self.send_response(rsp)
 		return False
