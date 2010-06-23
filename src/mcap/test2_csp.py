@@ -24,18 +24,19 @@ class MyInstance(MCAPInstance):
 		glib.MainLoop.quit(loop)
 
 	def RecvDump(self, mcl, message):
-		print "Received raw msg", repr(message)
+		# print "Received raw msg", repr(message)
 		return True
 
 	def SendDump(self, mcl, message):
-		print "Sent", repr(message)
+		# print "Sent", repr(message)
 		return True
 
 	### CSP-specifc part
 
 	def begin(self, mcl):
-		self.counter = 1
-		instance.SyncCapabilities(mcl, 1000)
+		mcl._tc = 1
+		# requests 10ppm precision
+		instance.SyncCapabilities(mcl, 10)
 
 	def SyncCapabilitiesResponse(self, mcl, err, btclockres, synclead,
 					tmstampres, tmstampacc):
@@ -44,22 +45,27 @@ class MyInstance(MCAPInstance):
 				synclead, tmstampres, tmstampacc)
 		if err:
 			self.bye()
+
 		btclock = instance.SyncBtClock(mcl)
 		if btclock is None:
 			self.bye()
-		btclock = btclock[0] + 3200 * 5
+
+		# resets timestamp in 1s
+		btclock = btclock[0] + 3200
+
 		instance.SyncSet(mcl, True, btclock, 5000000)
 	
 	def SyncSetResponse(self, mcl, err, btclock, tmstamp, tmstampacc):
 		print "CSP Set resp: %s btclk=%d ts=%d tsacc=%d" % \
 			(err and "Err" or "Ok", btclock,
-				tmstamp / 1000000.0, tmstampacc)
+				tmstamp, tmstampacc)
 		if err:
 			self.bye()
 
 	def SyncInfoIndication(self, mcl, btclock, tmstamp, accuracy):
-		print "CSP Indication btclk=%d ts=%d tsacc%d" % \
-			(btclock, tmstamp / 1000000.0, accuracy)
+		print "CSP Indication btclk=%d ts=%d tsacc=%d" % \
+			(btclock, tmstamp, accuracy)
+		# FIXME calculate drift, deviation
 
 try:
 	remote_addr = (sys.argv[1], int(sys.argv[2]))
@@ -77,3 +83,4 @@ loop.run()
 
 # FIXME assert request in flight
 # FIXME test two reqs in sequence
+# FIXME stop indication test
