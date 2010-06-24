@@ -255,7 +255,6 @@ class CSPStateMachine(object):
 		
 		if message.btclock == btclock_immediate:
 			to = 0
-			ito = "invalid"
 		else:
 			if not self.remote_got_caps:
 				rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
@@ -277,9 +276,10 @@ class CSPStateMachine(object):
 				# would never make it in time
 				rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 			
+		if rspcode == MCAP_RSP_SUCCESS:
 			ito = int(1000000 \
 				* self.remote_reqaccuracy \
-				/ self.tmstampacc) # sec
+				/ self.tmstampacc) # us
 
 			if ito < (self.latency * 2) or ito < 100000:
 				# unreasonable indication rhythm due to
