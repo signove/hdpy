@@ -186,6 +186,7 @@ class MCL(object):
 		self.state = MCAP_MCL_STATE_IDLE
 		self.sm.stop()
 		self.sm = MCLStateMachine(self)
+		self.state = MCAP_MCL_STATE_IDLE
 
 	def connect(self):
 		if self.state != MCAP_MCL_STATE_IDLE:
@@ -227,7 +228,7 @@ class MCL(object):
 
 	def read(self):
 		if not self.sk:
-			print "Trying to read command in disconected state"
+			print "Trying to read data in disconnected state"
 			return ''
 		try:
 			message = self.sk.recv(1024)
@@ -237,7 +238,7 @@ class MCL(object):
 
 	def write(self, message):
 		if not self.sk:
-			print "Trying to send command in disconected state"
+			print "Trying to send data in disconnected state"
 			return False
 		try:
 			l = self.sk.send(message)
@@ -357,6 +358,9 @@ class MCLStateMachine:
 			return self.send_response(message)
 
 	def send_request(self, request):
+		if self.mcl.state == MCAP_MCL_STATE_IDLE:
+			raise InvalidOperation('MCL in idle state')
+
 		if self.request_in_flight:
 			raise InvalidOperation('Still waiting for response')
 
