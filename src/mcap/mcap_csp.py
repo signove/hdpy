@@ -328,6 +328,7 @@ class CSPStateMachine(object):
 		# compensate timestamp for lateness of this callback
 		delay = self.bt2us(self.btdiff(sched_btclock, btclock))
 		new_tmstamp += delay
+		print "Delay in CSP set bt clock (us):", delay
 	
 		if reset:
 			self.reset_timestamp(new_tmstamp)
