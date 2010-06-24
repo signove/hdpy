@@ -291,9 +291,7 @@ class CSPStateMachine(object):
 				print "CSP: indication sent every %d us" % ito
 
 		if rspcode == MCAP_RSP_SUCCESS:
-			if self.indication_alarm:
-				timeout_cancel(self.indication_alarm)
-				self.indication_alarm = None
+			self.stop_indication_alarm()
 
 			if message.timestamp == tmstamp_dontset:
 				# fast-track response
@@ -340,8 +338,7 @@ class CSPStateMachine(object):
 		tmstampacc = self.latency + self.tmstampacc
 
 		if update:
-			self.indication_alarm = \
-				timeout_call(ito / 1000, self.send_indication_cb)
+			self.start_indication_alarm(ito)
 
 		rspcode = MCAP_RSP_SUCCESS
 		rsp = CSPSetResponse(rspcode, btclock, timestamp, tmstampacc)
@@ -386,7 +383,21 @@ class CSPStateMachine(object):
 		self.send_request(rsp)
 		return True
 
-	def valid_btclock(self, btclock):
+	def start_indication_alarm(self, ito):
+		self.stop_indication_alarm()
+		self.indication_alarm = timeout_call(ito / 1000,
+					self.send_indication_cb)
+
+	def stop_indication_alarm(self):
+		if self.indication_alarm:
+			timeout_cancel(self.indication_alarm)
+			self.indication_alarm = None
+
+	def stop(self):
+		self.stop_indication_alarm()
+
+	@staticmethod
+	def valid_btclock(btclock):
 		'''
 		Tests whether btclock is a 28-bit value
 		'''
@@ -480,5 +491,3 @@ def test(argv0, target=None, l2cap_psm=None, ertm=None):
 if __name__ == '__main__':
 	import sys
 	test(*sys.argv)
-
-# FIXME stop sending indication when closed

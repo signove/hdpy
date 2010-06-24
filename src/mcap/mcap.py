@@ -184,11 +184,13 @@ class MCL(object):
 			schedule(self.observer.closed_mcl, self)
 
 		self.state = MCAP_MCL_STATE_IDLE
+		self.sm.stop()
 		self.sm = MCLStateMachine(self)
 
 	def connect(self):
 		if self.state != MCAP_MCL_STATE_IDLE:
-			raise InvalidOperation("State is not idle (already open/connected")
+			raise InvalidOperation("State is not idle" \
+					"(already open/connected")
 
 		try:
 			sk = create_control_socket(self.adapter)
@@ -605,7 +607,9 @@ class MCLStateMachine:
 
 		except InvalidMessage:
 			opcodeRsp = opcode + 1
-			rsp = MDLResponse(opcodeRsp, MCAP_RSP_INVALID_PARAMETER_VALUE, 0x0000)
+			rsp = MDLResponse(opcodeRsp,
+					MCAP_RSP_INVALID_PARAMETER_VALUE,
+					0x0000)
 			return self.send_response(rsp)
 
 	def process_create_request(self, request, reconn=False):
@@ -788,6 +792,9 @@ class MCLStateMachine:
 
 	def get_btclock(self):
 		return self.csp.get_btclock()
+
+	def stop(self):
+		self.csp.stop()
 
 # FIXME inquire_mdep should call upper layer
 # FIXME MDL streaming or ertm channel? <-- via inquire_mdep
