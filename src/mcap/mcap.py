@@ -224,7 +224,7 @@ class MCL(object):
 		return True
 
 	def read(self):
-		if not sk:
+		if not self.sk:
 			print "Trying to read command in disconected state"
 			return ''
 		try:
@@ -234,7 +234,7 @@ class MCL(object):
 		return message
 
 	def write(self, message):
-		if not sk:
+		if not self.sk:
 			print "Trying to send command in disconected state"
 			return False
 		try:
