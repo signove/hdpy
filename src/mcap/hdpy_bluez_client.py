@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+'''
+hdpy client to be used to test bluez
+'''
 
 from mcap_instance import MCAPInstance
 from mcap_defs import *
@@ -9,6 +12,9 @@ import glib
 loop = glib.MainLoop()
 
 class MyInstance(MCAPInstance):
+    '''
+    Test mcap instance
+    '''
 
     def __init__(self, adapter, listener):
         MCAPInstance.__init__(self, adapter, listener)
@@ -18,25 +24,35 @@ class MyInstance(MCAPInstance):
         self.sent = []
         self.received = []
 
-    def bye(self):
+    def _bye(self):
+        '''
+        Ends the test script
+        '''
         if self.counter >= len(self.send_script):
             print 'TESTS OK'
         else:
             print 'DID NOT COMPLETE ALL TESTS'
         glib.MainLoop.quit(loop)
 
-    def take_initiative(self, mcl, mdl=None):
+    def _take_initiative(self, mcl, mdl=None):
+        '''
+        Send commands from the script.
+        '''
         if self.counter >= len(self.send_script):
-            self.bye()
+            self._bye()
         else:
-            print '############ runing %d/%d' % (self.counter + 1, len(self.send_script))
-            to = 1000
+            print '############ running %d/%d' % (self.counter + 1,
+                                                 len(self.send_script))
+            timeou = 1000
             print "############ counter", self.counter
             if self.counter == 4:
-                to = 2000
-            glib.timeout_add(to, self.take_initiative_cb, mcl, mdl)
+                timeou = 2000
+            glib.timeout_add(timeou, self._take_initiative_cb, mcl, mdl)
 
-    def take_initiative_cb(self, mcl, mdl, *args):
+    def _take_initiative_cb(self, mcl, mdl, *args):
+        '''
+        Called after timeout defined in _take_initiative
+        '''
         action = self.send_script[self.counter]
         method = action[0]
         if method in [MyInstance.DeleteMDL, MyInstance.ConnectMDL,
@@ -55,7 +71,7 @@ class MyInstance(MCAPInstance):
         self.Send(mdl, data)
         self.check_asserts(self, mdl.mcl)
         self.counter += 1
-        self.take_initiative(mdl.mcl, mdl)
+        self._take_initiative(mdl.mcl, mdl)
 
     def SendAndWait(self, mdl, data):
         self.Send(mdl, data)
@@ -66,33 +82,21 @@ class MyInstance(MCAPInstance):
     def MDLReady_post(self, mdl):
         self.ConnectMDL(mdl)
 
-#    def ping(self, mdl):
-#        self.ping_counter -= 1
-#        if self.ping_counter < 0:
-#            self.CloseMDL(mdl)
-#            return False
-#
-#        if not mdl.active():
-#            return False
-#        mdl.write("hdpy ping ")
-#        return True
-
     ### Overriden callback methods
 
     def Recv(self, mdl, data):
         print "MDL received from %s, the data: %s" % (id(mdl), data)
         assert(self.received[self.counter] == data)
         self.counter += 1
-        self.take_initiative(mdl.mcl, mdl)
-#        return True
+        self._take_initiative(mdl.mcl, mdl)
 
     def MCLConnected(self, mcl):
         print "MCL has connected"
-        self.take_initiative(mcl)
+        self._take_initiative(mcl)
 
     def MCLDisconnected(self, mcl):
         print "MCL has disconnected"
-        self.bye()
+        self._bye()
 
     def MCLReconnected(self, mcl):
         print "MCLReconnected not overridden"
@@ -103,7 +107,7 @@ class MyInstance(MCAPInstance):
     def MDLReady(self, mcl, mdl):
 #        if mdl.mdlid == 0x27:
 #            print "MDL ready but not connecting"
-#            self.take_initiative(mdl.mcl)
+#            self._take_initiative(mdl.mcl)
 #        else:
         print "MDL ready, connecting"
         glib.timeout_add(0, self.MDLReady_post, mdl)
@@ -118,7 +122,7 @@ class MyInstance(MCAPInstance):
     def MDLConnected(self, mdl):
         print "MDL connected"
 #        glib.timeout_add(1500, self.ping, mdl)
-        self.take_initiative(mdl.mcl, mdl)
+        self._take_initiative(mdl.mcl, mdl)
 
     def MDLDeleted(self, mdl):
         print "MDLDeleted not overridden"
@@ -136,7 +140,7 @@ class MyInstance(MCAPInstance):
         self.check_asserts(self, mcl)
         self.counter += 1
         if message[0:2] != "\x02\x00":
-            self.take_initiative(mcl)
+            self._take_initiative(mcl)
         else:
             # delay until we open MDL
             pass
