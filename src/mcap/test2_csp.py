@@ -36,6 +36,22 @@ class MyInstance(MCAPInstance):
 
 	def begin(self, mcl):
 		mcl._tc = 1
+		mcl._err_expected = True
+		try:
+			instance.SyncSet(mcl, True, None, 0x123)
+			print "Preposterous CSP sync set must fail locally"
+			sys.exit(1)
+		except mcap.InvalidOperation:
+			pass
+
+		# cheat to make it go to server (and fail there)
+		mcl.sm.csp.local_got_caps = True
+		instance.SyncSet(mcl, True, None, 0x123)
+
+	def bad_set_response(self, mcl):
+		mcl._tc = 1
+		mcl._err_expected = False
+		mcl.sm.csp.local_got_caps = False
 		self.request_capabilities(mcl)
 
 	def request_capabilities(self, mcl):
@@ -43,12 +59,15 @@ class MyInstance(MCAPInstance):
 		if mcl._tc == 1:
 			# requests invalid 0ppm precision
 			instance.SyncCapabilities(mcl, 0)
+			mcl._err_expected = True
 		elif mcl._tc == 2:
 			# requests too accurate 2ppm precision
 			instance.SyncCapabilities(mcl, 2)
+			mcl._err_expected = True
 		elif mcl._tc == 3:
 			# requests 20ppm precision
 			instance.SyncCapabilities(mcl, 20)
+			mcl._err_expected = False
 
 		try:
 			instance.SyncCapabilities(mcl, 20)
@@ -57,19 +76,21 @@ class MyInstance(MCAPInstance):
 		except mcap.InvalidOperation:
 			pass
 
+	def bad_cap_response(self, mcl):
+		mcl._tc += 1
+		self.request_capabilities(mcl)
+
 	def SyncCapabilitiesResponse(self, mcl, err, btclockres, synclead,
 					tmstampres, tmstampacc):
 		print "CSP Caps resp %s btres %d lead %d tsres %d tsacc %d" % \
 			(err and "Err" or "Ok", btclockres,
 				synclead, tmstampres, tmstampacc)
 		if err:
-			if mcl._tc >= 3:
+			if mcl._err_expected:
+				self.bad_cap_response(mcl)
+			else:
 				print "Something went wrong :("
 				self.bye()
-				return
-
-			mcl._tc += 1
-			self.request_capabilities(mcl)
 			return
 
 		btclock = instance.SyncBtClock(mcl)
@@ -91,16 +112,24 @@ class MyInstance(MCAPInstance):
 		print "CSP Set resp: %s btclk %d ts %d tsacc %d" % \
 			(err and "Err" or "Ok", btclock,
 				tmstamp, tmstampacc)
-		self.calc_drift(mcl, btclock, tmstamp)
 		if err:
-			self.bye()
+			if mcl._err_expected:
+				self.bad_set_response(mcl)
+			else:
+				self.bye()
+			return
+
+		self.calc_drift(mcl, btclock, tmstamp)
 
 	def SyncInfoIndication(self, mcl, btclock, tmstamp, accuracy):
 		print "CSP Indication btclk %d ts %d tsacc %d" % \
 			(btclock, tmstamp, accuracy)
 		self.calc_drift(mcl, btclock, tmstamp)
 		mcl._tc += 1
-		if mcl._tc > 5:
+		if mcl._tc > 10:
+			print
+			print "Stopping indication."
+			print
 			instance.SyncSet(mcl, False, None, None)
 
 	def calc_drift(self, mcl, btclock, tmstamp):
