@@ -38,6 +38,12 @@ class MyInstance(MCAPInstance):
 		mcl._tc = 1
 		# requests 20ppm precision
 		instance.SyncCapabilities(mcl, 20)
+		try:
+			instance.SyncCapabilities(mcl, 20)
+			print "Error: should not have accepted two requests"
+			sys.exit(1)
+		except mcap.InvalidOperation:
+			pass
 
 	def SyncCapabilitiesResponse(self, mcl, err, btclockres, synclead,
 					tmstampres, tmstampacc):
