@@ -63,6 +63,12 @@ MCAP_MDL_STATE_ACTIVE		= 'ACTIVE'
 MCAP_MDL_STATE_CLOSED		= 'CLOSED'
 MCAP_MDL_STATE_DELETED		= 'DELETED'
 
+# CSP and Bluetooth clock special values
+
+btclock_immediate = 0xffffffff
+tmstamp_dontset   = 0xffffffffffffffff
+btclock_max       = 0xfffffff
+
 # Verbose error messages
 
 error_rsp_messages = { 
@@ -151,16 +157,17 @@ class CSPRequest(object):
 		self.opcode = opcode
 
 	def encode(self):
-		return struct.pack(mask1, self.opcode)
+		return struct.pack(self.mask1, self.opcode)
 
 	@staticmethod
 	def length(rspcode):
-		return mask1_size
+		return CSPRequest.mask1_size
 
 	@staticmethod
 	def _decode(message):
-		data = struct.unpack(mask1, message[0:mask1_size])
-		return list(data[1:]), message[mask1_size:]
+		data = struct.unpack(CSPRequest.mask1,
+					message[0:CSPRequest.mask1_size])
+		return list(data[1:]), message[CSPRequest.mask1_size:]
 
 
 class CSPResponse(object):
@@ -172,16 +179,17 @@ class CSPResponse(object):
 		self.rspcode = rspcode
 
 	def encode(self):
-		return struct.pack(mask1, self.opcode, self.rspcode)
+		return struct.pack(self.mask1, self.opcode, self.rspcode)
 
 	@staticmethod
 	def length(rspcode):
-		return mask1_size
+		return CSPResponse.mask1_size
 
 	@staticmethod
 	def _decode(message):
-		data = struct.unpack(mask1, message[0:mask1_size])
-		return list(data[1:]), message[mask1_size:]
+		data = struct.unpack(CSPResponse.mask1,
+					message[0:CSPResponse.mask1_size])
+		return list(data[1:]), message[CSPResponse.mask1_size:]
 
 
 # Specific request messages
@@ -282,6 +290,19 @@ class CSPSetRequest( CSPRequest ):
 
 	def __init__(self, update, btclock, timestamp):
 		CSPRequest.__init__(self, MCAP_MD_SYNC_SET_REQ)
+
+		# Some coercions
+		if update:
+			update = 1
+		else:
+			update = 0
+
+		if btclock is None:
+			btclock = btclock_immediate
+
+		if timestamp is None:
+			timestamp = tmstamp_dontset
+
 		self.update = update
 		self.btclock = btclock
 		self.timestamp = timestamp
@@ -303,11 +324,11 @@ class CSPSetRequest( CSPRequest ):
 		return CSPSetRequest(*data)
 
 
-class CSPSyncInfoIndication( CSPRequest ):
+class CSPInfoIndication( CSPRequest ):
 	mask2 = ">IQH"
 	mask2_size = struct.calcsize(mask2)
 
-	def __init__(self, update, btclock, timestamp, accuracy):
+	def __init__(self, btclock, timestamp, accuracy):
 		CSPRequest.__init__(self, MCAP_MD_SYNC_INFO_IND)
 		self.btclock = btclock
 		self.timestamp = timestamp
@@ -319,15 +340,15 @@ class CSPSyncInfoIndication( CSPRequest ):
 
 	@staticmethod
 	def length(rspcode):
-		return CSPRequest.length(rspcode) + CSPSyncInfoIndication.mask2_size
+		return CSPRequest.length(rspcode) + CSPInfoIndication.mask2_size
 
 	@staticmethod
 	def decode(message, rspcode):
-		if len(message) != CSPSyncInfoIndication.length(rspcode):
+		if len(message) != CSPInfoIndication.length(rspcode):
 			raise InvalidMessage("Invalid msg length")
-		data, message = CSPSyncInfoIndication._decode(message)
-		data.extend(struct.unpack(CSPSyncInfoIndication.mask2, message))
-		return CSPSyncInfoIndication(*data)
+		data, message = CSPInfoIndication._decode(message)
+		data.extend(struct.unpack(CSPInfoIndication.mask2, message))
+		return CSPInfoIndication(*data)
 
 
 # Specific response messages
@@ -475,13 +496,13 @@ class DeleteMDLResponse( MDLResponse ):
 
 
 class CSPCapabilitiesResponse( CSPResponse ):
-	mask2 = ">BBHHH"
+	mask2 = ">BHHH"
 	mask2_size = struct.calcsize(mask2)
 	# CSP responses don't change length even in case of error
 
 	def __init__(self, rspcode, btclockres, synclead, tmstampres,
 			tmstampacc):
-		CSPResponse.__init__(self, MCAP_MD_SYNC_CAP_REQ, rspcode)
+		CSPResponse.__init__(self, MCAP_MD_SYNC_CAP_RSP, rspcode)
 		self.btclockres = btclockres # BT clock ticks
 		self.synclead = synclead # delay, ms
 		self.tmstampres = tmstampres # resolution, us
@@ -489,7 +510,7 @@ class CSPCapabilitiesResponse( CSPResponse ):
 
 	def encode(self):
 		return CSPResponse.encode(self) + \
-			struct.pack(self.mark2, self.btclockres, self.synclead,
+			struct.pack(self.mask2, self.btclockres, self.synclead,
 				self.tmstampres, self.tmstampacc)
 
 	@staticmethod
@@ -506,19 +527,20 @@ class CSPCapabilitiesResponse( CSPResponse ):
 
 
 class CSPSetResponse( CSPResponse ):
-	mask2 = ">BIQH"
+	mask2 = ">IQH"
 	mask2_size = struct.calcsize(mask2)
 	# CSP responses don't change length even in case of error
 
 	def __init__(self, rspcode, btclock, timestamp, tmstampacc):
-		CSPResponse.__init__(self, MCAP_MD_SYNC_SET_REQ, rspcode)
+		CSPResponse.__init__(self, MCAP_MD_SYNC_SET_RSP, rspcode)
 		self.btclock = btclock
 		self.timestamp = timestamp
 		self.tmstampacc = tmstampacc # accuracy, us
 
 	def encode(self):
 		return CSPResponse.encode(self) + \
-			struct.pack(self.mask2, self.btclock, self.timestamp, self.tmstampacc)
+			struct.pack(self.mask2, self.btclock, self.timestamp,
+				self.tmstampacc)
 	
 	@staticmethod
 	def length(rspcode):
@@ -541,7 +563,7 @@ class MessageParser:
 		MCAP_MD_DELETE_MDL_REQ: DeleteMDLRequest,
 		MCAP_MD_SYNC_CAP_REQ: CSPCapabilitiesRequest,
 		MCAP_MD_SYNC_SET_REQ: CSPSetRequest,
-		MCAP_MD_SYNC_INFO_IND: CSPSyncInfoIndication,
+		MCAP_MD_SYNC_INFO_IND: CSPInfoIndication,
 		MCAP_ERROR_RSP:	ErrorMDLResponse,
                	MCAP_MD_CREATE_MDL_RSP: CreateMDLResponse,
                	MCAP_MD_RECONNECT_MDL_RSP: ReconnectMDLResponse,

@@ -141,6 +141,27 @@ class MCAPInstance:
 		req = RawRequest(*chars)
 		mcl.send_request(req)
 
+	def SyncTimestamp(self, mcl):
+		return mcl.get_timestamp()
+
+	def SyncBtClock(self, mcl):
+		'''
+		Returns (clock, accuracy), or None if failed
+		'''
+		return mcl.get_btclock()
+
+	def SyncCapabilities(self, mcl, reqaccuracy):
+		req = CSPCapabilitiesRequest(reqaccuracy)
+		mcl.send_request(req)
+
+	def SyncSet(self, mcl, update, btclock, timestamp):
+		'''
+		btclock None means immediate update
+		timestamp None means do not update
+		'''
+		req = CSPSetRequest(update, btclock, timestamp)
+		mcl.send_request(req)
+
 ### Callback methods that must/may be implemented by subclass
 
 	def Recv(self, mdl, data):
@@ -186,6 +207,16 @@ class MCAPInstance:
 
 	def SendDump(self, mcl, message):
 		pass
+
+	def SyncCapabilitiesResponse(self, mcl, err, btclockres, synclead,
+				tmstampres, tmstampacc):
+		print "SyncCapabilitiesResponse not overridden"
+
+	def SyncSetResponse(self, mcl, err, btclock, tmstamp, tmstampacc):
+		print "SyncSetResponse not overridden"
+
+	def SyncInfoIndication(self, mcl, btclock, tmstamp, accuracy):
+		print "SyncIndication not overridden"
 	
 ### Internal callbacks
 
@@ -278,5 +309,16 @@ class MCAPInstance:
 		else:
 			event = self.MCLReconnected
 		event(mcl)
+
+	def csp_capabilities(self, mcl, err, btclockres, synclead,
+				tmstampres, tmstampacc):
+		self.SyncCapabilitiesResponse(mcl, err, btclockres, synclead,
+						tmstampres, tmstampacc)
+
+	def csp_set(self, mcl, err, btclock, timestamp, tmacc):
+		self.SyncSetResponse(mcl, err, btclock, timestamp, tmacc)
+
+	def csp_indication(self, mcl, btclock, timestamp, accuracy):
+		self.SyncInfoIndication(mcl, btclock, timestamp, accuracy)
 
 # TODO Uncache timeout for idle MCLs

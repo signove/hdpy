@@ -184,11 +184,13 @@ class MCL(object):
 			schedule(self.observer.closed_mcl, self)
 
 		self.state = MCAP_MCL_STATE_IDLE
+		self.sm.stop()
 		self.sm = MCLStateMachine(self)
 
 	def connect(self):
 		if self.state != MCAP_MCL_STATE_IDLE:
-			raise InvalidOperation("State is not idle (already open/connected")
+			raise InvalidOperation("State is not idle" \
+					"(already open/connected")
 
 		try:
 			sk = create_control_socket(self.adapter)
@@ -224,6 +226,9 @@ class MCL(object):
 		return True
 
 	def read(self):
+		if not self.sk:
+			print "Trying to read command in disconected state"
+			return ''
 		try:
 			message = self.sk.recv(1024)
 		except IOError:
@@ -231,6 +236,9 @@ class MCL(object):
 		return message
 
 	def write(self, message):
+		if not self.sk:
+			print "Trying to send command in disconected state"
+			return False
 		try:
 			l = self.sk.send(message)
 			schedule(self.observer.activity_mcl, self, False, message)
@@ -301,6 +309,11 @@ class MCL(object):
 	def closed_mdl(self, mdl):
 		return self.sm.closed_mdl(mdl)
 
+	def get_timestamp(self):
+		return self.sm.get_timestamp()
+
+	def get_btclock(self):
+		return self.sm.get_btclock()
 
 class MCLStateMachine:
 
@@ -594,7 +607,9 @@ class MCLStateMachine:
 
 		except InvalidMessage:
 			opcodeRsp = opcode + 1
-			rsp = MDLResponse(opcodeRsp, MCAP_RSP_INVALID_PARAMETER_VALUE, 0x0000)
+			rsp = MDLResponse(opcodeRsp,
+					MCAP_RSP_INVALID_PARAMETER_VALUE,
+					0x0000)
 			return self.send_response(rsp)
 
 	def process_create_request(self, request, reconn=False):
@@ -772,13 +787,24 @@ class MCLStateMachine:
 		else:
 			print "Unknown error rsp code %d" % error_rsp_code
 
+	def get_timestamp(self):
+		return self.csp.get_timestamp()
+
+	def get_btclock(self):
+		return self.csp.get_btclock()
+
+	def stop(self):
+		self.csp.stop()
 
 # FIXME inquire_mdep should call upper layer
 # FIXME MDL streaming or ertm channel? <-- via inquire_mdep
 # FIXME error feedback (for requests we had made)
+# FIXME failed async connect notification error
 
 # TODO Refuse untimely MDL connection using BT_DEFER_SETUP
 #	get addr via L2CAP_OPTIONS to decide upon acceptance
 #	definitive accept using poll OUT ; if !OUT, read 1 byte
 
 # TODO async writes (here and at instance)
+# TODO optional request security level
+

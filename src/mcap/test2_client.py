@@ -161,7 +161,7 @@ try:
 	remote_addr = (sys.argv[1], int(sys.argv[2]))
 	dpsm = int(sys.argv[3])
 except:
-	print "Usage: %s <remote addr> <remote control PSM>" % sys.argv[0]
+	print "Usage: %s <remote addr> <control PSM> <data PSM>" % sys.argv[0]
 	sys.exit(1)
 
 instance = MyInstance("00:00:00:00:00:00", False)
