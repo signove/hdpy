@@ -1,12 +1,13 @@
+ENABLE_ERTM = False
+
+
 import time
 from bluetooth import *
 import bluetooth._bluetooth as bz
 import errno
 import socket
 
-
 DC_MTU = 512
-
 
 L2CAP_MODE_ERTM = 0x03
 L2CAP_MODE_STREAMING = 0x04
@@ -38,17 +39,19 @@ def set_options(sock, options):
 
 
 def set_ertm(sock):
-	options = get_options(sock)
-	options[i_fcs] = 1
-	options[i_mode] = L2CAP_MODE_ERTM
-	set_options(sock, options)
+	if ENABLE_ERTM:
+		options = get_options(sock)
+		options[i_fcs] = 1
+		options[i_mode] = L2CAP_MODE_ERTM
+		set_options(sock, options)
 
 
 def set_streaming(sock):
-	options = get_options(sock)
-	options[i_fcs] = 1
-	options[i_mode] = L2CAP_MODE_STREAMING
-	set_options(sock, options)
+	if ENABLE_ERTM:
+		options = get_options(sock)
+		options[i_fcs] = 1
+		options[i_mode] = L2CAP_MODE_STREAMING
+		set_options(sock, options)
 
 
 def set_mtu(sock, mtu):
