@@ -59,7 +59,7 @@ class BluetoothClock:
 
 
 btclock_field     = btclock_max + 1
-btclock_wrap      = btclock_max / 4
+btclock_wrap      = btclock_max // 4
 clocks = {}
 
 
@@ -211,7 +211,7 @@ class CSPStateMachine(object):
 			self.remote_reqaccuracy = message.reqaccuracy
 
 			btclockres = clk[1]
-			synclead = self.latency / 1000
+			synclead = self.latency // 1000
 			tmstampres = self.tmstampres
 			tmstampacc = self.tmstampacc
 		
@@ -277,8 +277,9 @@ class CSPStateMachine(object):
 				# would never make it in time
 				rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 			
-			ito = self.remote_reqaccuracy / self.tmstampacc # sec
-			ito = int(ito * 1000000) # us
+			ito = int(1000000 \
+				* self.remote_reqaccuracy \
+				/ self.tmstampacc) # sec
 
 			if ito < (self.latency * 2) or ito < 100000:
 				# unreasonable indication rhythm due to
@@ -302,7 +303,7 @@ class CSPStateMachine(object):
 							ito)
 			else:
 				# send response only when tmstamp is set
-				timeout_call(to / 1000, self.set_request_phase2,
+				timeout_call(to // 1000, self.set_request_phase2,
 					message.update, message.btclock,
 					message.timestamp, ito)
 			return True
@@ -388,7 +389,7 @@ class CSPStateMachine(object):
 
 	def start_indication_alarm(self, ito):
 		self.stop_indication_alarm()
-		self.indication_alarm = timeout_call(ito / 1000,
+		self.indication_alarm = timeout_call(ito // 1000,
 					self.send_indication_cb)
 
 	def stop_indication_alarm(self):
@@ -443,7 +444,7 @@ def test(argv0, target=None, l2cap_psm=None, ertm=None):
 	assert(CSPStateMachine.us2bt(-1000000) == -3200)
 
 	import time
-	b = BluetoothClock(0)
+	b = BluetoothClock("00:00:00:00:00:00")
 
 	print "Read clock RTT in microseconds: %d" % b.latency()
 	print
