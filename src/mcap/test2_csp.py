@@ -36,8 +36,20 @@ class MyInstance(MCAPInstance):
 
 	def begin(self, mcl):
 		mcl._tc = 1
-		# requests 20ppm precision
-		instance.SyncCapabilities(mcl, 20)
+		self.request_capabilities(mcl)
+
+	def request_capabilities(self, mcl):
+		print "Requesting capabilities, round %d" % mcl._tc
+		if mcl._tc == 1:
+			# requests invalid 0ppm precision
+			instance.SyncCapabilities(mcl, 0)
+		elif mcl._tc == 2:
+			# requests too accurate 2ppm precision
+			instance.SyncCapabilities(mcl, 2)
+		elif mcl._tc == 3:
+			# requests 20ppm precision
+			instance.SyncCapabilities(mcl, 20)
+
 		try:
 			instance.SyncCapabilities(mcl, 20)
 			print "Error: should not have accepted two requests"
@@ -51,7 +63,14 @@ class MyInstance(MCAPInstance):
 			(err and "Err" or "Ok", btclockres,
 				synclead, tmstampres, tmstampacc)
 		if err:
-			self.bye()
+			if mcl._tc >= 3:
+				print "Something went wrong :("
+				self.bye()
+				return
+
+			mcl._tc += 1
+			self.request_capabilities(mcl)
+			return
 
 		btclock = instance.SyncBtClock(mcl)
 		if btclock is None:
@@ -122,6 +141,3 @@ except mcap.InvalidOperation:
 	pass
 
 loop.run()
-
-# FIXME assert request in flight
-# FIXME test two reqs in sequence
