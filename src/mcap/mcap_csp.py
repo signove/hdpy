@@ -12,8 +12,8 @@ class BluetoothClock:
 	MCAP instances, as a Bluetooth Clock source.
 	"""
 
-	def __init__(self, device_id):
-		self.raw_socket = mcap_sock.hci_open_dev(device_id)
+	def __init__(self, adapter):
+		self.raw_socket = mcap_sock.hci_open_dev(adapter)
 		self.clock_latency = self._determine_clock_latency()
 
 	def _determine_clock_latency(self):
@@ -63,14 +63,11 @@ btclock_wrap      = btclock_max / 4
 clocks = {}
 
 
-def get_singleton_clock(addr):
-	# TODO get the right device id accordingly to interface.
-	# For now we get interface 0.
-	device_id = 0
+def get_singleton_clock(adapter):
 	try:
-		clock = clocks[device_id]
+		clock = clocks[adapter]
 	except KeyError:
-		clock = clocks[device_id] = BluetoothClock(device_id)
+		clock = clocks[adapter] = BluetoothClock(adapter)
 	return clock
 
 
@@ -87,7 +84,7 @@ class CSPStateMachine(object):
 		self.indication_alarm = None
 		self.remote_got_caps = False
 		self.local_got_caps = False
-		self.clock = get_singleton_clock(self.mcl.remote_addr)
+		self.clock = get_singleton_clock(self.mcl.adapter)
 
 		# TODO allow setting timestamp accuracy from higher layer
 		self.tmstampacc = 10 # ppm

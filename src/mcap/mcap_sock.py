@@ -139,8 +139,8 @@ def connection_ok(sk):
 	return not err
 
 
-def hci_open_dev(dev_id):
-	return bz.hci_open_dev(dev_id)
+def hci_open_dev(dev_addr):
+	return bz.hci_open_dev(bz.hci_devid(dev_addr))
 
 
 # Ripped from PyBlueZ advanced examples
@@ -194,7 +194,8 @@ def hci_read_clock(sock, remote_addr):
 
 
 def test():
-	raw = hci_open_dev(0)
+	# all-zeros means default adapter
+	raw = hci_open_dev("00:00:00:00:00:00")
 	clock1, accuracy1 = hci_read_clock(raw, None)
 	time.sleep(0.1)
 	clock2, accuracy2 = hci_read_clock(raw, None)
