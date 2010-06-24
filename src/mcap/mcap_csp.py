@@ -95,10 +95,6 @@ class CSPStateMachine(object):
 		# gettimeofday() returns time in us
 		self.tmstampres = 1 # us
 
-		# TODO determine btclockres experimentally
-		# (preliminary tests returned 1)
-		self.btclockres = 1 # clock cycle
-
 		self.latency = self.clock.latency() # us
 
 	def reset_timestamp(self, new_timestamp):
@@ -205,15 +201,19 @@ class CSPStateMachine(object):
 		tmstampacc = 0
 		rspcode = MCAP_RSP_SUCCESS
 
+		clk = self.get_btclock()
+
 		if not self.enabled:
 			rspcode = MCAP_RSP_REQUEST_NOT_SUPPORTED
 		elif message.reqaccuracy < self.tmstampacc:
 			rspcode = MCAP_RSP_REQUEST_NOT_SUPPORTED
+		elif not clk:
+			rspcode = MCAP_RSP_UNSPECIFIED_ERROR
 		else:
 			self.remote_got_caps = True
 			self.remote_reqaccuracy = self.tmstampacc
 
-			btclockres = self.btclockres
+			btclockres = clk[1]
 			synclead = self.latency / 1000
 			tmstampres = self.tmstampres
 			tmstampacc = self.tmstampacc
