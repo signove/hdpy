@@ -36,8 +36,8 @@ class MyInstance(MCAPInstance):
 
 	def begin(self, mcl):
 		mcl._tc = 1
-		# requests 100ppm precision
-		instance.SyncCapabilities(mcl, 100)
+		# requests 20ppm precision
+		instance.SyncCapabilities(mcl, 20)
 
 	def SyncCapabilitiesResponse(self, mcl, err, btclockres, synclead,
 					tmstampres, tmstampacc):
@@ -74,6 +74,9 @@ class MyInstance(MCAPInstance):
 		print "CSP Indication btclk %d ts %d tsacc %d" % \
 			(btclock, tmstamp, accuracy)
 		self.calc_drift(mcl, btclock, tmstamp)
+		mcl._tc += 1
+		if mcl._tc > 5:
+			instance.SyncSet(mcl, False, None, None)
 
 	def calc_drift(self, mcl, btclock, tmstamp):
 		btdiff = mcl.sm.csp.btdiff(mcl._ib, btclock)
@@ -116,4 +119,3 @@ loop.run()
 
 # FIXME assert request in flight
 # FIXME test two reqs in sequence
-# FIXME stop indication test
