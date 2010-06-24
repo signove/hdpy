@@ -35,8 +35,99 @@ class MyInstance(MCAPInstance):
 	### CSP-specifc part
 
 	def begin(self, mcl):
-		mcl._tc = 1
-		mcl._err_expected = True
+		mcl.test_step = 0
+		self.test(mcl, None, None)
+
+	def test(self, mcl, response, err):
+		if response is not None and response != mcl.test_response:
+			print "Test %d expected %d came %d" % \
+				(mcl.test_step, mcl.test_response, response)
+			sys.exit(1)
+
+		if err is not None and err != mcl.test_err:
+			print "Test %d expected err %s came %s" % \
+				(mcl.test_step, mcl.test_err, err)
+			sys.exit(1)
+
+		mcl.test_step += 1
+		print "Round %d" % mcl.test_step
+
+		if mcl.test_step == 1:
+			self.test_preposterous(mcl)
+
+		elif mcl.test_step == 2:
+			# requests invalid 0ppm precision
+			self.test_req_cap(mcl, 0, True)
+		
+		elif mcl.test_step == 3:
+			# requests too accurate 2ppm precision
+			self.test_req_cap(mcl, 2, True)
+
+		elif mcl.test_step == 4:
+			# requests 20ppm precision
+			self.test_req_cap(mcl, 20, False)
+
+		elif mcl.test_step == 5:
+			self.test_set_future_indication(mcl)
+
+		elif mcl.test_step == 6:
+			mcl.test_response = 3 # Indications
+			pass
+
+		elif mcl.test_step == 7:
+			self.test_stop_indications(mcl)
+
+		else:
+			print "All tests ok"
+			glib.timeout_add(5000, self.bye)
+
+
+	def test_req_cap(self, mcl, ppm, err):
+		print "Requesting capabilities, ppm %d" % ppm
+
+		mcl.test_response = 1 # Req
+		mcl.test_err = err
+		instance.SyncCapabilities(mcl, ppm)
+
+		try:
+			instance.SyncCapabilities(mcl, 20)
+			print "Error: should not have accepted two requests"
+			sys.exit(1)
+		except mcap.InvalidOperation:
+			pass
+
+
+	def test_set_future_indication(self, mcl):
+		mcl.test_response = 2 # Set
+		mcl.test_err = False
+
+		btclock = instance.SyncBtClock(mcl)
+		if btclock is None:
+			self.bye()
+
+		# resets timestamp in 1s
+		btclock = btclock[0] + 3200
+		# begins with a timestamp of 5 full seconds
+		initial_tmstamp = 5000000
+
+		mcl.test_indications = 0
+		mcl.test_initial_ts = initial_tmstamp
+		mcl.test_initial_btclk = btclock
+		mcl.test_err_ma = None
+
+		instance.SyncSet(mcl, True, btclock, initial_tmstamp)
+	
+
+	def test_stop_indications(self, mcl):
+		mcl.test_response = 2 # Set
+		mcl.test_err = False
+
+		instance.SyncSet(mcl, False, None, None)
+
+
+	def test_preposterous(self, mcl):
+		mcl.test_err = True
+		mcl.test_response = 2 # Set
 		try:
 			instance.SyncSet(mcl, True, None, 0x123)
 			print "Preposterous CSP sync set must fail locally"
@@ -48,101 +139,48 @@ class MyInstance(MCAPInstance):
 		mcl.sm.csp.local_got_caps = True
 		instance.SyncSet(mcl, True, None, 0x123)
 
-	def bad_set_response(self, mcl):
-		mcl._tc = 1
-		mcl._err_expected = False
-		mcl.sm.csp.local_got_caps = False
-		self.request_capabilities(mcl)
-
-	def request_capabilities(self, mcl):
-		print "Requesting capabilities, round %d" % mcl._tc
-		if mcl._tc == 1:
-			# requests invalid 0ppm precision
-			instance.SyncCapabilities(mcl, 0)
-			mcl._err_expected = True
-		elif mcl._tc == 2:
-			# requests too accurate 2ppm precision
-			instance.SyncCapabilities(mcl, 2)
-			mcl._err_expected = True
-		elif mcl._tc == 3:
-			# requests 20ppm precision
-			instance.SyncCapabilities(mcl, 20)
-			mcl._err_expected = False
-
-		try:
-			instance.SyncCapabilities(mcl, 20)
-			print "Error: should not have accepted two requests"
-			sys.exit(1)
-		except mcap.InvalidOperation:
-			pass
-
-	def bad_cap_response(self, mcl):
-		mcl._tc += 1
-		self.request_capabilities(mcl)
 
 	def SyncCapabilitiesResponse(self, mcl, err, btclockres, synclead,
 					tmstampres, tmstampacc):
 		print "CSP Caps resp %s btres %d lead %d tsres %d tsacc %d" % \
 			(err and "Err" or "Ok", btclockres,
 				synclead, tmstampres, tmstampacc)
-		if err:
-			if mcl._err_expected:
-				self.bad_cap_response(mcl)
-			else:
-				print "Something went wrong :("
-				self.bye()
-			return
 
-		btclock = instance.SyncBtClock(mcl)
-		if btclock is None:
-			self.bye()
-
-		# resets timestamp in 1s
-		btclock = btclock[0] + 3200
-		# begins with a timestamp of 5 full seconds
-		initial_tmstamp = 5000000
-
-		mcl._it = initial_tmstamp
-		mcl._ib = btclock
-		mcl._iema = None
-
-		instance.SyncSet(mcl, True, btclock, initial_tmstamp)
+		self.test(mcl, 1, err)
 	
+		
 	def SyncSetResponse(self, mcl, err, btclock, tmstamp, tmstampacc):
 		print "CSP Set resp: %s btclk %d ts %d tsacc %d" % \
 			(err and "Err" or "Ok", btclock,
 				tmstamp, tmstampacc)
-		if err:
-			if mcl._err_expected:
-				self.bad_set_response(mcl)
-			else:
-				self.bye()
-			return
+		if not err:
+			self.calc_drift(mcl, btclock, tmstamp)
 
-		self.calc_drift(mcl, btclock, tmstamp)
+		self.test(mcl, 2, err)
+
 
 	def SyncInfoIndication(self, mcl, btclock, tmstamp, accuracy):
 		print "CSP Indication btclk %d ts %d tsacc %d" % \
 			(btclock, tmstamp, accuracy)
 		self.calc_drift(mcl, btclock, tmstamp)
-		mcl._tc += 1
-		if mcl._tc > 10:
-			print
-			print "Stopping indication."
-			print
-			instance.SyncSet(mcl, False, None, None)
+
+		mcl.test_indications += 1
+		if mcl.test_indications > 5:
+			self.test(mcl, 3, False)
+
 
 	def calc_drift(self, mcl, btclock, tmstamp):
-		btdiff = mcl.sm.csp.btdiff(mcl._ib, btclock)
+		btdiff = mcl.sm.csp.btdiff(mcl.test_initial_btclk, btclock)
 		btdiff *= 312.5
-		tmdiff = tmstamp - mcl._it
+		tmdiff = tmstamp - mcl.test_initial_ts
 		err = tmdiff - btdiff
 
-		if mcl._iema is None:
-			errma = mcl._iema = err
+		if mcl.test_err_ma is None:
+			errma = mcl.test_err_ma = err
 		else:
-			last_ma = mcl._iema
-			errma = mcl._iema = 0.05 * err + 0.95 * mcl._iema
+			last_ma = mcl.test_err_ma
+			errma = mcl.test_err_ma = 0.05 * err + \
+				0.95 * last_ma
 
 		print "\terror %dus moving avg %dus " % (err, errma),
 
