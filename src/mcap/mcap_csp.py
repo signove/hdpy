@@ -208,7 +208,7 @@ class CSPStateMachine(object):
 			rspcode = MCAP_RSP_UNSPECIFIED_ERROR
 		else:
 			self.remote_got_caps = True
-			self.remote_reqaccuracy = self.tmstampacc
+			self.remote_reqaccuracy = message.reqaccuracy
 
 			btclockres = clk[1]
 			synclead = self.latency / 1000
@@ -255,6 +255,7 @@ class CSPStateMachine(object):
 		
 		if message.btclock == btclock_immediate:
 			to = 0
+			ito = "invalid"
 		else:
 			if not self.remote_got_caps:
 				rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
@@ -285,7 +286,10 @@ class CSPStateMachine(object):
 				# precision requirement
 				rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 			else:
-				print "CSP: indication sent every %d us" % ito
+				print "CSP: indication sent every %d us" \
+					" (req %dppm, ours %dppm)" % \
+					(ito, self.remote_reqaccuracy,
+					self.tmstampacc)
 
 		if rspcode == MCAP_RSP_SUCCESS:
 			self.stop_indication_alarm()
@@ -320,10 +324,11 @@ class CSPStateMachine(object):
 
 		btclock = btclock[0]
 
-		# compensate timestamp for lateness of this callback
-		delay = self.bt2us(self.btdiff(sched_btclock, btclock))
-		new_tmstamp += delay
-		print "Delay in CSP set bt clock (us):", delay
+		if sched_btclock != btclock_immediate:
+			# compensate timestamp for lateness of this callback
+			delay = self.bt2us(self.btdiff(sched_btclock, btclock))
+			new_tmstamp += delay
+			print "Delay in CSP set bt clock (us):", delay
 	
 		if reset:
 			self.reset_timestamp(new_tmstamp)
