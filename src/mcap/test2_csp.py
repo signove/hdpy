@@ -2,6 +2,7 @@
 # Run something like a test2_server in the other side
 
 from mcap_instance import MCAPInstance
+import mcap
 import time
 import sys
 import glib
@@ -35,8 +36,8 @@ class MyInstance(MCAPInstance):
 
 	def begin(self, mcl):
 		mcl._tc = 1
-		# requests 10ppm precision
-		instance.SyncCapabilities(mcl, 10)
+		# requests 100ppm precision
+		instance.SyncCapabilities(mcl, 100)
 
 	def SyncCapabilitiesResponse(self, mcl, err, btclockres, synclead,
 					tmstampres, tmstampacc):
@@ -65,6 +66,7 @@ class MyInstance(MCAPInstance):
 		print "CSP Set resp: %s btclk %d ts %d tsacc %d" % \
 			(err and "Err" or "Ok", btclock,
 				tmstamp, tmstampacc)
+		self.calc_drift(mcl, btclock, tmstamp)
 		if err:
 			self.bye()
 
@@ -85,10 +87,13 @@ class MyInstance(MCAPInstance):
 			last_ma = mcl._iema
 			errma = mcl._iema = 0.05 * err + 0.95 * mcl._iema
 
-		drift = float(errma) / (float(tmdiff) / 1000000)
-		
-		print "\terror %dus moving avg %dus drift %dus/h" % \
-			(err, errma, drift * 3600)
+		print "\terror %dus moving avg %dus " % (err, errma),
+
+		if tmdiff > 10000000:
+			drift = float(errma) / (float(tmdiff) / 1000000)
+			print "drift %dus/h" % (drift * 3600)
+		else:
+			print
 
 try:
 	remote_addr = (sys.argv[1], int(sys.argv[2]))
@@ -99,8 +104,13 @@ except:
 instance = MyInstance("00:00:00:00:00:00", False)
 print "Connecting..."
 mcl = instance.CreateMCL(remote_addr, 0)
-# FIXME test CSP command here
-# FIXME send command while not connected? protection
+
+try:
+	instance.SyncCapabilities(mcl, 100)
+	print "Error: accepted command before connected"
+	sys.exit(1)
+except mcap.InvalidOperation:
+	pass
 
 loop.run()
 
