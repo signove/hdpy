@@ -356,6 +356,7 @@ class CSPStateMachine(object):
 	
 	def info_indication(self, message):
 		if not self.indication_expected:
+			print "Unexpected indication received, ignoring"
 			return
 		elif not self.valid_btclock(message.btclock):
 			return
