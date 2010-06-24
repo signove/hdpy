@@ -77,9 +77,72 @@ class MyInstance(MCAPInstance):
 		elif mcl.test_step == 7:
 			self.test_stop_indications(mcl)
 
+		elif mcl.test_step in range(8, 28):
+			self.test_invalid_set(mcl, mcl.test_step - 8)
+
+		elif mcl.test_step == 28:
+			self.test_stop_indications(mcl)
+
 		else:
 			print "All tests ok"
 			glib.timeout_add(5000, self.bye)
+
+
+	def test_invalid_set(self, mcl, seq):
+		mcl.test_response = 2 # Set
+		mcl.test_err = True
+
+		btclock = instance.SyncBtClock(mcl)
+		if btclock is None:
+			self.bye()
+			return
+
+		# resets timestamp in 1s
+		btclock = btclock[0] + 1600
+		# begins with a timestamp of 5 full seconds
+		initial_tmstamp = 5000000
+
+		mcl.test_indications = -100000
+		mcl.test_initial_ts = initial_tmstamp
+		mcl.test_initial_btclk = btclock
+		mcl.test_err_ma = None
+
+		if seq % 2:
+			update = True
+		else:
+			update = False
+
+		# Until here we have perfectly valid parameters
+		# Now we inject errors
+
+		seq //= 2
+
+		if seq % 2:
+			# "don't set" (DS) timestamp
+			initial_tmstamp = 0xffffffffffffffff
+
+		seq //= 2
+
+		if seq == 0:
+			# btclock in past tense
+			btclock -= 3200
+		elif seq == 1:
+			# btclock too into future
+			btclock += 3200 * 63
+		elif seq == 2:
+			# invalid btclock
+			btclock = 0xfffffff + 5
+		elif seq == 3:
+			# immediate btclock (makes req VALID)
+			btclock = 0xffffffff
+			mcl.test_err = False
+		elif seq == 4:
+			# leave btclock as it is (makes req VALID)
+			mcl.test_err = False
+			pass
+
+		instance.SyncSet(mcl, update, btclock, initial_tmstamp)
+		
 
 
 	def test_req_cap(self, mcl, ppm, err):
@@ -104,6 +167,7 @@ class MyInstance(MCAPInstance):
 		btclock = instance.SyncBtClock(mcl)
 		if btclock is None:
 			self.bye()
+			return
 
 		# resets timestamp in 1s
 		btclock = btclock[0] + 3200
