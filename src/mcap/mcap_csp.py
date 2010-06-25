@@ -452,7 +452,9 @@ class CSPStateMachine(object):
 		self.stop_indication_alarm()
 
 	def role_changed(self):
-		# TODO
+		# TODO detect master/slave role change
+		# (That could be done reading local and piconet clocks,
+		# and comparing them, assuming that they are very distant)
 		return False
 
 	@staticmethod
