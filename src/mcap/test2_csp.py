@@ -97,14 +97,13 @@ class MyInstance(MCAPInstance):
 			self.bye()
 			return
 
-		# resets timestamp in 1s
-		btclock = btclock[0] + 1600
-		# begins with a timestamp of 5 full seconds
-		initial_tmstamp = 5000000
+		saved_btclock = btclock = btclock[0]
+		# resets timestamp in 0.5s
+		btclock += 1600
+		# begins with a timestamp of 100 full seconds
+		initial_tmstamp = 100000000
 
 		mcl.test_indications = -100000
-		mcl.test_initial_ts = initial_tmstamp
-		mcl.test_initial_btclk = btclock
 		mcl.test_err_ma = None
 
 		if seq % 2:
@@ -117,7 +116,8 @@ class MyInstance(MCAPInstance):
 
 		seq //= 2
 
-		if seq % 2:
+		reset = seq % 2
+		if not reset:
 			# "don't set" (DS) timestamp
 			initial_tmstamp = 0xffffffffffffffff
 
@@ -140,6 +140,18 @@ class MyInstance(MCAPInstance):
 			# leave btclock as it is (makes req VALID)
 			mcl.test_err = False
 			pass
+
+		if reset and not mcl.test_err:
+			mcl.test_initial_ts = initial_tmstamp
+
+		if reset and not mcl.test_err:
+			if btclock != 0xffffffff:
+				mcl.test_initial_btclk = btclock
+			else:
+				# immediate update: save recently read clock
+				mcl.test_initial_btclk = saved_btclock
+
+		# print "\t", update, btclock, initial_tmstamp
 
 		instance.SyncSet(mcl, update, btclock, initial_tmstamp)
 		
