@@ -269,16 +269,17 @@ class CSPStateMachine(object):
 		elif message.update and not self.remote_got_caps:
 			rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 
-		# FIXME role switch after cap_req? invalid operation 
-
-		bt_now = self.get_btclock()
-		if not bt_now:
-			rspcode = MCAP_RSP_UNSPECIFIED_ERROR
-			bt_now = message.btclock - 1
 		else:
-			bt_now = bt_now[0]
-		
-		if message.btclock == btclock_immediate:
+			bt_now = self.get_btclock()
+			if not bt_now:
+				rspcode = MCAP_RSP_UNSPECIFIED_ERROR
+			else:
+				bt_now = bt_now[0]
+				if self.role_changed():
+					rspcode = MCAP_RSP_INVALID_OPERATION
+
+		if message.btclock == btclock_immediate \
+				or rspcode != MCAP_RSP_SUCCESS:
 			to = 0
 		else:
 			if not self.remote_got_caps:
@@ -332,9 +333,9 @@ class CSPStateMachine(object):
 					message.update, message.btclock,
 					message.timestamp, ito)
 			return True
-		else:
-			rsp = CSPSetResponse(rspcode, 0, 0, 0)
 
+		# Fail
+		rsp = CSPSetResponse(rspcode, 0, 0, 0)
 		return self.send_response(rsp)
 
 	def set_request_phase2(self, update, sched_btclock, new_tmstamp, ito):
@@ -449,6 +450,10 @@ class CSPStateMachine(object):
 
 	def stop(self):
 		self.stop_indication_alarm()
+
+	def role_changed(self):
+		# TODO
+		return False
 
 	@staticmethod
 	def valid_btclock(btclock):
