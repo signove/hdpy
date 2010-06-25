@@ -58,6 +58,9 @@ class BluetoothClock:
 
 	def latency(self):
 		return self.clock_latency
+
+	def read_native(self):
+		return mcap_sock.hci_read_clock(self.raw_socket, None)
 	
 	def read(self, remote_addr=None):
 		"""
@@ -79,8 +82,8 @@ class BluetoothClock:
 		return mcap_sock.hci_read_clock(self.raw_socket, remote_addr)
 
 
-btclock_field     = btclock_max + 1
-btclock_wrap      = btclock_max // 4
+btclock_field = btclock_max + 1
+btclock_half  = btclock_field // 2
 clocks = {}
 
 
@@ -106,6 +109,7 @@ class CSPStateMachine(object):
 		self.remote_got_caps = False
 		self.local_got_caps = False
 		self.clock = get_singleton_clock(self.mcl.adapter)
+		self.bt_offset = 0
 
 		# TODO allow setting timestamp accuracy from higher layer
 		self.tmstampacc = 10 # ppm
@@ -132,6 +136,9 @@ class CSPStateMachine(object):
 
 	def get_btclock(self):
 		return self.clock.read(self.mcl.remote_addr)
+	
+	def get_btclock_native(self):
+		return self.clock.read_native()
 
 	@staticmethod 
 	def bt2us(btclock):
@@ -139,15 +146,20 @@ class CSPStateMachine(object):
 
 	@staticmethod 
 	def btdiff(btclock1, btclock2):
-		diff = btclock2 - btclock1
-		# test for probable wrap of either clock
-		if diff > btclock_wrap:
-			# btclock1 wrapped
-			diff -= btclock_field
-		elif diff < -btclock_wrap:
-			# btclock2 wrapped
-			diff += btclock_field
-		return diff
+		return CSPStateMachine.btoffset(btclock1, btclock2)
+
+	@staticmethod
+	def btoffset(btclock1, btclock2):
+		offset = btclock2 - btclock1
+		if offset <= -btclock_half:
+			offset += btclock_field
+		elif offset > btclock_half:
+			offset -= btclock_field
+		return offset
+
+	@staticmethod
+	def btoffsetdiff(offset1, offset2):
+		return abs(offset2 - offset1)
 
 	@staticmethod 
 	def us2bt(tmstamp):
@@ -230,7 +242,7 @@ class CSPStateMachine(object):
 		elif message.reqaccuracy < self.tmstampacc:
 			rspcode = MCAP_RSP_REQUEST_NOT_SUPPORTED
 		elif not clk:
-			rspcode = MCAP_RSP_UNSPECIFIED_ERROR
+			rspcode = MCAP_RSP_RESOURCE_UNAVAILABLE
 		else:
 			self.remote_got_caps = True
 			self.remote_reqaccuracy = message.reqaccuracy
@@ -275,8 +287,13 @@ class CSPStateMachine(object):
 				rspcode = MCAP_RSP_UNSPECIFIED_ERROR
 			else:
 				bt_now = bt_now[0]
-				if self.role_changed():
-					rspcode = MCAP_RSP_INVALID_OPERATION
+
+			bt_local = self.get_btclock_native()
+			if not bt_local:
+				rspcode = MCAP_RSP_UNSPECIFIED_ERROR
+			else:
+				bt_local = bt_local[0]
+				self.bt_offset = self.btoffset(bt_now, bt_local)
 
 		if message.btclock == btclock_immediate \
 				or rspcode != MCAP_RSP_SUCCESS:
@@ -358,6 +375,12 @@ class CSPStateMachine(object):
 
 		btclock = btclock[0]
 
+		if self.role_changed(btclock):
+			rspcode = MCAP_RSP_INVALID_OPERATION
+			rsp = CSPSetResponse(rspcode, 0, 0, 0)
+			self.send_response(rsp)
+			return False
+
 		reset = new_tmstamp != tmstamp_dontset
 
 		if reset:
@@ -418,7 +441,7 @@ class CSPStateMachine(object):
 					message.timestamp,
 					message.accuracy)
 
-	def send_indication_cb(self):
+	def send_indication_cb(self, periodic):
 		latency = self.preemption_thresh + 1
 		retry = 5
 
@@ -436,12 +459,13 @@ class CSPStateMachine(object):
 		tmstampacc = self.latency
 		rsp = CSPInfoIndication(btclock, timestamp, tmstampacc)
 		self.send_request(rsp)
-		return True
+		return periodic
 
 	def start_indication_alarm(self, ito):
 		self.stop_indication_alarm()
 		self.indication_alarm = timeout_call(ito // 1000,
-					self.send_indication_cb)
+					self.send_indication_cb, True)
+		timeout_call(0, self.send_indication_cb, False)
 
 	def stop_indication_alarm(self):
 		if self.indication_alarm:
@@ -451,11 +475,16 @@ class CSPStateMachine(object):
 	def stop(self):
 		self.stop_indication_alarm()
 
-	def role_changed(self):
-		# TODO detect master/slave role change
-		# (That could be done reading local and piconet clocks,
-		# and comparing them, assuming that they are very distant)
-		return False
+	def role_changed(self, bt_piconet):
+		# TODO use some direct way to read BT offset or role
+		bt_local = self.get_btclock_native()
+
+		if not bt_local:
+			return False
+
+		bt_offset = self.btoffset(bt_piconet, bt_local[0])
+
+		return self.btoffsetdiff(bt_offset, self.bt_offset) > (3200*63)
 
 	@staticmethod
 	def valid_btclock(btclock):
@@ -499,6 +528,21 @@ def test(argv0, target=None, l2cap_psm=None, ertm=None):
 	assert(CSPStateMachine.bt2us(-1600) == -500000)
 	assert(CSPStateMachine.us2bt(1000000) == 3200)
 	assert(CSPStateMachine.us2bt(-1000000) == -3200)
+	assert(CSPStateMachine.btoffset(500, 500) == 0)
+	assert(CSPStateMachine.btoffset(500, 501) == 1)
+	assert(CSPStateMachine.btoffset(502, 500) == -2)
+	assert(CSPStateMachine.btoffset(0, 0xfffffff) == -1)
+	assert(CSPStateMachine.btoffset(0xffffffe, 0) == 2)
+	assert(CSPStateMachine.btoffset(0, 0x7ffffff) == 0x7ffffff)
+	assert(CSPStateMachine.btoffset(0, 0x8000000) == 0x8000000) 
+	assert(CSPStateMachine.btoffset(0, 0x8000001) == -0x7ffffff)
+	assert(CSPStateMachine.btoffsetdiff(1, 1) == 0)
+	assert(CSPStateMachine.btoffsetdiff(1, 1000) == 999)
+	assert(CSPStateMachine.btoffsetdiff(1000, 1) == 999)
+	assert(CSPStateMachine.btoffsetdiff(-100000, 100000) == 200000)
+	assert(CSPStateMachine.btoffsetdiff(100000, -100000) == 200000)
+	assert(CSPStateMachine.btoffsetdiff(-100000, -100001) == 1)
+	assert(CSPStateMachine.btoffsetdiff(-100000, -100001) == 1)
 
 	import time
 	b = BluetoothClock("00:00:00:00:00:00")
