@@ -5,6 +5,7 @@ from mcap_defs import *
 import string
 import time
 from mcap_loop import *
+import math
 
 class BluetoothClock:
 	"""
@@ -27,13 +28,33 @@ class BluetoothClock:
 		t = time.time()
 		mcap_sock.hci_read_clock(self.raw_socket, None)
 		t = time.time()
-		# then measure
-		t1 = time.time()
-		# FIXME detect preemption here
-		mcap_sock.hci_read_clock(self.raw_socket, None)
-		# FIXME detect preemption here
-		t2 = time.time()
-		return int((t2 - t1) * 1000000)
+
+		# take a bunch of measures
+		latencies = []
+		latencies2 = []
+		for x in range(0, 20):
+			t1 = time.time()
+			mcap_sock.hci_read_clock(self.raw_socket, None)
+			t2 = time.time()
+			latency = t2 - t1
+			latencies.append(latency)
+			latencies2.append(latency * latency)
+
+		s = sum(latencies)
+		n = len(latencies)
+		avg = s / n
+		stdev = math.sqrt((n * sum(latencies2) - s * s)) / n
+
+		filtered = []
+		for latency in latencies:
+			# leap of faith here: we assume that latencies too
+			# high are result of preemption between calls
+			if latency < avg + 6 * stdev:
+				filtered.append(latency)
+
+		# Return average without freak samples
+		avg = sum(filtered) / len(filtered)
+		return int(avg * 1000000)
 
 	def latency(self):
 		return self.clock_latency
@@ -77,7 +98,7 @@ class CSPStateMachine(object):
 		self.parser = mainsm.parser
 		self.mcl = mcl
 		self.observer = mcl.observer
-		self.reset_timestamp(0)
+		self.reset_timestamp(time.time(), 0)
 		self.request_in_flight = 0
 		self.enabled = True
 		self.indication_expected = False
@@ -94,8 +115,12 @@ class CSPStateMachine(object):
 
 		self.latency = self.clock.latency() # us
 
-	def reset_timestamp(self, new_timestamp):
-		self.base_time = time.time()
+		# We assume that observed latencies bigger than
+		# 4 x "normal" latency is sympthom of preemption
+		self.preemption_thresh = self.latency * 4.0 / 1000000.0
+
+	def reset_timestamp(self, now, new_timestamp):
+		self.base_time = now
 		self.base_timestamp = new_timestamp
 
 	def get_timestamp(self):
@@ -313,8 +338,15 @@ class CSPStateMachine(object):
 		return self.send_response(rsp)
 
 	def set_request_phase2(self, update, sched_btclock, new_tmstamp, ito):
-		reset = new_tmstamp != tmstamp_dontset
-		btclock = self.get_btclock()
+		latency = self.preemption_thresh + 1
+		retry = 5
+
+		while latency > self.preemption_thresh and retry:
+			t1 = time.time()
+			btclock = self.get_btclock()
+			timestamp = self.get_timestamp()
+			latency = time.time() - t1
+			retry -= 1
 
 		if not btclock:
 			# damn!
@@ -325,16 +357,28 @@ class CSPStateMachine(object):
 
 		btclock = btclock[0]
 
-		if sched_btclock != btclock_immediate:
-			# compensate timestamp for lateness of this callback
-			delay = self.bt2us(self.btdiff(sched_btclock, btclock))
-			new_tmstamp += delay
-			print "Delay in CSP set bt clock (us):", delay
-	
-		if reset:
-			self.reset_timestamp(new_tmstamp)
+		reset = new_tmstamp != tmstamp_dontset
 
-		timestamp = self.get_timestamp()
+		if reset:
+			if sched_btclock != btclock_immediate:
+				# compensate timestamp for lateness
+				# of this callback
+				delay = self.bt2us(self.btdiff(sched_btclock,
+								btclock))
+				new_tmstamp += delay
+				print "CSP set bt %sus late (but compensated)" \
+					 % delay
+			else:
+				print "CSP set immediately, no compensation"
+
+			self.reset_timestamp(t1 + latency, new_tmstamp)
+			timestamp = new_tmstamp
+
+		else:
+			if sched_btclock != btclock_immediate:
+				print "CSP scheduled query"
+			else:
+				print "CSP immediate query"
 
 		# this is different from timestamp accuracy;
 		# it needs to take latency into account
@@ -374,9 +418,15 @@ class CSPStateMachine(object):
 					message.accuracy)
 
 	def send_indication_cb(self):
-		btclock = self.get_btclock()
-		# FIXME detect preemption here
-		timestamp = self.get_timestamp()
+		latency = self.preemption_thresh + 1
+		retry = 5
+
+		while latency > self.preemption_thresh and retry:
+			t1 = time.time()
+			btclock = self.get_btclock()
+			timestamp = self.get_timestamp()
+			latency = time.time() - t1
+			retry -= 1
 
 		if not btclock:
 			return False
