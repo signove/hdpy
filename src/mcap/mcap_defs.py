@@ -307,8 +307,8 @@ class CSPSetRequest( CSPRequest ):
 			timestamp = tmstamp_dontset
 
 		self.update = update
-		self.btclock = btclock
-		self.timestamp = timestamp
+		self.btclock = btclock & 0xffffffff
+		self.timestamp = timestamp & 0xffffffffffffffff
 
 	def encode(self):
 		return CSPRequest.encode(self) + \
@@ -333,8 +333,8 @@ class CSPInfoIndication( CSPRequest ):
 
 	def __init__(self, btclock, timestamp, accuracy):
 		CSPRequest.__init__(self, MCAP_MD_SYNC_INFO_IND)
-		self.btclock = btclock
-		self.timestamp = timestamp
+		self.btclock = btclock & 0xffffffff
+		self.timestamp = timestamp & 0xffffffffffffffff
 		self.accuracy = accuracy # us
 
 	def encode(self):
@@ -536,8 +536,8 @@ class CSPSetResponse( CSPResponse ):
 
 	def __init__(self, rspcode, btclock, timestamp, tmstampacc):
 		CSPResponse.__init__(self, MCAP_MD_SYNC_SET_RSP, rspcode)
-		self.btclock = btclock
-		self.timestamp = timestamp
+		self.btclock = btclock & 0xffffffff
+		self.timestamp = timestamp & 0xffffffffffffffff
 		self.tmstampacc = tmstampacc # accuracy, us
 
 	def encode(self):
