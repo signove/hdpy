@@ -26,11 +26,11 @@ class MyInstance(MCAPInstance):
 		print "MDL deleted", id(mdl)
 
 	def RecvDump(self, mcl, message):
-		# print "Received command ", repr(message)
+		print "Received command ", repr(message)
 		return True
 
 	def SendDump(self, mcl, message):
-		# print "Sent command ", repr(message)
+		print "Sent command ", repr(message)
 		return True
 
 	def Recv(self, mdl, data):

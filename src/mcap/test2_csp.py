@@ -182,7 +182,8 @@ class MyInstance(MCAPInstance):
 			return
 
 		# resets timestamp in 1s
-		btclock = btclock[0] + 3200
+		print "My BT Clock is", btclock
+		btclock = btclock[0] + 3200 * 4
 		# begins with a timestamp of 5 full seconds
 		initial_tmstamp = 5000000
 
@@ -241,7 +242,7 @@ class MyInstance(MCAPInstance):
 		self.calc_drift(mcl, btclock, tmstamp)
 
 		mcl.test_indications += 1
-		if mcl.test_indications > 5:
+		if mcl.test_indications > 10:
 			self.test(mcl, 3, False)
 
 
