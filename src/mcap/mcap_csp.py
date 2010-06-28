@@ -346,7 +346,8 @@ class CSPStateMachine(object):
 							ito)
 			else:
 				# send response only when tmstamp is set
-				timeout_call(to // 1000, self.set_request_phase2,
+				timeout_call(to // 1000 + 1,
+					self.set_request_phase2,
 					message.update, message.btclock,
 					message.timestamp, ito)
 			return True
@@ -389,9 +390,13 @@ class CSPStateMachine(object):
 				# of this callback
 				delay = self.bt2us(self.btdiff(sched_btclock,
 								btclock))
-				new_tmstamp += delay
-				print "CSP set bt %sus late (but compensated)" \
-					 % delay
+				if delay > 0 or new_tmstamp > -delay:
+					new_tmstamp += delay
+					action = "compensated"
+				else:
+					action = "not compensated"
+				print "CSP set %dus late (%s)" \
+					 % (delay, action)
 			else:
 				print "CSP set immediately, no compensation"
 
@@ -463,7 +468,7 @@ class CSPStateMachine(object):
 
 	def start_indication_alarm(self, ito):
 		self.stop_indication_alarm()
-		self.indication_alarm = timeout_call(ito // 1000,
+		self.indication_alarm = timeout_call(ito // 1000 + 1,
 					self.send_indication_cb, True)
 		timeout_call(0, self.send_indication_cb, False)
 
