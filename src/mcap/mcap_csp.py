@@ -319,7 +319,7 @@ class CSPStateMachine(object):
 				# would never make it in time
 				rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 			
-		if rspcode == MCAP_RSP_SUCCESS:
+		if rspcode == MCAP_RSP_SUCCESS and message.update:
 			ito = int(1000000 \
 				* self.remote_reqaccuracy \
 				/ self.tmstampacc) # us
@@ -334,7 +334,9 @@ class CSPStateMachine(object):
 					" (req %dppm, ours %dppm)" % \
 					(ito, self.remote_reqaccuracy,
 					self.tmstampacc)
-
+		else:
+			ito = "None"
+			
 		if rspcode == MCAP_RSP_SUCCESS:
 			self.stop_indication_alarm()
 
