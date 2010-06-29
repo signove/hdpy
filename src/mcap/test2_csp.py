@@ -98,6 +98,8 @@ class MyInstance(MCAPInstance):
 			print "All tests ok"
 			glib.timeout_add(5000, self.bye)
 
+		return False
+
 
 	def test_invalid_set(self, mcl, seq):
 		mcl.test_response = 2 # Set
@@ -244,7 +246,7 @@ class MyInstance(MCAPInstance):
 		if not err:
 			self.calc_drift(mcl, btclock, tmstamp)
 
-		self.test(mcl, 2, err)
+		glib.timeout_add(500, self.test, mcl, 2, err)
 
 
 	def SyncInfoIndication(self, mcl, btclock, tmstamp, accuracy):
