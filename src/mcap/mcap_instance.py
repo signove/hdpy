@@ -293,7 +293,7 @@ class MCAPInstance:
 		self.MDLRequested(mcl, mdl, mdepid, config)
 
 	def mdlreconn_mcl(self, mcl, mdl):
-		self.MDLReconnected(mcl, mdl)
+		self.MDLReconnected(mdl)
 
 	def mdlaborted_mcl(self, mcl, mdl):
 		self.MDLAborted(mcl, mdl)

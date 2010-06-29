@@ -688,7 +688,8 @@ class MCLStateMachine:
 
 			self.mcl.state = MCAP_MCL_STATE_PENDING
 			if reconn:
-				schedule(self.mcl.observer.mdlreconn_mcl, mdl)
+				schedule(self.mcl.observer.mdlreconn_mcl,
+					self.mcl, mdl)
 			else:
 				schedule(self.mcl.observer.mdlrequested_mcl,
 					self.mcl, mdl, request.mdepid, config)
@@ -696,7 +697,7 @@ class MCLStateMachine:
 		return success
 
 	def process_reconnect_request(self, request):
-		return self.process_create_request(self, True)
+		return self.process_create_request(request, True)
 
 	def process_delete_request(self, request):
 		rspcode = MCAP_RSP_SUCCESS
