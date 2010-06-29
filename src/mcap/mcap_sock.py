@@ -1,3 +1,14 @@
+# -*- coding: utf-8
+
+################################################################
+#
+# Copyright (c) 2010 Signove. All rights reserved.
+# See the COPYING file for licensing details.
+#
+# Autors: Elvis Pfützenreuter < epx at signove dot com >
+#         Raul Herbster < raul dot herbster at signove dot com >
+################################################################
+
 ENABLE_ERTM = False
 
 
@@ -139,8 +150,14 @@ def connection_ok(sk):
 	return not err
 
 
-def hci_open_dev(dev_addr):
-	return bz.hci_open_dev(bz.hci_devid(dev_addr))
+def hci_open_dev(adapter):
+	# TODO: use remote device addr and hci_get_route
+	# (need to add this to PyBlueZ)
+	dev_id = bz.hci_devid(adapter)
+	if dev_id < 0:
+		# take the first one and pray
+		dev_id = 0
+	return bz.hci_open_dev(dev_id), dev_id
 
 
 # Ripped from PyBlueZ advanced examples
@@ -193,9 +210,34 @@ def hci_read_clock(sock, remote_addr):
 	return (clock, accuracy)
 
 
+# TODO add to PyBluez and use C structures
+
+hci_dev_info = "H8s6sLB8sLLLHHHHLLLLLLLLLL";
+HCI_LM_MASTER = 1;
+
+# TODO add to PyBluez and use C structures
+
+def hci_role(fd, dev_id):
+	reqstr = struct.pack(hci_dev_info, bz.htobs(dev_id),
+			"\0" * 6, "\0" * 8, 0, 0, "\0" * 8,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0)
+	request = array.array("c", reqstr)
+
+	try:
+		fcntl.ioctl(fd.fileno(), bz.HCIGETDEVINFO, request, 1)
+	except IOError:
+		return -1;
+
+	res = struct.unpack(hci_dev_info, request.tostring())
+
+	return res[8] & HCI_LM_MASTER;
+
+
 def test():
 	# all-zeros means default adapter
-	raw = hci_open_dev("00:00:00:00:00:00")
+	raw, dev_id = hci_open_dev("00:00:00:00:00:00")
+	print "Dev id", dev_id
 	clock1, accuracy1 = hci_read_clock(raw, None)
 	time.sleep(0.1)
 	clock2, accuracy2 = hci_read_clock(raw, None)
@@ -223,6 +265,8 @@ def test():
 	x = create_data_socket("00:00:00:00:00:00",  None, False)
 	print "Streaming data socket"
 	print "Options", get_options(x)
+
+	print "Role:", hci_role(raw, 0);
 
 	time.sleep(1)
 

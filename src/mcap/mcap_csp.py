@@ -1,4 +1,17 @@
 #!/usr/bin/env ptyhon
+# -*- coding: utf-8
+
+################################################################
+#
+# Copyright (c) 2010 Signove. All rights reserved.
+# See the COPYING file for licensing details.
+#
+# Autors: Elvis Pfützenreuter < epx at signove dot com >
+#         Raul Herbster < raul dot herbster at signove dot com >
+################################################################
+
+CLOCK_ACCURACY_PPM = 10
+CLOCK_RESOLUTION_US = 1
 
 import mcap_sock
 from mcap_defs import *
@@ -8,16 +21,16 @@ from mcap_loop import *
 import math
 
 class BluetoothClock:
-	"""
-	This class is intended to be used as a singleton by all
-	MCAP instances, as a Bluetooth Clock source.
-	"""
+	clock_latency = None
 
-	def __init__(self, adapter):
-		self.raw_socket = mcap_sock.hci_open_dev(adapter)
-		self.clock_latency = self._determine_clock_latency()
+	def __init__(self, adapter, remote_addr):
+		self.adapter = adapter
+		self.addr = remote_addr
+		self.raw_socket, self.dev_id = mcap_sock.hci_open_dev(adapter)
+		if BluetoothClock.clock_latency is None:
+			BluetoothClock.clock_latency = self._determine_latency()
 
-	def _determine_clock_latency(self):
+	def _determine_latency(self):
 		"""
 		Determine how much time it takes to read HCI clock
 		"""
@@ -57,18 +70,20 @@ class BluetoothClock:
 		return int(avg * 1000000)
 
 	def latency(self):
-		return self.clock_latency
+		return BluetoothClock.clock_latency
+
+	def role(self):
+		return mcap_sock.hci_role(self.raw_socket, self.dev_id)
 
 	def read_native(self):
 		return mcap_sock.hci_read_clock(self.raw_socket, None)
 	
-	def read(self, remote_addr=None):
+	def read(self, piconet):
 		"""
 		Reads Bluetooth clock.
 
-		If remote addr is specified, reads piconet clock (the addr
-		is a remote participant of the piconet). If not specified,
-		reads native clock (which is the same as piconet clock if
+		If piconet is True, reads piconet clock. If False, reads
+		native clock (which is the same as piconet clock if
 		local BT is piconet master).
 
 		Returns a tuple with BT clock and accuracy, or None if
@@ -77,22 +92,14 @@ class BluetoothClock:
 		Accuracy may be zero (means theoretical infinit precision).
 		Unit is Bluetooth "ticks" (312.5 us each), wraps 32 bits
 		"""
-		if remote_addr:
-			remote_addr = remote_addr[0]
-		return mcap_sock.hci_read_clock(self.raw_socket, remote_addr)
+		addr = None
+		if piconet:
+			addr = self.addr
+		return mcap_sock.hci_read_clock(self.raw_socket, addr)
 
 
 btclock_field = btclock_max + 1
 btclock_half  = btclock_field // 2
-clocks = {}
-
-
-def get_singleton_clock(adapter):
-	try:
-		clock = clocks[adapter]
-	except KeyError:
-		clock = clocks[adapter] = BluetoothClock(adapter)
-	return clock
 
 
 class CSPStateMachine(object):
@@ -108,20 +115,31 @@ class CSPStateMachine(object):
 		self.indication_alarm = None
 		self.remote_got_caps = False
 		self.local_got_caps = False
-		self.clock = get_singleton_clock(self.mcl.adapter)
-		self.bt_offset = 0
+		self._clock = None
+		self._latency = None
+		self._preemption_thresh = None
 
-		# TODO allow setting timestamp accuracy from higher layer
-		self.tmstampacc = 10 # ppm
+		self.tmstampacc = CLOCK_ACCURACY_PPM
+		self.tmstampres = CLOCK_RESOLUTION_US
 
-		# gettimeofday() returns time in us
-		self.tmstampres = 1 # us
+	def clock(self):
+		if not self._clock:
+			self._clock = BluetoothClock(self.mcl.adapter,
+						self.mcl.remote_addr[0])
+		return self._clock
 
-		self.latency = self.clock.latency() # us
+	def latency(self):
+		if self._latency is None:
+			self._latency = self.clock().latency()
+		return self._latency
 
+	def preemption_thresh(self):
 		# We assume that observed latencies bigger than
 		# 4 x "normal" latency is sympthom of preemption
-		self.preemption_thresh = self.latency * 4.0 / 1000000.0
+		if self._preemption_thresh is None:
+			self._preemption_thresh = self.clock().latency() \
+						* 4.0 / 1000000.0
+		return self._preemption_thresh
 
 	def reset_timestamp(self, now, new_timestamp):
 		self.base_time = now
@@ -135,10 +153,10 @@ class CSPStateMachine(object):
 			+ self.base_timestamp
 
 	def get_btclock(self):
-		return self.clock.read(self.mcl.remote_addr)
+		return self.clock().read(self.mcl.remote_addr)
 	
 	def get_btclock_native(self):
-		return self.clock.read_native()
+		return self.clock().read_native()
 
 	@staticmethod 
 	def bt2us(btclock):
@@ -159,7 +177,12 @@ class CSPStateMachine(object):
 
 	@staticmethod
 	def btoffsetdiff(offset1, offset2):
-		return abs(offset2 - offset1)
+		ofd = offset2 - offset1
+		if ofd <= -btclock_half:
+			ofd += btclock_field
+		elif ofd > btclock_half:
+			oft -= btclock_field
+		return ofd
 
 	@staticmethod 
 	def us2bt(tmstamp):
@@ -248,7 +271,7 @@ class CSPStateMachine(object):
 			self.remote_reqaccuracy = message.reqaccuracy
 
 			btclockres = clk[1]
-			synclead = self.latency // 1000
+			synclead = self.latency() // 1000
 			tmstampres = self.tmstampres
 			tmstampacc = self.tmstampacc
 		
@@ -269,6 +292,7 @@ class CSPStateMachine(object):
 				message.tmstampres, message.tmstampacc)
 
 	def set_request(self, message):
+		self.set_req_role = -2
 		rspcode = MCAP_RSP_SUCCESS
 
 		if message.btclock != btclock_immediate and \
@@ -287,13 +311,7 @@ class CSPStateMachine(object):
 				rspcode = MCAP_RSP_UNSPECIFIED_ERROR
 			else:
 				bt_now = bt_now[0]
-
-			bt_local = self.get_btclock_native()
-			if not bt_local:
-				rspcode = MCAP_RSP_UNSPECIFIED_ERROR
-			else:
-				bt_local = bt_local[0]
-				self.bt_offset = self.btoffset(bt_now, bt_local)
+				self.set_req_role = self.clock().role()
 
 		if message.btclock == btclock_immediate \
 				or rspcode != MCAP_RSP_SUCCESS:
@@ -315,7 +333,7 @@ class CSPStateMachine(object):
 				# more than 60 seconds in the future
 				rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 
-			elif to < self.latency:
+			elif to < self.latency():
 				# would never make it in time
 				rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 			
@@ -324,7 +342,7 @@ class CSPStateMachine(object):
 				* self.remote_reqaccuracy \
 				/ self.tmstampacc) # us
 
-			if ito < (self.latency * 2) or ito < 100000:
+			if ito < (self.latency() * 2) or ito < 100000:
 				# unreasonable indication rhythm due to
 				# low local precision or too high remote
 				# precision requirement
@@ -359,10 +377,10 @@ class CSPStateMachine(object):
 		return self.send_response(rsp)
 
 	def set_request_phase2(self, update, sched_btclock, new_tmstamp, ito):
-		latency = self.preemption_thresh + 1
+		latency = self.preemption_thresh() + 1
 		retry = 5
 
-		while latency > self.preemption_thresh and retry:
+		while latency > self.preemption_thresh() and retry:
 			t1 = time.time()
 			btclock = self.get_btclock()
 			timestamp = self.get_timestamp()
@@ -378,7 +396,8 @@ class CSPStateMachine(object):
 
 		btclock = btclock[0]
 
-		if self.role_changed(btclock):
+		if self.clock().role() != self.set_req_role:
+			print "Role changed between set req and set rsp"
 			rspcode = MCAP_RSP_INVALID_OPERATION
 			rsp = CSPSetResponse(rspcode, 0, 0, 0)
 			self.send_response(rsp)
@@ -413,7 +432,7 @@ class CSPStateMachine(object):
 
 		# this is different from timestamp accuracy;
 		# it needs to take latency into account
-		tmstampacc = self.latency + self.tmstampacc
+		tmstampacc = self.latency() + self.tmstampacc
 
 		if update:
 			self.start_indication_alarm(ito)
@@ -449,10 +468,10 @@ class CSPStateMachine(object):
 					message.accuracy)
 
 	def send_indication_cb(self, periodic):
-		latency = self.preemption_thresh + 1
+		latency = self.preemption_thresh() + 1
 		retry = 5
 
-		while latency > self.preemption_thresh and retry:
+		while latency > self.preemption_thresh() and retry:
 			t1 = time.time()
 			btclock = self.get_btclock()
 			timestamp = self.get_timestamp()
@@ -463,7 +482,7 @@ class CSPStateMachine(object):
 			return False
 
 		btclock = btclock[0]
-		tmstampacc = self.latency
+		tmstampacc = self.latency()
 		rsp = CSPInfoIndication(btclock, timestamp, tmstampacc)
 		self.send_request(rsp)
 		return periodic
@@ -481,17 +500,6 @@ class CSPStateMachine(object):
 
 	def stop(self):
 		self.stop_indication_alarm()
-
-	def role_changed(self, bt_piconet):
-		# TODO use some direct way to read BT offset or role
-		bt_local = self.get_btclock_native()
-
-		if not bt_local:
-			return False
-
-		bt_offset = self.btoffset(bt_piconet, bt_local[0])
-
-		return self.btoffsetdiff(bt_offset, self.bt_offset) > (3200*63)
 
 	@staticmethod
 	def valid_btclock(btclock):
@@ -559,9 +567,9 @@ def test(argv0, target=None, l2cap_psm=None, ertm=None):
 
 	print "Reading native clock"
 	# Can't fail
-	clock1, accuracy = b.read()
+	clock1, accuracy = b.read(False)
 	time.sleep(0.1)
-	clock2, accuracy = b.read()
+	clock2, accuracy = b.read(False)
 	diff = clock2 - clock1
 	print "Clocks: %d - %d = %d" % (clock1, clock2, diff)
 	diff *= 312.5 / 1000000.0 # 312.5us per tick
