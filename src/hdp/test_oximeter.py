@@ -13,6 +13,7 @@
 import hdp_record
 import gobject
 import dbus.mainloop.glib
+from dummy_ieee10404 import parse_message
 
 mcap_iface = 'org.bluez.mcap'
 mcap_control_psm = 0x1001
@@ -21,9 +22,10 @@ mcap_data_psm = 0x1003
 def object_signal(*args, **kwargs):
 	print 'Value', args
 	print 'Details', kwargs
-#	if 'member' in kwargs and kwargs['member'] == 'Recv':
-#		mdl, data = args
-#		adapter.Send(mdl, data + ' pong ')
+	if 'member' in kwargs and kwargs['member'] == 'Recv':
+		mdl, data = args
+		response = parse_message(data)
+		adapter.Send(mdl, response)
 
 health_record = {'features': [{'mdep_id': 0x01, 'role': 'sink',
                      'data_type': 0x1004, 'description': 'HDP sink'}],
@@ -54,8 +56,7 @@ bus.add_signal_receiver(object_signal, bus_name='org.bluez',
 				member_keyword='member',
 				path_keyword='path',
 				interface_keyword='interface',
-				dbus_interface=mcap_iface,
-				byte_arrays=True)
+				dbus_interface=mcap_iface)
 
 mcap_handle = adapter.StartSession(mcap_control_psm, mcap_data_psm)
 print 'Mcap handle: ', mcap_handle
