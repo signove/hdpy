@@ -67,13 +67,14 @@ class MCAPInstance:
 		self.peers[peer] = mcl
 
 	def remove_mcl(self, mcl):
+		peer = mcl.remote_addr[0]
 		mcl.close()
 		mcl.invalidated = True
 		for i, item in enumerate(self.mcls):
 			if item is mcl:
 				del self.mcls[i]
 				break
-		del self.peers[mcl.peer]
+		del self.peers[peer]
 
 	def peer_connected(self, remote_addr):
 		return remote_addr[0] in self.peers
@@ -138,7 +139,7 @@ class MCAPInstance:
 		mcl = mdl.mcl
 		mdl.close()
 
-	def ReconnectMDL(mdl):
+	def ReconnectMDL(self, mdl):
 		''' followed by ConnectMDL/AbortMDL, which should be '''
 		''' invoked when MDLReady callback is triggered '''
 		mcl = mdl.mcl

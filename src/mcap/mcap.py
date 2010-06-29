@@ -505,8 +505,8 @@ class MCLStateMachine:
 			
 		return True			
 	
-	def process_reconnect_response(self, response, True):
-		return self.process_create_response(response)
+	def process_reconnect_response(self, response):
+		return self.process_create_response(response, True)
 
 	def process_delete_response(self, response):		
 		if response.rspcode == MCAP_RSP_SUCCESS:
