@@ -1,0 +1,343 @@
+################################################################
+#
+# Copyright (c) 2010 Signove. All rights reserved.
+# See the COPYING file for licensing details.
+#
+# Autors: Elvis Pfützenreuter < epx at signove dot com >
+#         Raul Herbster < raul dot herbster at signove dot com >
+################################################################
+
+HDPy MCAPInstance API
+---------------------
+
+The API of MCAPInstance mimics closely the mcap_test_plugin implemented
+for BlueZ / OpenHealth MCAP. Though this is not the most beautiful API 
+on Earth, it works and makes it easy to convert scripts from/to BlueZ.
+
+As a general rule, all initiator role tasks are invoked via synchronous
+methods, and all acceptor tasks are received via callback methods.
+
+This is analog to BlueZ plug-in API which uses a mix of synchronous and
+asynchronous methods for initiator tasks, and D-BUS signals for acceptor
+tasks.
+
+The major difference between them is the absence of async initiator
+methods in HDPy. The async feedback comes via callback methods, that is,
+via the same way as acceptor tasks. (In BlueZ plug-in, only acceptor,
+unprovoked events come via signals.)
+
+For example, the MCLConnected(mcl object) method will be called either
+if a MCL connection was accepted, or if a CreateMCL() call was
+successful in initiating a MCL.
+
+So, the application must take into account that it will receive callbacks
+about locally generated events. Failing to take this into account may
+put the application in an infinite loop, reacting to events that it
+initiated itself.
+
+But how can the application distinguish initiated and accepted MCLs?
+Easy: CreateMCL() returns the MCL object immediately. This object should
+not be used before connection confirmation, but it allows for easy
+discrimination of MCLs that come via MCLConnected().
+
+The same pattern is followed by CreateMDL() -- returns immediately a
+MDL object that should not be used until connection is confirmed.
+
+MDL Creation, Connection and Reconnection
+-----------------------------------------
+
+MCAP creates data channels (MDLs) in a funny two-phase scheme: first
+the channel is "created" via control channel, and then it is actually
+connected via data PSM. The possibility of abortion and reconnection
+adds up to complexity.
+
+Since the application may have to decide whether it will accept or
+not the data channel, it is necessary to have calls and callbacks
+for every phase of MDL connection.
+
+Even more quirky is the temporal link between creation and connection.
+The only way MCAP 'knows' that a given Bluetooth data connection belongs
+to a certain MDL, is because that MDL has just been created via control
+channel!
+
+
+Initiator side:
+
+1) calls CreateMDL()
+
+2) waits until MDLReady() callback confirms MDL creation in remote side
+
+3) calls ConnectMDL(), which actually establishes a Bluetooth data channel
+
+4) waits until MDLConnected() confirms that connection is established.
+
+Note that, once (2) happens, MCAP goes into PENDING state and application
+MUST connect the MDL -- or abort it using AbortMDL().
+
+
+Acceptor side:
+
+1) receives MDLRequested() callback
+
+2) receives MDLConnected() callback.
+
+The application 'knows' that the MDL received in (2) corresponds to the
+details received in (1) because the callbacks will happen in this order,
+and no MDL-related event between them.
+
+
+If the initiator decides to abort before connection:
+
+1) CreateMDL()
+
+2) MDLReady()
+
+3) AbortMDL()
+
+4) MDLAborted() callback confirms.
+
+At acceptor side:
+
+1) MDLRequested()
+
+2) MDLAborted().
+
+Note how 'abort' replaces 'connect'.
+
+
+Since MCAP stores MDL state beyond connections, it is possible to reconnect
+a previously created MDL object. The initiator would do the following:
+
+1) ReconnectMDL()
+
+2) receives MDLReady() event
+
+3) ConnectMDL()
+
+4) MDLConnected() event confirms connection is up.
+
+Note that ReconnectMDL replaced CreateMDL (because we don't want to create
+MDL from scratch), and the rest is the same.
+
+The reconnection scenario at acceptor side:
+
+1) MDLReconnected() 
+
+2) MDLConnected()
+
+MDLReconnected replaced MDLRequested, and the rest is equal.
+
+
+Callback implementation
+-----------------------
+
+MCAPInstance should be subclassed, and all callbacks that are of interest
+must be overridden. A couple callbacks are compulsory (will raise exceptions
+if called and not overridden), but most of them can be safely ignored.
+
+
+Methods (initiator and callbacks-cb)
+------------------------------------
+
+
+__init__(self, string_bdaddr adapter, bool listen)
+
+If listen is True, we are acceptors of MCL connections.
+
+
+CreateMCL(self, addr, dpsm) -> mcl
+
+Initiate a MCL connection.
+
+
+cb MCLConnected(self, mcl)
+
+Called back if CreateMCL() was successful or if a MCL connection was
+accepted.
+
+
+cb MCLReconnected(self, mcl)
+
+The same as previous, but MCL was already 'known'.
+
+
+DeleteMCL(self, mcl)
+
+Make MCAP stack 'forget' the given MCL.
+
+
+cb MCLUncached(self, mcl)
+
+MCAP stack has forgot the given MCL. All references to it should be
+removed, otherwise the object can not be garbage-collected.
+
+	
+CloseMCL(self, mcl)
+
+Closes the connection (but does not forget/delete) the MCL.
+
+
+cb MCLDisconnected(self, mcl)
+
+MCL has disconnected, for any reason (including if we called CloseMCL())
+
+
+CreateMDLID(self, mcl)
+
+Generates an unique MDL ID for this MCL. This method does not involve
+any communication.
+
+
+CreateMDL(self, mcl, mdlid, mdepid, conf)
+
+First phase of MDL creation initiation. If a previous MDL with the
+same MDL ID exists, it will be overridden by this one.
+
+
+cb MDLReady(self, mcl, mdl)
+
+Confirms that CreateMDL() or ReconnectMDL() was successful,
+and we can connect MDL now.  This event only handles MDLs
+that we have initiated.
+
+After this event, no other operation can be done, except ConnectMDL()
+or AbortMDL().
+
+
+cb MDLRequested(self, mcl, mdl, mdep_id, conf)
+
+Remote side initiated MDL creation with the given characteristics.
+This event only handles MDLs that remote side has initiated.
+
+No operation can be done after this event, until MDLConnected() or
+MDLAborted() are called.
+
+
+ConnectMDL(self, mdl)
+
+Initiator-side second phase of MDL creation. Connects the data channel.
+
+
+cb MDLConnected(self, mcl, mdl)
+
+Informs that MDL has a connected data channel. This event is received
+for both initiated and accepted MDLs.
+
+
+Send(self, mdl, data)
+
+Sends data through MDL, if we don't want to manipulate the file
+descriptor directly.
+
+
+cb Recv(self, mdl, data)
+
+Called back when data came via MDL.
+
+
+CloseMDL(self, mdl)
+
+Closes MDL data channel (but does not forget the MDL, so it can be
+reconnected later.)
+
+
+cb MDLClosed(self, mdl)
+
+Notifies that the given MDL has been closed.
+
+
+ReconnectMDL(self, mdl)
+
+Initiator-side. First phase of reconnecting a previously known MDL.
+
+
+cb MDLReconnected(self, mdl)
+
+Acceptor-only. Reconnection request was granted. We don't need to do
+nothing, only wait for MDLConnected(), if we intend to accept the
+MDL.
+
+
+AbortMDL(self, mcl, mdlid)
+
+Initiator-side method to abort MDL creation/reconnection. Used
+in place of ConnectMDL() to take MCAP off PENDING state.
+
+
+cb MDLAborted(self, mcl, mdl)
+
+Informs that MDL connection has been aborted, and we should not wait
+for MDLConnected().
+
+
+DeleteMDL(self, mdl)
+
+Effectively removes the MDL from memory, so it cannot be reconnected.
+
+
+cb MDLDeleted(self, mdl)
+
+The MDL has been removed from remote side, either by our initiative
+or remote's.
+
+
+DeleteAll(self, mcl)
+
+Remove all MDLs.
+
+
+SyncTimestamp(self, mcl) -> timestamp
+
+CSP Slave. Gets the current timestamp, for application usage.
+
+
+SyncBtClock(self, mcl) -> btclock
+
+CSP Slave. Gets current Bluetooth Clock.
+
+
+SyncCapabilities(self, mcl, reqaccuracy)
+
+CSP Master. Requests CSP capabilities from slave.
+
+
+cb SyncCapabilitiesResponse(self, mcl, err, btclockres, synclead,
+				tmstampres, tmstampacc)
+
+CSP Master. Slave returned capabilities request.
+
+
+SyncSet(self, mcl, update, btclock, timestamp)
+
+CSP Master. Requests reset of slave timestamp. Passing btclock as none
+means immediate update. Passing timestamp as None means do not reset
+timestamp, only read it. Update as True means that info indication must
+be sent periodically by slave.
+
+
+cb SyncSetResponse(self, mcl, err, btclock, tmstamp, tmstampacc)
+
+CSP Master. Response to reset request.
+
+
+cb SyncInfoIndication(self, mcl, btclock, tmstamp, accuracy)
+
+CSP Master. Info indication received.
+
+
+SendRawRequest(self, mcl, *chars)
+
+Sends a raw request through MCL control channel. No checks are made
+on data. For debugging and testing purposes only.
+
+
+RecvDump(self, mcl, message)
+
+MCL control channel incoming data event. For debugging and testing
+purposes only.
+
+
+SendDump(self, mcl, message)
+
+MCL control channel outgoing data event. For debugging and testing
+purposes only.
