@@ -209,7 +209,7 @@ class MCAPInstance:
 		print "MDLDeleted not overridden"
 
 	def MDLClosed(self, mdl):
-		print "MDLReconnected not overridden"
+		print "MDLClosed not overridden"
 
 	def MDLReconnected(self, mdl):
 		print "MDLReconnected not overridden"
