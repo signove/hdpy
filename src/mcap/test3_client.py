@@ -81,13 +81,50 @@ class MI(MCAPInstance):
 		print "\tmdl id is", mdlid
 		instance.CreateMDL(mcl, mdlid, 0x01, 0x12)
 
+	def test_mdl_create_pending(self, mcl, dummy):
+		self.test_mdl_create(mcl, dummy)
+		# and now tries to create again
+		mdlid = instance.CreateMDLID(mcl)
+		try:
+			instance.CreateMDL(mcl, mdlid, 0x01, 0x12)
+			print "CreateMDL in PENDING state should have failed"
+			sys.exit(1)
+		except mcap.InvalidOperation:
+			pass
+
 	def test_mdl_connect(self, dummy, mdl):
 		self.response = self.MDLConnected
 		instance.ConnectMDL(mdl)
 
+	def test_mdl_connect_connected(self, dummy, mdl):
+		self.response = self.test_mdl_connect_connected
+		try:
+			instance.ConnectMDL(mdl)
+			print "CreateMDL in CONNECTED state should have failed"
+		except mcap.InvalidOperation:
+			pass
+			glib.timeout_add(0, self.test, dummy, mdl,
+					self.test_mdl_connect_connected)
+
 	def test_mdl_reconnect(self, dummy, mdl):
 		self.response = self.MDLReady
 		instance.ReconnectMDL(mdl)
+
+	def test_mdl_reconnect_pending(self, mcl, mdl):
+		self.test_mdl_reconnect(mcl, mdl)
+		# and now tries to create again
+		try:
+			instance.ReconnectMDL(mdl)
+			print "ReconnectMDL in PENDING state should have failed"
+			sys.exit(1)
+		except mcap.InvalidOperation:
+			pass
+		try:
+			instance.CreateMDL(mcl, 33, 0x02, 0x13)
+			print "CreateMDL in PENDING state should have failed (2)"
+			sys.exit(1)
+		except mcap.InvalidOperation:
+			pass
 
 	def test_mdl_connect2(self, dummy, mdl):
 		self.response = self.MDLConnected
@@ -160,7 +197,7 @@ class MI(MCAPInstance):
 
 	def Recv(self, mdl, data):
 		print "\tMDL received data"
-		assert(data == ("%d" % (mdl._a + mdl._b)))
+		assert(data == ("%d" % (mdl._a + mdl._b + mdl.mdlid)))
 		self.test(mdl.mcl, mdl, self.Recv)
 
 
@@ -179,11 +216,18 @@ MI.tests = ( \
 	(MI.test_mdl_reconnect, ),
 	(MI.test_mdl_connect2, ),
 	(MI.test_mdl_close, ),
-	(MI.test_mdl_reconnect, ),
+	(MI.test_mdl_reconnect_pending, ),
 	(MI.test_mdl_connect2, ),
+	(MI.test_mdl_send, ),
+	(MI.test_mdl_send, ),
+	(MI.test_mdl_connect_connected, ),
+	(MI.test_mdl_send, ),
+	(MI.test_mdl_send, ),
 	(MI.test_mdl_close, ),
 	(MI.test_mdl_delete, ),
 	(MI.test_mdl_delete_all, ),
+	(MI.test_mdl_create_pending, ),
+	(MI.test_mdl_abort, ),
 	(MI.test_disconnect, ),
 	(MI.finish, ),
 	)
