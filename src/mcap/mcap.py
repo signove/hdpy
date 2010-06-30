@@ -377,6 +377,11 @@ class MCLStateMachine:
 			# not our problem
 			return self.csp.send_request(request)
 
+		if self.mcl.state == MCAP_MCL_STATE_PENDING and \
+			type(request) is not AbortMDLRequest:
+
+			raise InvalidOperation('MCL in PENDING state')
+
 		self.request_in_flight = opcode
 		self.last_request = request
 		return self.send_mcap_command(request)
@@ -819,4 +824,4 @@ class MCLStateMachine:
 
 # TODO async writes (here and at instance)
 # TODO optional request security level
-
+# TODO PENDING state timeout
