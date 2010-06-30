@@ -103,8 +103,7 @@ class MCAPInstance:
 		mcl.send_request(req)
 
 	def ConnectMDL(self, mdl):
-		if mdl.state == MCAP_MDL_STATE_CLOSED:
-			mdl.connect()
+		mdl.connect()
 
 	def DeleteMDL(self, mdl):
 		mcl = mdl.mcl
