@@ -370,7 +370,8 @@ class MCLStateMachine:
 			return self.send_response(message)
 
 	def send_request(self, request):
-		if self.mcl.state == MCAP_MCL_STATE_IDLE:
+		if self.mcl.state in (MCAP_MCL_STATE_IDLE,
+					MCAP_MCL_STATE_WAITING):
 			raise InvalidOperation('MCL in idle state')
 
 		if self.request_in_flight:
