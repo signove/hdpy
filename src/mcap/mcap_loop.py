@@ -38,6 +38,9 @@ def watch_fd_err(sk, cb, *args):
 	return glib.io_add_watch(sk, IO_ERR | IO_HUP | IO_NVAL,
 					cb, *args)
 
+def watch_cancel(handle):
+	return glib.source_remove(handle)
+
 def timeout_call(to, cb, *args):
 	return glib.timeout_add(to, cb, *args)
 

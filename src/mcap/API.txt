@@ -235,6 +235,23 @@ cb Recv(self, mdl, data)
 Called back when data came via MDL.
 
 
+TakeFd(self, mdl) -> socket
+
+Takes ownership of MDL socket. This means that Recv() callback
+will no longer be triggered, and application is responsible by
+watching the socket for reading and writing.
+
+The MCAP stack still watches for socket errors. You don't need
+to do nothing if read/write fails; the MDLClosed() event will
+come in time.
+
+If you use mdl.read() and mdl.write() instead of send()/recv()
+on socket, the MDL closure in case of error will be sped up,
+so it is recommended to use the higher-level interface. Moreover,
+mdl.read()/write() catches IOError exceptions, saving the
+application from having to catch them.
+
+
 CloseMDL(self, mdl)
 
 Closes MDL data channel (but does not forget the MDL, so it can be

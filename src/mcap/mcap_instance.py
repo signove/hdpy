@@ -125,6 +125,14 @@ class MCAPInstance:
 		req = ReconnectMDLRequest(mdl.mdlid)
 		mcl.send_request(req)
 
+	def TakeFd(self, mdl):
+		if not mdl.active():
+			raise InvalidOperation("MDL is not active yet")
+		if mdl._instance_watch:
+			watch_cancel(mdl._instance_watch)
+			mdl._instance_watch = None
+		return mdl.sk
+
 	def Send(self, mdl, data):
 		return mdl.write(data)
 
@@ -243,7 +251,7 @@ class MCAPInstance:
 			self.SendDump(mcl, message)
 
 	def mdlconnected_mcl(self, mdl, reconn):
-		watch_fd(mdl.sk, self.mdl_activity, mdl)
+		mdl._instance_watch = watch_fd(mdl.sk, self.mdl_activity, mdl)
 		self.MDLConnected(mdl)
 
 	def mdl_activity(self, sk, event, mdl):
@@ -252,6 +260,7 @@ class MCAPInstance:
 
 		data = mdl.read()
 		if not data:
+			# redundant but harmless
 			mdl.close()
 			return False
 
@@ -278,6 +287,7 @@ class MCAPInstance:
 		self.MDLDeleted(mdl)
 
 	def mdlclosed_mcl(self, mdl):
+		mdl._instance_watch = None
 		self.MDLClosed(mdl)
 
 	def new_dc(self, listener, sk, addr):
