@@ -103,6 +103,7 @@ class MDL(object):
 			raise InvalidOperation("Trying to connect a non-closed MDL")
 
 		try:
+			self.state = MCAP_MDL_STATE_WAITING
 			sk = create_data_socket(self.mcl.adapter, None,
 						self.reliable)
 			set_reliable(sk, self.reliable)
@@ -120,11 +121,13 @@ class MDL(object):
 			if not self.mcl.connected_mdl_socket(self):
 				self.abort()
 		else:
+			self.state = MCAP_MDL_STATE_CLOSED
 			print "async mdl connect() failed"
+
 		return False
 
 	def active(self):
-		return self.state == MCAP_MDL_STATE_ACTIVE
+		return self.state != MCAP_MDL_STATE_CLOSED
 
 	def read(self):
 		if not self.sk:
@@ -201,6 +204,7 @@ class MCL(object):
 					"(already open/connected")
 
 		try:
+			self.state = MCAP_MCL_STATE_WAITING
 			sk = create_control_socket(self.adapter)
 			async_connect(sk, self.remote_addr)
 			watch_fd_connect(sk, self.connect_cb)
@@ -215,6 +219,7 @@ class MCL(object):
 			watch_fd(sk, self.activity)
 			schedule(self.observer.mclconnected_mcl, self)
 		else:
+			self.state = MCAP_MCL_STATE_IDLE
 			print "async mcl connect() failed"
 
 		return False
