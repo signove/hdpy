@@ -90,7 +90,7 @@ class MI(MCAPInstance):
 		instance.ReconnectMDL(mdl)
 
 	def test_mdl_connect2(self, dummy, mdl):
-		self.response = self.MDLReconnected
+		self.response = self.MDLConnected
 		instance.ConnectMDL(mdl)
 
 	def test_mdl_abort(self, mcl, mdl):
@@ -143,7 +143,8 @@ class MI(MCAPInstance):
 
 	def MDLReconnected(self, mdl):
 		print "\tMDL reconnected"
-		self.test(mdl.mcl, mdl, self.MDLReconnected)
+		print "ERROR: this callback is acceptor-only"
+		sys.exit(1)
 
 	def MDLAborted(self, mcl, mdl):
 		print "\tMDL abort"

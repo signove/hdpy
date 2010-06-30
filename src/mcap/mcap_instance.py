@@ -9,30 +9,10 @@
 #         Raul Herbster < raul dot herbster at signove dot com >
 ################################################################
 
+
 from mcap_defs import *
 from mcap import *
 from mcap_loop import *
-
-# The API of MCAPInstance mimics closely the mcap_test_plugin implemented
-# for BlueZ / OpenHealth HDP and MCAP. D-BUS methods are normal methods,
-# and D-BUS signals are callback methods implemented by a subclass of
-# MCAPInstance.
-#
-# Differences from D-BUS API:
-# 
-# The major difference is that methods don't have async responses. If there
-# is any async feedback, it comes via callbacks/signals. (In D-BUS API, only
-# "passive", unprovoked events come via signals.)
-#
-# So, the application must take into account that it will receive callbacks
-# about locally generated events, in order to avoid infinite loops.
-#
-# CreateMDL is an special case that can not work without an async response,
-# so this API has a "MDLReady" signal just to supply this need.
-# The same for ReconnectMDL.
-#
-# MDLRequested yields (mcl, mdl, mdep_id, config) because MDL object is already
-# known, while D-BUS does not reurn MDL handle at this signal.
 
 
 class MCAPInstance:
@@ -209,7 +189,7 @@ class MCAPInstance:
 		print "MDLDeleted not overridden"
 
 	def MDLClosed(self, mdl):
-		print "MDLReconnected not overridden"
+		print "MDLClosed not overridden"
 
 	def MDLReconnected(self, mdl):
 		print "MDLReconnected not overridden"
@@ -265,10 +245,7 @@ class MCAPInstance:
 
 	def mdlconnected_mcl(self, mdl, reconn):
 		watch_fd(mdl.sk, self.mdl_activity, mdl)
-		if reconn:
-			self.MDLReconnected(mdl)
-		else:
-			self.MDLConnected(mdl)
+		self.MDLConnected(mdl)
 
 	def mdl_activity(self, sk, event, mdl):
 		if io_err(event):
