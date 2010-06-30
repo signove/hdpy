@@ -49,7 +49,10 @@ class MyInstance(MCAPInstance):
 
 	def Recv(self, mdl, data):
 		print "MDL", id(mdl), "data", data
-		response = str(eval(data))
+		try:
+			response = str(eval(data + (" + %d" % mdl.mdlid)))
+		except:
+			response = "ERROR IN EVAL"
 		print "\tresponse is", response
 		instance.Send(mdl, response)
 		return True
