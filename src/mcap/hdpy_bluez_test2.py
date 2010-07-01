@@ -10,12 +10,17 @@
 #         Raul Herbster < raul dot herbster at signove dot com >
 ################################################################
 
-
 '''
-Test 2. Simple MDL creation
+Test 2. Simple MDL creation.
+Procedure:
+1. Start the server (hdpy_bluez_server.py)
+2. Run this script
 '''
 
-from hdpy_bluez_client import *
+from hdpy_bluez_client import MyInstance
+from hdpy_bluez_client import run_test
+from hdpy_bluez_client import MCAP_MCL_STATE_CONNECTED
+from hdpy_bluez_client import MCAP_MCL_STATE_PENDING
 
 
 #               CREATE_MD_REQ(0x01)   mdlid, mdepid, conf

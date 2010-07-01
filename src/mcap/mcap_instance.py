@@ -80,7 +80,7 @@ class MCAPInstance:
 			schedule(self.mclconnected_mcl, mcl)
 
 		return mcl
-	
+
 	def DeleteMCL(self, mcl):
 		self.remove_mcl(mcl)
 		schedule(self.MCLUncached, mcl)
@@ -177,7 +177,7 @@ class MCAPInstance:
 
 	def MCLUncached(self, mcl):
 		print "MCLUncached not overridden"
-	
+
 	def MDLReady(self, mcl, mdl):
 		''' Async confirmation of MDLCreate/MDLReconnect method '''
 		raise Exception("Not overridden, but it should have been")
@@ -216,7 +216,7 @@ class MCAPInstance:
 
 	def SyncInfoIndication(self, mcl, btclock, tmstamp, accuracy):
 		print "SyncIndication not overridden"
-	
+
 ### Internal callbacks
 
 	def new_cc(self, listener, sk, addr):
