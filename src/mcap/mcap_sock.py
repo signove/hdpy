@@ -71,13 +71,13 @@ def set_mtu(sock, mtu):
 	set_options(sock, options)
 
 
-def get_available_psm():
+def get_available_psm(adapter):
 	# Ripped from PyBlueZ source
 
 	for psm in range (0x1001, 0x8000, 2):
 		s = BluetoothSocket(L2CAP)
 		try:
-			s.bind(("", psm))
+			s.bind((adapter, psm))
 			s.close()
 			return psm
 		except Exception as msg:
@@ -93,13 +93,25 @@ def create_socket(btaddr, psm):
 	s.bind((btaddr, psm))
 	return s
 
+
 def set_reliable(s, reliable):
 	if reliable:
 		set_ertm(s)
 	else:
 		set_streaming(s)
 
+
 def create_control_socket(btaddr, psm=None):
+	dev_id = bz.hci_devid(btaddr)
+	if dev_id < 0:
+		if btaddr and btaddr != "00:00:00:00:00:00":
+			print "WARNING: the adapter address %s is invalid, " \
+				"using default adapter" % btaddr
+		else:
+			print "Using default adapter"
+	else:
+		print "Adapter ID is %d" % dev_id
+	
 	s = create_socket(btaddr, psm)
 	set_reliable(s, True)
 	set_mtu(s, 48)
@@ -114,7 +126,8 @@ def create_data_socket(btaddr, psm, reliable):
 
 
 def create_control_listening_socket(btaddr):
-	psm = get_available_psm()
+	psm = get_available_psm(btaddr)
+	print "Control socket: PSM %d" % psm
 	s = create_control_socket(btaddr, psm)
 	set_reliable(s, True)
 	s.listen(5)
@@ -122,7 +135,8 @@ def create_control_listening_socket(btaddr):
 
 
 def create_data_listening_socket(btaddr):
-	psm = get_available_psm()
+	psm = get_available_psm(btaddr)
+	print "Data socket: PSM %d" % psm
 	s = create_data_socket(btaddr, psm, DC_MTU)
 	s.listen(5)
 	return (s, psm)
@@ -154,9 +168,10 @@ def hci_open_dev(adapter):
 	# TODO: use remote device addr and hci_get_route
 	# (need to add this to PyBlueZ)
 	dev_id = bz.hci_devid(adapter)
-	if dev_id < 0:
-		# take the first one and pray
-		dev_id = 0
+	print "Device ID: %d" % dev_id
+	# if dev_id < 0:
+	#	# take the first one and pray
+	#	dev_id = 0
 	return bz.hci_open_dev(dev_id), dev_id
 
 
@@ -181,7 +196,11 @@ def hci_read_clock(sock, remote_addr):
 		which_clock = 1
 		acl = _get_acl_conn_handle(sock, remote_addr)
 		if acl < 0:
-			return None
+			# probably a loopback connection, use native clock
+			which_clock = 0
+			acl = 0
+			# print "ERROR in get_acl_conn"
+			# return None
 
 	old_filter = sock.getsockopt(bz.SOL_HCI, bz.HCI_FILTER, 14)
 
@@ -218,6 +237,9 @@ HCI_LM_MASTER = 1;
 # TODO add to PyBluez and use C structures
 
 def hci_role(fd, dev_id):
+	if dev_id < 0:
+		return 0
+
 	reqstr = struct.pack(hci_dev_info, bz.htobs(dev_id),
 			"\0" * 6, "\0" * 8, 0, 0, "\0" * 8,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
