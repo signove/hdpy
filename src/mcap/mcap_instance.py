@@ -9,30 +9,10 @@
 #         Raul Herbster < raul dot herbster at signove dot com >
 ################################################################
 
+
 from mcap_defs import *
 from mcap import *
 from mcap_loop import *
-
-# The API of MCAPInstance mimics closely the mcap_test_plugin implemented
-# for BlueZ / OpenHealth HDP and MCAP. D-BUS methods are normal methods,
-# and D-BUS signals are callback methods implemented by a subclass of
-# MCAPInstance.
-#
-# Differences from D-BUS API:
-# 
-# The major difference is that methods don't have async responses. If there
-# is any async feedback, it comes via callbacks/signals. (In D-BUS API, only
-# "passive", unprovoked events come via signals.)
-#
-# So, the application must take into account that it will receive callbacks
-# about locally generated events, in order to avoid infinite loops.
-#
-# CreateMDL is an special case that can not work without an async response,
-# so this API has a "MDLReady" signal just to supply this need.
-# The same for ReconnectMDL.
-#
-# MDLRequested yields (mcl, mdl, mdep_id, config) because MDL object is already
-# known, while D-BUS does not reurn MDL handle at this signal.
 
 
 class MCAPInstance:
@@ -123,8 +103,7 @@ class MCAPInstance:
 		mcl.send_request(req)
 
 	def ConnectMDL(self, mdl):
-		if mdl.state == MCAP_MDL_STATE_CLOSED:
-			mdl.connect()
+		mdl.connect()
 
 	def DeleteMDL(self, mdl):
 		mcl = mdl.mcl
@@ -145,6 +124,14 @@ class MCAPInstance:
 		mcl = mdl.mcl
 		req = ReconnectMDLRequest(mdl.mdlid)
 		mcl.send_request(req)
+
+	def TakeFd(self, mdl):
+		if not mdl.active():
+			raise InvalidOperation("MDL is not active yet")
+		if mdl._instance_watch:
+			watch_cancel(mdl._instance_watch)
+			mdl._instance_watch = None
+		return mdl.sk
 
 	def Send(self, mdl, data):
 		return mdl.write(data)
@@ -264,11 +251,8 @@ class MCAPInstance:
 			self.SendDump(mcl, message)
 
 	def mdlconnected_mcl(self, mdl, reconn):
-		watch_fd(mdl.sk, self.mdl_activity, mdl)
-		if reconn:
-			self.MDLReconnected(mdl)
-		else:
-			self.MDLConnected(mdl)
+		mdl._instance_watch = watch_fd(mdl.sk, self.mdl_activity, mdl)
+		self.MDLConnected(mdl)
 
 	def mdl_activity(self, sk, event, mdl):
 		if io_err(event):
@@ -276,6 +260,7 @@ class MCAPInstance:
 
 		data = mdl.read()
 		if not data:
+			# redundant but harmless
 			mdl.close()
 			return False
 
@@ -302,6 +287,7 @@ class MCAPInstance:
 		self.MDLDeleted(mdl)
 
 	def mdlclosed_mcl(self, mdl):
+		mdl._instance_watch = None
 		self.MDLClosed(mdl)
 
 	def new_dc(self, listener, sk, addr):

@@ -103,6 +103,7 @@ class MDL(object):
 			raise InvalidOperation("Trying to connect a non-closed MDL")
 
 		try:
+			self.state = MCAP_MDL_STATE_WAITING
 			sk = create_data_socket(self.mcl.adapter, None,
 						self.reliable)
 			set_reliable(sk, self.reliable)
@@ -120,11 +121,13 @@ class MDL(object):
 			if not self.mcl.connected_mdl_socket(self):
 				self.abort()
 		else:
+			self.state = MCAP_MDL_STATE_CLOSED
 			print "async mdl connect() failed"
+
 		return False
 
 	def active(self):
-		return self.state == MCAP_MDL_STATE_ACTIVE
+		return self.state != MCAP_MDL_STATE_CLOSED
 
 	def read(self):
 		if not self.sk:
@@ -201,6 +204,7 @@ class MCL(object):
 					"(already open/connected")
 
 		try:
+			self.state = MCAP_MCL_STATE_WAITING
 			sk = create_control_socket(self.adapter)
 			async_connect(sk, self.remote_addr)
 			watch_fd_connect(sk, self.connect_cb)
@@ -215,6 +219,7 @@ class MCL(object):
 			watch_fd(sk, self.activity)
 			schedule(self.observer.mclconnected_mcl, self)
 		else:
+			self.state = MCAP_MCL_STATE_IDLE
 			print "async mcl connect() failed"
 
 		return False
@@ -365,7 +370,8 @@ class MCLStateMachine:
 			return self.send_response(message)
 
 	def send_request(self, request):
-		if self.mcl.state == MCAP_MCL_STATE_IDLE:
+		if self.mcl.state in (MCAP_MCL_STATE_IDLE,
+					MCAP_MCL_STATE_WAITING):
 			raise InvalidOperation('MCL in idle state')
 
 		if self.request_in_flight:
@@ -376,6 +382,11 @@ class MCLStateMachine:
 		if self.csp.is_mine(opcode):
 			# not our problem
 			return self.csp.send_request(request)
+
+		if self.mcl.state == MCAP_MCL_STATE_PENDING and \
+			type(request) is not AbortMDLRequest:
+
+			raise InvalidOperation('MCL in PENDING state')
 
 		self.request_in_flight = opcode
 		self.last_request = request
@@ -808,10 +819,12 @@ class MCLStateMachine:
 	def stop(self):
 		self.csp.stop()
 
+# FIXME error feedback (for requests we had made)
+# FIXME reconnect error feedback (so upper level knows what to do)
+# FIXME failed async connect notification error
+
 # FIXME inquire_mdep should call upper layer
 # FIXME MDL streaming or ertm channel? <-- via inquire_mdep
-# FIXME error feedback (for requests we had made)
-# FIXME failed async connect notification error
 
 # TODO Refuse untimely MDL connection using BT_DEFER_SETUP
 #	get addr via L2CAP_OPTIONS to decide upon acceptance
@@ -819,4 +832,4 @@ class MCLStateMachine:
 
 # TODO async writes (here and at instance)
 # TODO optional request security level
-
+# TODO PENDING state timeout

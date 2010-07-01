@@ -81,16 +81,53 @@ class MI(MCAPInstance):
 		print "\tmdl id is", mdlid
 		instance.CreateMDL(mcl, mdlid, 0x01, 0x12)
 
+	def test_mdl_create_pending(self, mcl, dummy):
+		self.test_mdl_create(mcl, dummy)
+		# and now tries to create again
+		mdlid = instance.CreateMDLID(mcl)
+		try:
+			instance.CreateMDL(mcl, mdlid, 0x01, 0x12)
+			print "CreateMDL in PENDING state should have failed"
+			sys.exit(1)
+		except mcap.InvalidOperation:
+			pass
+
 	def test_mdl_connect(self, dummy, mdl):
 		self.response = self.MDLConnected
 		instance.ConnectMDL(mdl)
+
+	def test_mdl_connect_connected(self, dummy, mdl):
+		self.response = self.test_mdl_connect_connected
+		try:
+			instance.ConnectMDL(mdl)
+			print "CreateMDL in CONNECTED state should have failed"
+		except mcap.InvalidOperation:
+			pass
+			glib.timeout_add(0, self.test, dummy, mdl,
+					self.test_mdl_connect_connected)
 
 	def test_mdl_reconnect(self, dummy, mdl):
 		self.response = self.MDLReady
 		instance.ReconnectMDL(mdl)
 
+	def test_mdl_reconnect_pending(self, mcl, mdl):
+		self.test_mdl_reconnect(mcl, mdl)
+		# and now tries to create again
+		try:
+			instance.ReconnectMDL(mdl)
+			print "ReconnectMDL in PENDING state should have failed"
+			sys.exit(1)
+		except mcap.InvalidOperation:
+			pass
+		try:
+			instance.CreateMDL(mcl, 33, 0x02, 0x13)
+			print "CreateMDL in PENDING state should have failed (2)"
+			sys.exit(1)
+		except mcap.InvalidOperation:
+			pass
+
 	def test_mdl_connect2(self, dummy, mdl):
-		self.response = self.MDLReconnected
+		self.response = self.MDLConnected
 		instance.ConnectMDL(mdl)
 
 	def test_mdl_abort(self, mcl, mdl):
@@ -114,6 +151,21 @@ class MI(MCAPInstance):
 	def test_mdl_delete_all(self, mcl, dummy):
 		self.response = self.MDLDeleted
 		instance.DeleteAll(mcl)
+
+	def test_mdl_getfd(self, dummy, mdl):
+		self.response = self.fd_activity
+		sk = instance.TakeFd(mdl)
+		assert(mdl.sk is sk)
+		glib.io_add_watch(sk, glib.IO_IN, self.fd_activity, dummy, mdl)
+		mdl._a = a = int(random.random() * 1000)
+		mdl._b = b = int(random.random() * 1000)
+		sk.send("%d + %d" % (a, b))
+
+	def test_mdl_sendfd(self, dummy, mdl):
+		self.response = self.fd_activity
+		mdl._a = a = int(random.random() * 1000)
+		mdl._b = b = int(random.random() * 1000)
+		mdl.write("%d + %d" % (a, b))
 
 	################################### MCAP callbacks
 
@@ -143,7 +195,8 @@ class MI(MCAPInstance):
 
 	def MDLReconnected(self, mdl):
 		print "\tMDL reconnected"
-		self.test(mdl.mcl, mdl, self.MDLReconnected)
+		print "ERROR: this callback is acceptor-only"
+		sys.exit(1)
 
 	def MDLAborted(self, mcl, mdl):
 		print "\tMDL abort"
@@ -159,9 +212,16 @@ class MI(MCAPInstance):
 
 	def Recv(self, mdl, data):
 		print "\tMDL received data"
-		assert(data == ("%d" % (mdl._a + mdl._b)))
+		assert(data == ("%d" % (mdl._a + mdl._b + mdl.mdlid)))
 		self.test(mdl.mcl, mdl, self.Recv)
 
+	def fd_activity(self, sk, evt, mcl, mdl):
+		print "\tMDL received data via fd"
+		if evt == mcap.IO_IN:
+			data = mdl.read()
+			assert(data == ("%d" % (mdl._a + mdl._b + mdl.mdlid)))
+		self.test(mcl, mdl, self.fd_activity)
+		return True
 
 MI.tests = ( \
 	(MI.test_disconnect, ),
@@ -178,11 +238,23 @@ MI.tests = ( \
 	(MI.test_mdl_reconnect, ),
 	(MI.test_mdl_connect2, ),
 	(MI.test_mdl_close, ),
-	(MI.test_mdl_reconnect, ),
+	(MI.test_mdl_reconnect_pending, ),
 	(MI.test_mdl_connect2, ),
+	(MI.test_mdl_send, ),
+	(MI.test_mdl_send, ),
+	(MI.test_mdl_connect_connected, ),
+	(MI.test_mdl_send, ),
+	(MI.test_mdl_send, ),
 	(MI.test_mdl_close, ),
 	(MI.test_mdl_delete, ),
 	(MI.test_mdl_delete_all, ),
+	(MI.test_mdl_create_pending, ),
+	(MI.test_mdl_abort, ),
+	(MI.test_mdl_create, ),
+	(MI.test_mdl_connect, ),
+	(MI.test_mdl_getfd, ),
+	(MI.test_mdl_sendfd, ),
+	(MI.test_mdl_close, ),
 	(MI.test_disconnect, ),
 	(MI.finish, ),
 	)
