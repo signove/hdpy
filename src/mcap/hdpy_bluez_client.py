@@ -68,7 +68,7 @@ class MyInstance(MCAPInstance):
         action = self.send_script[self.counter]
         method = action[0]
         if method in [MyInstance.DeleteMDL, MyInstance.ConnectMDL,
-                MyInstance.ReconnectMDL]:
+                MyInstance.ReconnectMDL, MyInstance.CloseMDL]:
             method(self, mdl)
         elif method in [MyInstance.SendOnce, MyInstance.SendAndWait]:
             if mdl:
@@ -141,6 +141,8 @@ class MyInstance(MCAPInstance):
 
     def MDLClosed(self, mdl):
         print "MDL closed"
+        self.counter += 1
+        self._take_initiative(mdl.mcl, mdl)
 
     def MDLReconnected(self, mdl):
         print "MDLReconnected not overridden"
