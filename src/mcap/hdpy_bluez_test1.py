@@ -10,12 +10,16 @@
 #         Raul Herbster < raul dot herbster at signove dot com >
 ################################################################
 
-
 '''
-A simple test case, sends an invalid message
+A simple test case, sends an invalid message.
+Procedure:
+1. Start the server (hdpy_bluez_server.py)
+2. Run this script
 '''
 
-from hdpy_bluez_client import *
+from hdpy_bluez_client import MyInstance
+from hdpy_bluez_client import run_test
+
 
 #send an invalid message (Op Code does not exist)
 SEND_SCRIPT = [(MyInstance.SendRawRequest, 0x0b, 0xff, 0x00, 0x0a, 0xbc)]

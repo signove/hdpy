@@ -166,7 +166,7 @@ class MyInstance(MCAPInstance):
         assert(message == expected_msg)
         return True
 
-def run_test(send_script, sent, received, check_asserts):
+def run_test(send_script, sent, received, check_asserts=None):
     try:
         remote_addr = sys.argv[1], int(sys.argv[2])
         dpsm = int(sys.argv[3])
