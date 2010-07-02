@@ -9,7 +9,7 @@
 #         Raul Herbster < raul dot herbster at signove dot com >
 ################################################################
 
-ENABLE_ERTM = False
+ENABLE_ERTM = True
 
 
 import time
