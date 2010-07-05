@@ -189,7 +189,7 @@ class MCAPInstance:
 	def MDLAborted(self, mcl, mdl):
 		print "MDLAborted not overridden"
 
-	def MDLConnected(self, mcl, mdl):
+	def MDLConnected(self, mdl):
 		print "MDLConnected not overridden"
 
 	def MDLDeleted(self, mdl):

@@ -218,7 +218,7 @@ ConnectMDL(self, mdl)
 Initiator-side second phase of MDL creation. Connects the data channel.
 
 
-cb MDLConnected(self, mcl, mdl)
+cb MDLConnected(self, mdl)
 
 Informs that MDL has a connected data channel. This event is received
 for both initiated and accepted MDLs.
