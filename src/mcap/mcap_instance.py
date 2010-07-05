@@ -242,8 +242,10 @@ class MCAPInstance:
 			mcl.accept(sk)
 			event(mcl, 0)
 		else:
-			# crossed or duplicated connection, reject
-			# TODO refuse using BT_DEFER_SETUP		
+			try:
+				sk.shutdown(2)
+			except IOError:
+				pass
 			sk.close()
 
 	def error_cc(self, listener):
@@ -306,6 +308,10 @@ class MCAPInstance:
 	def new_dc(self, listener, sk, addr):
 		if not self.peer_connected(addr):
 			# unknown peer
+			try:
+				sk.shutdown(2)
+			except IOError:
+				pass
 			sk.close()
 			return
 		mcl = self.peer_mcl(addr)

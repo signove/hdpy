@@ -10,7 +10,10 @@
 ################################################################
 
 ENABLE_ERTM = True
+SECURITY = False
 DC_MTU = 512
+
+DEFER_SETUP = True
 
 import bluetooth
 
@@ -28,6 +31,7 @@ from bluetooth import *
 import bluetooth._bluetooth as bz
 import errno
 import socket
+import select
 
 
 pos = ["omtu", "imtu", "flush_to", "mode", "fcs", "max_tx", "txwin_size"]
@@ -49,6 +53,12 @@ def set_ertm(sock):
 		options[i_fcs] = 1
 		options[i_mode] = bz.L2CAP_MODE_ERTM
 		set_options(sock, options)
+
+
+def set_security(sock):
+	if SECURITY:
+		print "Security set"
+		sock.setl2capsecurity(bz.BT_SECURITY_MEDIUM)
 
 
 def set_streaming(sock):
@@ -97,6 +107,32 @@ def set_reliable(s, reliable):
 		set_streaming(s)
 
 
+def defer_setup(s):
+	if DEFER_SETUP:
+		s.setsockopt(bz.SOL_BLUETOOTH, bz.BT_DEFER_SETUP, 1)
+
+
+def do_accept(s):
+	if not DEFER_SETUP:
+		return True
+
+	try:
+		r, w, x = select.select([], [s], [], 1)
+		if not w:
+			s.setblocking(False)
+			try:
+				s.recv(1)
+			except IOError:
+				pass
+		return True
+	except IOError:
+		try:
+			s.close()
+		except IOError:
+			pass
+		return False
+
+
 def create_control_socket(btaddr, psm=None):
 	dev_id = bz.hci_devid(btaddr)
 	if dev_id < 0:
@@ -109,6 +145,7 @@ def create_control_socket(btaddr, psm=None):
 		print "Adapter ID is %d" % dev_id
 	
 	s = create_socket(btaddr, psm)
+	set_security(s)
 	set_reliable(s, True)
 	set_mtu(s, 48)
 	return s
@@ -116,6 +153,7 @@ def create_control_socket(btaddr, psm=None):
 
 def create_data_socket(btaddr, psm, reliable):
 	s = create_socket(btaddr, psm)
+	set_security(s)
 	set_reliable(s, reliable)
 	set_mtu(s, DC_MTU)
 	return s
@@ -125,8 +163,8 @@ def create_control_listening_socket(btaddr):
 	psm = get_available_psm(btaddr)
 	print "Control socket: PSM %d" % psm
 	s = create_control_socket(btaddr, psm)
-	set_reliable(s, True)
 	s.listen(5)
+	defer_setup(s)
 	return (s, psm)
 
 
@@ -135,6 +173,7 @@ def create_data_listening_socket(btaddr):
 	print "Data socket: PSM %d" % psm
 	s = create_data_socket(btaddr, psm, DC_MTU)
 	s.listen(5)
+	defer_setup(s)
 	return (s, psm)
 
 
@@ -150,6 +189,7 @@ def async_connect(sk, addr):
 		else:
 			print "async connect() failed:", e[0]
 			raise
+
 
 def connection_ok(sk):
 	''' Check if async connection went ok '''

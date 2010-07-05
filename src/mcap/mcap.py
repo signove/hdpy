@@ -93,6 +93,11 @@ class MDL(object):
 		if self.state != MCAP_MDL_STATE_CLOSED:
 			raise InvalidOperation("Trying to accept over a non-closed MDL")
 
+		# complete deferred setup
+		if not do_accept(sk):
+			return
+
+		set_security(sk)
 		set_reliable(sk, self.reliable)
 		sk.setblocking(True)
 		self.sk = sk
@@ -176,7 +181,12 @@ class MCL(object):
 		self.sm = MCLStateMachine(self)
 
 	def accept(self, sk):
+		# complete deferred setup
+		if not do_accept(sk):
+			return
+
 		self.sk = sk
+		set_security(sk)
 		set_reliable(sk, True)
 		sk.setblocking(True)
 		self.state = MCAP_MCL_STATE_CONNECTED
@@ -593,7 +603,10 @@ class MCLStateMachine:
 			schedule(self.mcl.observer.mdlconnected_mcl,
 				mdl, self.reconn, 0)
 		else:
-			# TODO refuse, not close
+			try:
+				sk.shutdown(2)
+			except IOError:
+				pass
 			sk.close()
 
 		return ok
@@ -840,11 +853,6 @@ class MCLStateMachine:
 	def stop(self):
 		self.csp.stop()
 
-# TODO Refuse untimely MDL connection using BT_DEFER_SETUP
-#	get addr via L2CAP_OPTIONS to decide upon acceptance
-#	definitive accept using poll OUT ; if !OUT, read 1 byte
-
-# TODO optional request security level
 # TODO PENDING state timeout (MCAP spec should tell what to do in this case)
 # TODO make sure first MDL is always reliable
 # TODO add test case for MDL config rejection and streaming channel
