@@ -263,31 +263,10 @@ def hci_read_clock(sock, remote_addr):
 	return (clock, accuracy)
 
 
-# TODO add to PyBluez and use C structures
-
-hci_dev_info = "H8s6sLB8sLLLHHHHLLLLLLLLLL";
-HCI_LM_MASTER = 1;
-
-# TODO add to PyBluez and use C structures
-
 def hci_role(fd, dev_id):
 	if dev_id < 0:
 		return 0
-
-	reqstr = struct.pack(hci_dev_info, bz.htobs(dev_id),
-			"\0" * 6, "\0" * 8, 0, 0, "\0" * 8,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0)
-	request = array.array("c", reqstr)
-
-	try:
-		fcntl.ioctl(fd.fileno(), bz.HCIGETDEVINFO, request, 1)
-	except IOError:
-		return -1;
-
-	res = struct.unpack(hci_dev_info, request.tostring())
-
-	return res[8] & HCI_LM_MASTER;
+	return bz.hci_role(fd.fileno(), dev_id)
 
 
 def test():
