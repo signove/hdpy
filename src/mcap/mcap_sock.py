@@ -209,26 +209,13 @@ def hci_open_dev(remote_addr):
 	return bz.hci_open_dev(dev_id), dev_id
 
 
-# Ripped from PyBlueZ advanced examples
-def _get_acl_conn_handle(sock, addr):
-	hci_fd = sock.fileno()
-	reqstr = struct.pack("6sB17s", bz.str2ba(addr), bz.ACL_LINK, "\0" * 17)
-	request = array.array( "c", reqstr )
-	try:
-		fcntl.ioctl( hci_fd, bz.HCIGETCONNINFO, request, 1 )
-		handle = struct.unpack("8xH14x", request.tostring())[0]
-	except IOError:
-		handle = -1
-	return handle
-
-
-# TODO add to pybluez
 def hci_read_clock(sock, remote_addr):
 	acl = 0
 	which_clock = 0 # native
 	if remote_addr:
 		which_clock = 1
-		acl = _get_acl_conn_handle(sock, remote_addr)
+		acl = bz.hci_acl_conn_handle(sock.fileno(), remote_addr)
+		print "ACL", acl
 		if acl < 0:
 			# probably a loopback connection, use native clock
 			which_clock = 0
@@ -236,31 +223,7 @@ def hci_read_clock(sock, remote_addr):
 			# print "ERROR in get_acl_conn"
 			# return None
 
-	old_filter = sock.getsockopt(bz.SOL_HCI, bz.HCI_FILTER, 14)
-
-	opcode = bz.cmd_opcode_pack(bz.OGF_STATUS_PARAM,
-			bz.OCF_READ_CLOCK)
-	flt = bz.hci_filter_new()
-	bz.hci_filter_set_ptype(flt, bz.HCI_EVENT_PKT)
-	bz.hci_filter_set_event(flt, bz.EVT_CMD_COMPLETE);
-	bz.hci_filter_set_opcode(flt, opcode)
-	sock.setsockopt( bz.SOL_HCI, bz.HCI_FILTER, flt )
-	pkt = struct.pack("<HB", acl, which_clock)
-	bz.hci_send_cmd(sock, bz.OGF_STATUS_PARAM, bz.OCF_READ_CLOCK, pkt)
-
-	while True:
-		pkt = sock.recv(255)
-		# HCI is little-endian
-		status, handle, clock, accuracy = struct.unpack("<xxxxxxBHIH", pkt)
-		if handle == acl:
-			break
-
-	sock.setsockopt(bz.SOL_HCI, bz.HCI_FILTER, old_filter)
-	
-	if status:
-		return None
-
-	return (clock, accuracy)
+	return bz.hci_read_clock(sock.fileno(), acl, which_clock, 1000)
 
 
 def hci_role(fd, dev_id):
