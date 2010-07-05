@@ -28,6 +28,7 @@ bz.OCF_READ_CLOCK = 0x07
 # We handle options here because PyBluez has incomplete and buggy support
 # Remove this from here if we settle using CVS version of PyBluez
 # TODO add those features to PyBluez itself
+# TODO test for PyBlueZ module version (once we depend on >= 0.19)
 
 options_len = 12
 pos = ["omtu", "imtu", "flush_to", "mode", "fcs", "max_tx", "txwin_size"]

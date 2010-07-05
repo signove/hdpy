@@ -1,0 +1,2 @@
+HDPy currently works only in Linux, and depends on a recent
+version of PyBlueZ (0.18 or later, or development version).
