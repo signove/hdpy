@@ -213,10 +213,11 @@ class CreateMDLRequest( MDLRequest ):
 	mask2 = ">BB"
 	mask2_size = struct.calcsize(mask2)
 
-	def __init__(self, mdlid, mdepid, config):
+	def __init__(self, mdlid, mdepid, config, reliable=True):
 		MDLRequest.__init__(self, MCAP_MD_CREATE_MDL_REQ, mdlid)
 		self.mdepid = mdepid
 		self.config = config
+		self.reliable = reliable
 
 	def encode(self):
 		return MDLRequest.encode(self) + \

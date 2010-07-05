@@ -92,10 +92,10 @@ class MCAPInstance:
 		''' returns a new mdlid unique for the MCL '''
 		return mcl.create_mdlid()
 
-	def CreateMDL(self, mcl, mdlid, mdepid, conf):
+	def CreateMDL(self, mcl, mdlid, mdepid, conf, reliable=True):
 		''' followed by ConnectMDL/AbortMDL, which should be '''
 		''' invoked when MDLReady callback is triggered '''
-		req = CreateMDLRequest(mdlid, mdepid, conf)
+		req = CreateMDLRequest(mdlid, mdepid, conf, reliable)
 		mcl.send_request(req)
 
 	def AbortMDL(self, mcl, mdlid):

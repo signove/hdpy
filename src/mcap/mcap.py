@@ -106,7 +106,6 @@ class MDL(object):
 			self.state = MCAP_MDL_STATE_WAITING
 			sk = create_data_socket(self.mcl.adapter, None,
 						self.reliable)
-			set_reliable(sk, self.reliable)
 			async_connect(sk, self.mcl.remote_addr_dc)
 
 			watch_fd_connect(sk, self.connect_cb)
@@ -482,9 +481,7 @@ class MCLStateMachine:
 					return
 			else:
 				config = response.config
-				reliable = True
-				# TODO: submit response config to upper layers
-				# TODO: get reliable/streaming from upper layers
+				reliable = self.last_request.reliable
 
 				if self.last_request.mdlid != mdlid:
 					print "Conn resp of different MDLID"
@@ -847,7 +844,6 @@ class MCLStateMachine:
 #	get addr via L2CAP_OPTIONS to decide upon acceptance
 #	definitive accept using poll OUT ; if !OUT, read 1 byte
 
-# TODO async writes (here and at instance)
 # TODO optional request security level
 # TODO PENDING state timeout (MCAP spec should tell what to do in this case)
 # TODO make sure first MDL is always reliable

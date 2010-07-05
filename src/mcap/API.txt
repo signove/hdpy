@@ -209,11 +209,13 @@ Generates an unique MDL ID for this MCL. This method does not involve
 any communication.
 
 
-CreateMDL(self, mcl, mdlid, mdepid, conf)
+CreateMDL(self, mcl, mdlid, mdepid, conf, reliable=True)
 
 First phase of MDL creation initiation. If a previous MDL with the
 same MDL ID exists, it will be overridden by this one.
 
+The optional fifth parameter says if the socket should be ERTM (True)
+or Streaming (False).
 
 cb MDLReady(self, mcl, mdl, err)
 
@@ -227,6 +229,14 @@ except ConnectMDL() or AbortMDL().
 If err != 0, something went wrong; err value is the MCAP response
 code. The application can act upon accordingly. For example, if
 a reconnection failed, application can/should try CreateMDL().
+
+
+cb MDLInquire(self, mdepid, config)
+
+Acceptor only. Asks the application whether the MDEP IP and config
+are acceptable. Application should return synchronously a tuple
+of Boolean values: if the MDL is ok, and if the MDL should be
+reliable.
 
 
 cb MDLRequested(self, mcl, mdl, mdep_id, conf)
