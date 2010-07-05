@@ -166,19 +166,19 @@ class MCAPInstance:
 	def Recv(self, mdl, data):
 		print "Recv (mdl data) not overridden"
 
-	def MCLConnected(self, mcl):
+	def MCLConnected(self, mcl, err):
 		print "MCLConnected not overridden"
 
 	def MCLDisconnected(self, mcl):
 		print "MCLDisconnected not overridden"
 
-	def MCLReconnected(self, mcl):
+	def MCLReconnected(self, mcl, err):
 		print "MCLReconnected not overridden"
 
 	def MCLUncached(self, mcl):
 		print "MCLUncached not overridden"
 
-	def MDLReady(self, mcl, mdl):
+	def MDLReady(self, mcl, mdl, err):
 		''' Async confirmation of MDLCreate/MDLReconnect method '''
 		raise Exception("Not overridden, but it should have been")
 
@@ -189,7 +189,7 @@ class MCAPInstance:
 	def MDLAborted(self, mcl, mdl):
 		print "MDLAborted not overridden"
 
-	def MDLConnected(self, mdl):
+	def MDLConnected(self, mdl, err):
 		print "MDLConnected not overridden"
 
 	def MDLDeleted(self, mdl):
@@ -232,7 +232,7 @@ class MCAPInstance:
 
 		if mcl.state == MCAP_MCL_STATE_IDLE:
 			mcl.accept(sk)
-			event(mcl)
+			event(mcl, 0)
 		else:
 			# crossed or duplicated connection, reject
 			# TODO refuse using BT_DEFER_SETUP		
@@ -250,9 +250,11 @@ class MCAPInstance:
 		else:
 			self.SendDump(mcl, message)
 
-	def mdlconnected_mcl(self, mdl, reconn):
-		mdl._instance_watch = watch_fd(mdl.sk, self.mdl_activity, mdl)
-		self.MDLConnected(mdl)
+	def mdlconnected_mcl(self, mdl, reconn, err):
+		if not err:
+			mdl._instance_watch = \
+				watch_fd(mdl.sk, self.mdl_activity, mdl)
+		self.MDLConnected(mdl, err)
 
 	def mdl_activity(self, sk, event, mdl):
 		if io_err(event):
@@ -267,12 +269,12 @@ class MCAPInstance:
 		self.Recv(mdl, data)
 		return True
 
-	def mdlgranted_mcl(self, mcl, mdl):
+	def mdlgranted_mcl(self, mcl, mdl, err):
 		'''
 		Only called as async response to active CreateMDL or
 		ReconnectMDL
 		'''
-		self.MDLReady(mcl, mdl)
+		self.MDLReady(mcl, mdl, err)
 
 	def mdlrequested_mcl(self, mcl, mdl, mdepid, config):
 		self.MDLRequested(mcl, mdl, mdepid, config)
@@ -301,12 +303,12 @@ class MCAPInstance:
 	def error_dc(self, listener):
 		raise Exception("Error in data PSM listener, bailing out")
 
-	def mclconnected_mcl(self, mcl):
+	def mclconnected_mcl(self, mcl, err):
 		if mcl.virgin:
 			event = self.MCLConnected
 		else:
 			event = self.MCLReconnected
-		event(mcl)
+		event(mcl, err)
 
 	def csp_capabilities(self, mcl, err, btclockres, synclead,
 				tmstampres, tmstampacc):

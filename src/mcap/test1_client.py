@@ -110,9 +110,13 @@ class MCAPSessionClientStub:
 			assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
 			assert(mcl.sm.request_in_flight == 0)
 
-	def mdlgranted_mcl(self, mcl, mdl):
+	def mdlgranted_mcl(self, mcl, mdl, err):
 		# An MDL we requested has been granted. Now it is expected
 		# that we connect.
+		if err:
+			print "MDL not granted!", err
+			return
+
 		print "MDL granted:", id(mdl)
 
 		if mdl.mdlid == 0x27:
@@ -126,12 +130,19 @@ class MCAPSessionClientStub:
 		mdl.connect()
 		return False
 
-	def mclconnected_mcl(self, mcl):
+	def mclconnected_mcl(self, mcl, err):
+		if err:
+			print "Not connected!", err
+			return
 		print "Connected!"
 		session.take_initiative(mcl)
 		assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
 
-	def mdlconnected_mcl(self, mdl, reconnection):
+	def mdlconnected_mcl(self, mdl, reconnection, err):
+		if err:
+			print "MDL not connected!"
+			return
+
 		print "MDL connected"
 		assert(mdl.mcl.state == MCAP_MCL_STATE_ACTIVE)
 		glib.io_add_watch(mdl.sk, glib.IO_IN | glib.IO_ERR | glib.IO_HUP,

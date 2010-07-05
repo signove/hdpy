@@ -15,10 +15,10 @@ from mcap_instance import MCAPInstance
 import glib
 
 class MyInstance(MCAPInstance):
-	def MCLConnected(self, mcl):
+	def MCLConnected(self, mcl, err):
 		print "MCL has connected", id(mcl)
 
-	def MCLReconnected(self, mcl):
+	def MCLReconnected(self, mcl, err):
 		print "MCL has reconnected", id(mcl)
 
 	def MCLDisconnected(self, mcl):
@@ -27,7 +27,7 @@ class MyInstance(MCAPInstance):
 	def MDLRequested(self, mcl, mdl, mdepid, config):
 		print "MDL requested MDEP", mdepid, "config", config
 
-	def MDLConnected(self, mdl):
+	def MDLConnected(self, mdl, err):
 		print "MDL connected", id(mdl)
 
 	def MDLClosed(self, mdl):

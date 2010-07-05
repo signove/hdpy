@@ -43,6 +43,27 @@ discrimination of MCLs that come via MCLConnected().
 The same pattern is followed by CreateMDL() -- returns immediately a
 MDL object that should not be used until connection is confirmed.
 
+Errors
+------
+
+MCAP errors come via callback methods, too. Most callbacks have an "err"
+argument right after the related object (MCL or MDL). The error code
+will contain the MCAP error response code when convenient, or negative
+codes for lower-level errors, like a failed connect().
+
+Not all errors will be reported. For example, if application creates
+an MDL and the MCL is disconnected by the remote device at exactly
+the same time, there will never be a "MDL not created" error notification.
+Of course the application will receive the MCL disconnection callback
+(and no MDL connection feedback) meaning indirectly that MDL creation
+did not happen.
+
+Some errors are notified via exceptions. All of them are API-misusing
+errors, that will raise an InvalidOperation exception. Things like
+not connecting MDL right after creation, or trying to send a command
+before receiving the former command's response, will raise such an
+exception.
+
 MDL Creation, Connection and Reconnection
 -----------------------------------------
 
@@ -150,13 +171,13 @@ CreateMCL(self, addr, dpsm) -> mcl
 Initiate a MCL connection.
 
 
-cb MCLConnected(self, mcl)
+cb MCLConnected(self, mcl, err)
 
-Called back if CreateMCL() was successful or if a MCL connection was
-accepted.
+Called back when CreateMCL() was processed (with err != 0 in case of
+failure), as well as when a MCL connection was accepted.
 
 
-cb MCLReconnected(self, mcl)
+cb MCLReconnected(self, mcl, err)
 
 The same as previous, but MCL was already 'known'.
 
@@ -168,7 +189,7 @@ Make MCAP stack 'forget' the given MCL.
 
 cb MCLUncached(self, mcl)
 
-MCAP stack has forgot the given MCL. All references to it should be
+MCAP stack has forgotten the given MCL. All references to it should be
 removed, otherwise the object can not be garbage-collected.
 
 	
@@ -179,7 +200,7 @@ Closes the connection (but does not forget/delete) the MCL.
 
 cb MCLDisconnected(self, mcl)
 
-MCL has disconnected, for any reason (including if we called CloseMCL())
+MCL has disconnected, for any reason (including having called CloseMCL())
 
 
 CreateMDLID(self, mcl)
@@ -194,14 +215,18 @@ First phase of MDL creation initiation. If a previous MDL with the
 same MDL ID exists, it will be overridden by this one.
 
 
-cb MDLReady(self, mcl, mdl)
+cb MDLReady(self, mcl, mdl, err)
 
-Confirms that CreateMDL() or ReconnectMDL() was successful,
-and we can connect MDL now.  This event only handles MDLs
-that we have initiated.
+Response to CreateMDL() or ReconnectMDL(). If err == 0, MDL is set
+and we can connect MDL now. This event only handles MDLs that we 
+have initiated.
 
-After this event, no other operation can be done, except ConnectMDL()
-or AbortMDL().
+After this event (with err == 0), no other operation can be done,
+except ConnectMDL() or AbortMDL().
+
+If err != 0, something went wrong; err value is the MCAP response
+code. The application can act upon accordingly. For example, if
+a reconnection failed, application can/should try CreateMDL().
 
 
 cb MDLRequested(self, mcl, mdl, mdep_id, conf)
@@ -218,10 +243,13 @@ ConnectMDL(self, mdl)
 Initiator-side second phase of MDL creation. Connects the data channel.
 
 
-cb MDLConnected(self, mdl)
+cb MDLConnected(self, mdl, err)
 
 Informs that MDL has a connected data channel. This event is received
 for both initiated and accepted MDLs.
+
+if err != 0, something went wrong; probably a failed connect().
+Only MDLs initiated by us will notify errors.
 
 
 Send(self, mdl, data)
@@ -266,6 +294,8 @@ Notifies that the given MDL has been closed.
 ReconnectMDL(self, mdl)
 
 Initiator-side. First phase of reconnecting a previously known MDL.
+Note that confirmation callback is MDLReady(), the same as
+CreateMDL(). Should an error happens, MDLReady() will notify about.
 
 
 cb MDLReconnected(self, mdl)
@@ -323,6 +353,14 @@ cb SyncCapabilitiesResponse(self, mcl, err, btclockres, synclead,
 
 CSP Master. Slave returned capabilities request.
 
+The "err" argument contains the MCAP error response. If it is
+zero, means success. If not zero, the numeric arguments are
+invalid.
+
+Note that receiving one error does not mean that CSP is unavaiable.
+There are recoverable error codes. Read the MCAP CSP spec for
+clarification.
+
 
 SyncSet(self, mcl, update, btclock, timestamp)
 
@@ -335,6 +373,13 @@ be sent periodically by slave.
 cb SyncSetResponse(self, mcl, err, btclock, tmstamp, tmstampacc)
 
 CSP Master. Response to reset request.
+
+The "err" argument contains the MCAP error response. If it is not
+zero (success), the other values are unusable.
+
+Note that error may be transient (e.g. role change between call and
+response); in that case, CSP Set can be tried again. See the MCAP
+spec for details.
 
 
 cb SyncInfoIndication(self, mcl, btclock, tmstamp, accuracy)

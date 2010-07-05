@@ -20,7 +20,12 @@ import glib
 loop = glib.MainLoop()
 
 class MyInstance(MCAPInstance):
-	def MCLConnected(self, mcl):
+	def MCLConnected(self, mcl, err):
+		if err:
+			print "MCL Connection error", err
+			self.bye()
+			return
+
 		print "MCL has connected"
 		self.take_initiative(mcl)
 
@@ -103,8 +108,10 @@ class MyInstance(MCAPInstance):
 			assert(mcl.state == MCAP_MCL_STATE_CONNECTED)
 			assert(mcl.sm.request_in_flight == 0)
 	
-	def MDLReady(self, mcl, mdl):
-		if mdl.mdlid == 0x27:
+	def MDLReady(self, mcl, mdl, err):
+		if err:
+			print "MDL creation/reconnection failed!"
+		elif mdl.mdlid == 0x27:
 			print "MDL ready but not connecting"
 			self.take_initiative(mdl.mcl)
 		else:
@@ -114,7 +121,11 @@ class MyInstance(MCAPInstance):
 	def MDLReady_post(self, mdl):
 		instance.ConnectMDL(mdl)
 
-	def MDLConnected(self, mdl):
+	def MDLConnected(self, mdl, err):
+		if err:
+			print "MDL connection error!"
+			return
+
 		print "MDL connected"
 		glib.timeout_add(1500, self.ping, mdl)
 		self.take_initiative(mdl.mcl)

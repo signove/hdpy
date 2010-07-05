@@ -110,19 +110,20 @@ class MDL(object):
 			async_connect(sk, self.mcl.remote_addr_dc)
 
 			watch_fd_connect(sk, self.connect_cb)
+
 		except IOError:
-			return
+			schedule(self.mcl.connected_mdl_socket, self, -3)
 
 	def connect_cb(self, sk, event):
 		if event == IO_OUT and connection_ok(sk):
 			self.sk = sk
 			self.state = MCAP_MDL_STATE_ACTIVE
 
-			if not self.mcl.connected_mdl_socket(self):
+			if not self.mcl.connected_mdl_socket(self, 0):
 				self.abort()
 		else:
 			self.state = MCAP_MDL_STATE_CLOSED
-			print "async mdl connect() failed"
+			self.mcl.connected_mdl_socket(self, -2)
 
 		return False
 
@@ -209,7 +210,7 @@ class MCL(object):
 			async_connect(sk, self.remote_addr)
 			watch_fd_connect(sk, self.connect_cb)
 		except IOError:
-			return
+			schedule(self.observer.mclconnected_mcl, self, -1)
 
 	def connect_cb(self, sk, evt):
 		if evt == IO_OUT and connection_ok(sk):
@@ -217,10 +218,10 @@ class MCL(object):
 			sk.setblocking(True)
 			self.state = MCAP_MCL_STATE_CONNECTED
 			watch_fd(sk, self.activity)
-			schedule(self.observer.mclconnected_mcl, self)
+			schedule(self.observer.mclconnected_mcl, self, 0)
 		else:
 			self.state = MCAP_MCL_STATE_IDLE
-			print "async mcl connect() failed"
+			schedule(self.observer.mclconnected_mcl, self, -2)
 
 		return False
 
@@ -316,8 +317,8 @@ class MCL(object):
 	def incoming_mdl_socket(self, sk):
 		self.sm.incoming_mdl_socket(sk)
 
-	def connected_mdl_socket(self, mdl):
-		return self.sm.connected_mdl_socket(mdl)
+	def connected_mdl_socket(self, mdl, err):
+		return self.sm.connected_mdl_socket(mdl, err)
 
 	def closed_mdl(self, mdl):
 		return self.sm.closed_mdl(mdl)
@@ -476,6 +477,8 @@ class MCLStateMachine:
 				mdl = self.mcl.get_mdl(response.mdlid)
 				if not mdl:
 					print "Reconn resp to unknown MDLID"
+					schedule(self.mcl.observer.mdlgranted_mcl,
+						self.mcl, None, -1)
 					return
 			else:
 				config = response.config
@@ -485,11 +488,15 @@ class MCLStateMachine:
 
 				if self.last_request.mdlid != mdlid:
 					print "Conn resp of different MDLID"
+					schedule(self.mcl.observer.mdlgranted_mcl,
+						self.mcl, None, -2)
 					return
 
 				if config and config != \
 					self.last_request.config:
 					print "Conn resp of different config"
+					schedule(self.mcl.observer.mdlgranted_mcl,
+						self.mcl, None, -3)
 					return
 				
 				mdl = self.mcl.get_mdl(response.mdlid)
@@ -506,13 +513,19 @@ class MCLStateMachine:
 			self.pending_active_mdl = mdl
 			self.reconn = reconn
 			self.mcl.state = MCAP_MCL_STATE_PENDING
-			schedule(self.mcl.observer.mdlgranted_mcl, self.mcl, mdl)
+
+			schedule(self.mcl.observer.mdlgranted_mcl, self.mcl, mdl, 0)
 		else:
 			if self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_ACTIVE
 			else:
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
+
 			self.print_error_message(response.rspcode)
+
+			# notify application about the error
+			schedule(self.mcl.observer.mdlgranted_mcl, self.mcl,
+				None, response.rspcode)
 			
 		return True			
 	
@@ -580,15 +593,22 @@ class MCLStateMachine:
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 			mdl.accept(sk)
 			watch_fd_err(sk, self.mdl_socket_error, mdl)
-			schedule(self.mcl.observer.mdlconnected_mcl, mdl, self.reconn)
+			schedule(self.mcl.observer.mdlconnected_mcl,
+				mdl, self.reconn, 0)
 		else:
 			# TODO refuse, not close
 			sk.close()
 
 		return ok
 
-	def connected_mdl_socket(self, mdl):
+	def connected_mdl_socket(self, mdl, err):
 		# Called by MDL object itself
+		if err:
+			self.pending_active_mdl = None
+			schedule(self.mcl.observer.mdlconnected_mcl, mdl,
+				self.reconn, err)
+			return False
+
 		ok = self.mcl.state == MCAP_MCL_STATE_PENDING
 		ok = ok and self.pending_active_mdl.mdlid == mdl.mdlid
 		self.pending_active_mdl = None
@@ -596,7 +616,11 @@ class MCLStateMachine:
 		if ok:
 			self.mcl.state = MCAP_MCL_STATE_ACTIVE
 			watch_fd_err(mdl.sk, self.mdl_socket_error, mdl)
-			schedule(self.mcl.observer.mdlconnected_mcl, mdl, self.reconn)
+			schedule(self.mcl.observer.mdlconnected_mcl, mdl,
+				self.reconn, 0)
+		else:
+			schedule(self.mcl.observer.mdlconnected_mcl, mdl,
+				self.reconn, -1)
 
 		# MDL is responsible by closing socket if not ok
 		return ok
@@ -819,10 +843,6 @@ class MCLStateMachine:
 	def stop(self):
 		self.csp.stop()
 
-# FIXME error feedback (for requests we had made)
-# FIXME reconnect error feedback (so upper level knows what to do)
-# FIXME failed async connect notification error
-
 # FIXME inquire_mdep should call upper layer
 # FIXME MDL streaming or ertm channel? <-- via inquire_mdep
 
@@ -832,4 +852,4 @@ class MCLStateMachine:
 
 # TODO async writes (here and at instance)
 # TODO optional request security level
-# TODO PENDING state timeout
+# TODO PENDING state timeout (MCAP spec should tell what to do in this case)

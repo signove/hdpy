@@ -102,7 +102,10 @@ class MyInstance(MCAPInstance):
         self.counter += 1
         self._take_initiative(mdl.mcl, mdl)
 
-    def MCLConnected(self, mcl):
+    def MCLConnected(self, mcl, err):
+	if err:
+		print "MCL connection error"
+		return
         print "MCL has connected"
         self._take_initiative(mcl)
 
@@ -110,17 +113,23 @@ class MyInstance(MCAPInstance):
         print "MCL has disconnected"
         self._bye()
 
-    def MCLReconnected(self, mcl):
+    def MCLReconnected(self, mcl, err):
+	if err:
+		print "MCL connection error"
+		return
         print "MCLReconnected not overridden"
 
     def MCLUncached(self, mcl):
         print "MCLUncached not overridden"
 
-    def MDLReady(self, mcl, mdl):
+    def MDLReady(self, mcl, mdl, err):
 #        if mdl.mdlid == 0x27:
 #            print "MDL ready but not connecting"
 #            self._take_initiative(mdl.mcl)
 #        else:
+	if err:
+		print "MDL creation/reconnection failed!"
+		return
         print "MDL ready, connecting"
         glib.timeout_add(0, self.MDLReady_post, mdl)
 
@@ -131,8 +140,8 @@ class MyInstance(MCAPInstance):
     def MDLAborted(self, mcl, mdl):
         print "MDLAborted not overridden"
 
-    def MDLConnected(self, mdl):
-        print "MDL connected"
+    def MDLConnected(self, mdl, err):
+        print "MDL connected, err=%d" % err
 #        glib.timeout_add(1500, self.ping, mdl)
         self._take_initiative(mdl.mcl, mdl)
 

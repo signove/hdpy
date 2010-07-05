@@ -21,7 +21,12 @@ import glib
 loop = glib.MainLoop()
 
 class MyInstance(MCAPInstance):
-	def MCLConnected(self, mcl):
+	def MCLConnected(self, mcl, err):
+		if err:
+			print "MCL Connection error", err
+			self.bye()
+			return
+
 		print "MCL has connected"
 		self.begin(mcl)
 

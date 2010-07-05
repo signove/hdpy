@@ -169,11 +169,21 @@ class MI(MCAPInstance):
 
 	################################### MCAP callbacks
 
-	def MCLConnected(self, mcl):
+	def MCLConnected(self, mcl, err):
+		if err:
+			print "MCL Connection error", err
+			self.bye()
+			return
+
 		print "\tMCL has connected"
 		self.test(mcl, None, self.MCLConnected)
 
-	def MCLReconnected(self, mcl):
+	def MCLReconnected(self, mcl, err):
+		if err:
+			print "MCL Connection error", err
+			self.bye()
+			return
+
 		print "\tMCL has reconnected"
 		self.test(mcl, None, self.MCLReconnected)
 
@@ -185,11 +195,18 @@ class MI(MCAPInstance):
 		print "\tMCL has disconnected"
 		self.test(mcl, None, self.MCLUncached)
 
-	def MDLReady(self, mcl, mdl):
+	def MDLReady(self, mcl, mdl, err):
+		if err:
+			print "MDL creation/reconnection failed"
+			return
+
 		print "\tinitiated MDL ready"
 		self.test(mcl, mdl, self.MDLReady)
 
-	def MDLConnected(self, mdl):
+	def MDLConnected(self, mdl, err):
+		if err:
+			print "MDL connection failed!"
+			return
 		print "\tMDL connected"
 		self.test(mdl.mcl, mdl, self.MDLConnected)
 

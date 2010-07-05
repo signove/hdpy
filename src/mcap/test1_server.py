@@ -72,7 +72,7 @@ class MCAPSessionServerStub:
 	def new_dc(self, listener, sk, addr):
 		self.mcl.incoming_mdl_socket(sk)
 
-	def mdlconnected_mcl(self, mdl, reconn):
+	def mdlconnected_mcl(self, mdl, reconn, err):
 		glib.io_add_watch(mdl.sk, glib.IO_IN, self.recvdata, mdl)
 
 	def mdlaborted_mcl(self, mcl, mdl):
