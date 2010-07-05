@@ -81,8 +81,12 @@ def get_available_psm(adapter):
 def create_socket(btaddr, psm):
 	if psm is None:
 		psm = 0
+	if btaddr == "00:00:00:00:00:00":
+		btaddr = ""
 	s = BluetoothSocket(proto=L2CAP)
-	s.bind((btaddr, psm))
+	if psm or btaddr:
+		print "Bound to (%s,%d)" % (btaddr, psm)
+		s.bind((btaddr, psm))
 	return s
 
 
