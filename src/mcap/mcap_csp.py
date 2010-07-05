@@ -26,7 +26,7 @@ class BluetoothClock:
 	def __init__(self, adapter, remote_addr):
 		self.adapter = adapter
 		self.addr = remote_addr
-		self.raw_socket, self.dev_id = mcap_sock.hci_open_dev(adapter)
+		self.raw_socket, self.dev_id = mcap_sock.hci_open_dev(remote_addr)
 		if BluetoothClock.clock_latency is None:
 			BluetoothClock.clock_latency = self._determine_latency()
 

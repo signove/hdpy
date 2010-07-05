@@ -10,6 +10,17 @@
 ################################################################
 
 ENABLE_ERTM = True
+DC_MTU = 512
+
+import bluetooth
+
+try:
+	version = bluetooth.__version__
+except:
+	version = 0.18 # or less
+
+if version < 0.19:
+	raise ImportError("HDPy depends on PyBlueZ version 0.19 or better")
 
 
 import time
@@ -18,43 +29,25 @@ import bluetooth._bluetooth as bz
 import errno
 import socket
 
-DC_MTU = 512
 
-L2CAP_MODE_ERTM = 0x03
-L2CAP_MODE_STREAMING = 0x04
-
-bz.OCF_READ_CLOCK = 0x07
-
-# We handle options here because PyBluez has incomplete and buggy support
-# Remove this from here if we settle using CVS version of PyBluez
-# TODO add those features to PyBluez itself
-# TODO test for PyBlueZ module version (once we depend on >= 0.19)
-
-options_len = 12
 pos = ["omtu", "imtu", "flush_to", "mode", "fcs", "max_tx", "txwin_size"]
-mask = "HHHBBBH"
-i_omtu = pos.index("omtu")
-i_imtu = pos.index("imtu")
 i_mode = pos.index("mode")
 i_fcs = pos.index("fcs")
 
 
 def get_options(sock):
-	s = sock.getsockopt(SOL_L2CAP, L2CAP_OPTIONS, options_len)
-	options = struct.unpack(mask, s)
-	return list(options)
+	return list(sock.get_l2cap_options())
 
 
 def set_options(sock, options):
-	s = struct.pack(mask, *options)
-	sock.setsockopt(SOL_L2CAP, L2CAP_OPTIONS, s)
+	return sock.set_l2cap_options(options)
 
 
 def set_ertm(sock):
 	if ENABLE_ERTM:
 		options = get_options(sock)
 		options[i_fcs] = 1
-		options[i_mode] = L2CAP_MODE_ERTM
+		options[i_mode] = bz.L2CAP_MODE_ERTM
 		set_options(sock, options)
 
 
@@ -62,14 +55,12 @@ def set_streaming(sock):
 	if ENABLE_ERTM:
 		options = get_options(sock)
 		options[i_fcs] = 1
-		options[i_mode] = L2CAP_MODE_STREAMING
+		options[i_mode] = bz.L2CAP_MODE_STREAMING
 		set_options(sock, options)
 
 
 def set_mtu(sock, mtu):
-	options = get_options(sock)
-	options[i_omtu] = options[i_imtu] = mtu
-	set_options(sock, options)
+	return sock.set_l2cap_mtu(mtu)
 
 
 def get_available_psm(adapter):
@@ -165,10 +156,8 @@ def connection_ok(sk):
 	return not err
 
 
-def hci_open_dev(adapter):
-	# TODO: use remote device addr and hci_get_route
-	# (need to add this to PyBlueZ)
-	dev_id = bz.hci_devid(adapter)
+def hci_open_dev(remote_addr):
+	dev_id = bz.hci_get_route(remote_addr)
 	print "Device ID: %d" % dev_id
 	# if dev_id < 0:
 	#	# take the first one and pray
