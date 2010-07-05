@@ -826,7 +826,7 @@ class MCLStateMachine:
 		return True
 
 	def inquire_mdep(self, mdepid, config):
-		return True, True
+		return self.mcl.observer.mdlinquire_mcl(mdepid, config)
 
 	def print_error_message(self, error_rsp_code):
 		if error_rsp_code in error_rsp_messages:
@@ -843,9 +843,6 @@ class MCLStateMachine:
 	def stop(self):
 		self.csp.stop()
 
-# FIXME inquire_mdep should call upper layer
-# FIXME MDL streaming or ertm channel? <-- via inquire_mdep
-
 # TODO Refuse untimely MDL connection using BT_DEFER_SETUP
 #	get addr via L2CAP_OPTIONS to decide upon acceptance
 #	definitive accept using poll OUT ; if !OUT, read 1 byte
@@ -853,3 +850,5 @@ class MCLStateMachine:
 # TODO async writes (here and at instance)
 # TODO optional request security level
 # TODO PENDING state timeout (MCAP spec should tell what to do in this case)
+# TODO make sure first MDL is always reliable
+# TODO add test case for MDL config rejection and streaming channel

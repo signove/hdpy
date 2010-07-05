@@ -178,6 +178,14 @@ class MCAPInstance:
 	def MCLUncached(self, mcl):
 		print "MCLUncached not overridden"
 
+	def MDLInquire(self, mdepid, config):
+		'''
+		Ask if this MDEP ID and config are ok, and if the channel
+		is reliable or not
+		'''
+		print "MDLInquire not overridden"
+		return True, True # Default answer: ok and reliable, respectiv.
+
 	def MDLReady(self, mcl, mdl, err):
 		''' Async confirmation of MDLCreate/MDLReconnect method '''
 		raise Exception("Not overridden, but it should have been")
@@ -268,6 +276,9 @@ class MCAPInstance:
 
 		self.Recv(mdl, data)
 		return True
+
+	def mdlinquire_mcl(self, mdepid, config):
+		return self.MDLInquire(mdepid, config)
 
 	def mdlgranted_mcl(self, mcl, mdl, err):
 		'''
