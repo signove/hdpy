@@ -10,7 +10,7 @@
 ################################################################
 
 ENABLE_ERTM = True
-SECURITY = False
+SECURITY = True
 DC_MTU = 512
 
 DEFER_SETUP = True

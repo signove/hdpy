@@ -11,7 +11,7 @@
 ################################################################
 
 
-from mcap_instance import MCAPInstance
+from mcap.mcap_instance import MCAPInstance
 import glib
 
 class MyInstance(MCAPInstance):
@@ -30,6 +30,9 @@ class MyInstance(MCAPInstance):
 	def MDLConnected(self, mdl, err):
 		print "MDL connected", id(mdl)
 
+	def MDLAborted(self, mcl, mdl):
+		print "MDL aborted", id(mdl)
+
 	def MDLClosed(self, mdl):
 		print "MDL closed", id(mdl)
 
@@ -37,16 +40,21 @@ class MyInstance(MCAPInstance):
 		print "MDL deleted", id(mdl)
 
 	def RecvDump(self, mcl, message):
-		print "Received command ", repr(message)
+		# print "Received command ", repr(message)
 		return True
 
 	def SendDump(self, mcl, message):
-		print "Sent command ", repr(message)
+		# print "Sent command ", repr(message)
 		return True
 
 	def Recv(self, mdl, data):
 		print "MDL", id(mdl), "data", data
-		instance.Send(mdl, data + " PONG " + data)
+		try:
+			response = str(eval(data + (" + %d" % mdl.mdlid)))
+		except:
+			response = "ERROR IN EVAL"
+		print "\tresponse is", response
+		instance.Send(mdl, response)
 		return True
 
 instance = MyInstance("00:00:00:00:00:00", True)

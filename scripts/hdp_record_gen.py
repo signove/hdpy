@@ -10,7 +10,7 @@
 #         Raul Herbster < raul dot herbster at signove dot com >
 ################################################################
 
-import hdp_record
+from hdp import hdp_record
 
 feature1 = {'mdep_id': 0x01, 'role': 'source',
 		'data_type': 0x1004, 'description': "Fake oximeter"}

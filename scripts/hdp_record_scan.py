@@ -10,7 +10,7 @@
 #         Raul Herbster < raul dot herbster at signove dot com >
 ################################################################
 
-import hdp_record
+from hdp import hdp_record
 import dbus
 
 bus = dbus.SystemBus()

@@ -12,8 +12,8 @@
 
 # Run something like a test2_server in the other side
 
-from mcap_instance import MCAPInstance
-import mcap
+from mcap.mcap_instance import MCAPInstance
+from mcap import mcap
 import time
 import sys
 import glib

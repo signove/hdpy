@@ -10,10 +10,10 @@
 #         Raul Herbster < raul dot herbster at signove dot com >
 ################################################################
 
-import hdp_record
+from hdp import hdp_record
 import gobject
 import dbus.mainloop.glib
-from dummy_ieee10404 import parse_message
+from dummy_ieee10407 import parse_message
 
 mcap_iface = 'org.bluez.mcap'
 mcap_control_psm = 0x1001
@@ -28,7 +28,7 @@ def object_signal(*args, **kwargs):
 		adapter.Send(mdl, response)
 
 health_record = {'features': [{'mdep_id': 0x01, 'role': 'sink',
-                     'data_type': 0x1004, 'description': 'HDP sink'}],
+                     'data_type': 4103, 'description': 'HDP sink'}],
        'mcap_control_psm': mcap_control_psm, 'mcap_data_psm': mcap_data_psm,
        'name': 'Bluez HDP Sink', 'provider': 'Bluez',
        'description': 'A Health Device Protocol Sink',

@@ -12,7 +12,7 @@
 
 import sys
 
-# TODO remove this someday
+# FIXME remove this hack someday
 sys.path.insert(0, "..")
 
 from mcap.mcap_instance import MCAPInstance

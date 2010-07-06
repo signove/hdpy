@@ -11,8 +11,8 @@
 ################################################################
 
 
-from mcap_instance import MCAPInstance
-from mcap_defs import *
+from mcap.mcap_instance import MCAPInstance
+from mcap.mcap_defs import *
 import time
 import sys
 import glib

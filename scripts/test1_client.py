@@ -11,8 +11,8 @@
 ################################################################
 
 
-from mcap_defs import *
-from mcap import *
+from mcap.mcap_defs import *
+from mcap.mcap import *
 import time
 import sys
 import glib
