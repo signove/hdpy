@@ -236,6 +236,11 @@ def test():
 	# all-zeros means default adapter
 	raw, dev_id = hci_open_dev("00:00:00:00:00:00")
 	print "Dev id", dev_id
+
+	# Sometimes the very first read fails
+	hci_read_clock(raw, None)
+	hci_read_clock(raw, None)
+
 	clock1, accuracy1 = hci_read_clock(raw, None)
 	time.sleep(0.1)
 	clock2, accuracy2 = hci_read_clock(raw, None)
