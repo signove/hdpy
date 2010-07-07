@@ -37,6 +37,11 @@ class ControlChannelListener(object):
 		schedule(self.observer.new_cc, self, sk, address)
 		return True
 
+	def stop(self):
+		if self.sk:
+			self.sk.close()
+			self.sk = None
+
 
 class DataChannelListener(object):
 	def __init__(self, adapter, observer):
@@ -56,6 +61,11 @@ class DataChannelListener(object):
 		sk, address = self.sk.accept()
 		schedule(self.observer.new_dc, self, sk, address)
 		return True
+
+	def stop(self):
+		if self.sk:
+			self.sk.close()
+			self.sk = None
 
 
 class MDL(object):
