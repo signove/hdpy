@@ -79,14 +79,20 @@ class MI(MCAPInstance):
 		self.response = self.MDLReady
 		mdlid = instance.CreateMDLID(mcl)
 		print "\tmdl id is", mdlid
-		instance.CreateMDL(mcl, mdlid, 0x01, 0x12)
+		instance.CreateMDL(mcl, mdlid, 0x01, 0x01)
+
+	def test_mdl_create_streaming(self, mcl, dummy):
+		self.response = self.MDLReady
+		mdlid = instance.CreateMDLID(mcl)
+		print "\tstreaming mdl id is", mdlid
+		instance.CreateMDL(mcl, mdlid, 0x02, 0x02, False)
 
 	def test_mdl_create_pending(self, mcl, dummy):
 		self.test_mdl_create(mcl, dummy)
 		# and now tries to create again
 		mdlid = instance.CreateMDLID(mcl)
 		try:
-			instance.CreateMDL(mcl, mdlid, 0x01, 0x12)
+			instance.CreateMDL(mcl, mdlid, 0x01, 0x1)
 			print "CreateMDL in PENDING state should have failed"
 			sys.exit(1)
 		except mcap.InvalidOperation:
@@ -120,7 +126,7 @@ class MI(MCAPInstance):
 		except mcap.InvalidOperation:
 			pass
 		try:
-			instance.CreateMDL(mcl, 33, 0x02, 0x13)
+			instance.CreateMDL(mcl, 33, 0x01, 0x01)
 			print "CreateMDL in PENDING state should have failed (2)"
 			sys.exit(1)
 		except mcap.InvalidOperation:
@@ -265,6 +271,11 @@ MI.tests = ( \
 	(MI.test_mdl_close, ),
 	(MI.test_mdl_delete, ),
 	(MI.test_mdl_delete_all, ),
+	(MI.test_mdl_create_streaming, ),
+	(MI.test_mdl_connect, ),
+	(MI.test_mdl_send, ),
+	(MI.test_mdl_send, ),
+	(MI.test_mdl_close, ),
 	(MI.test_mdl_create_pending, ),
 	(MI.test_mdl_abort, ),
 	(MI.test_mdl_create, ),

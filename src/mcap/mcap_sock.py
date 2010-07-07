@@ -63,6 +63,7 @@ def set_security(sock):
 
 def set_streaming(sock):
 	if ENABLE_ERTM:
+		print "######################### streaming socket"
 		options = get_options(sock)
 		options[i_fcs] = 1
 		options[i_mode] = bz.L2CAP_MODE_STREAMING

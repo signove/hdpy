@@ -39,6 +39,11 @@ class MyInstance(MCAPInstance):
 	def MDLDeleted(self, mdl):
 		print "MDL deleted", id(mdl)
 
+	def MDLInquire(self, mdepid, config):
+		reliable = not (config == 0x02 and mdepid == 0x02)
+		ok = True
+		return ok, reliable
+
 	def RecvDump(self, mcl, message):
 		# print "Received command ", repr(message)
 		return True
