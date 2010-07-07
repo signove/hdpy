@@ -1,2 +1,5 @@
 HDPy currently works only in Linux, and depends on a recent
 version of PyBlueZ (0.19 or later, or development version).
+
+Check the deps/ folder for ready-made packages with versions
+that have been tested with scripts/ examples.

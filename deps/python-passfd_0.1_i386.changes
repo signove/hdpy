@@ -1,0 +1,28 @@
+Format: 1.8
+Date: Tue, 06 Jul 2010 23:59:59 -0300
+Source: python-passfd
+Binary: python-passfd
+Architecture: source i386
+Version: 0.1
+Distribution: unstable
+Urgency: low
+Maintainer: Debian Bluetooth Maintainers <pkg-bluetooth-maintainers@lists.alioth.debian.org>
+Changed-By: Elvis Pfutzenreuter <epx@signove.com>
+Description: 
+ python-passfd - File descriptor passing library
+Changes: 
+ python-passfd (0.1) unstable; urgency=low
+ .
+   * New upstream release
+Checksums-Sha1: 
+ 89189adec89248510e0ced25672f1eaf90f247a9 622 python-passfd_0.1.dsc
+ 61e2a7267940aa36de6c33a4365da021399d370c 14193 python-passfd_0.1.tar.gz
+ 8e2ec0cc7e9fbf77fbad8c6ba3aac4b61aba5689 6408 python-passfd_0.1_i386.deb
+Checksums-Sha256: 
+ 3dac4f8839bf524863a52141415d4c36171a626bc79d78b3883fec23115813e1 622 python-passfd_0.1.dsc
+ 6029eb22f8a19c25cd3d438e1d3c2f8ff47e8bacb5abaf1aa5df4fdce903e433 14193 python-passfd_0.1.tar.gz
+ df890ccb889bedd97b83085bd76e2857430093770607e0f4df27831a4c780724 6408 python-passfd_0.1_i386.deb
+Files: 
+ c975a95fca49b2e40b6941215de3e614 622 python optional python-passfd_0.1.dsc
+ 0b76453882c2f6288307db9b9c4ee502 14193 python optional python-passfd_0.1.tar.gz
+ 596635e10854b2a43f9eeee69c474acb 6408 python optional python-passfd_0.1_i386.deb

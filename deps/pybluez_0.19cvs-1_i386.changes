@@ -1,0 +1,28 @@
+Format: 1.8
+Date: Tue, 06 Jul 2010 23:59:59 -0300
+Source: pybluez
+Binary: python-bluez
+Architecture: source i386
+Version: 0.19cvs-1
+Distribution: unstable
+Urgency: low
+Maintainer: Debian Bluetooth Maintainers <pkg-bluetooth-maintainers@lists.alioth.debian.org>
+Changed-By: Elvis Pfutzenreuter <epx@signove.com>
+Description: 
+ python-bluez - Python wrappers around BlueZ for rapid bluetooth development
+Changes: 
+ pybluez (0.19cvs-1) unstable; urgency=low
+ .
+   * New upstream release
+Checksums-Sha1: 
+ cb1635eba027d8600621500da48d3fb99032c175 913 pybluez_0.19cvs-1.dsc
+ e27acfe1228f2901220b34164024689ad5edc49a 158006 pybluez_0.19cvs-1.tar.gz
+ a0fd374d71415ae2c4d5c781c418efb732bf6253 64464 python-bluez_0.19cvs-1_i386.deb
+Checksums-Sha256: 
+ f5712be7b6e419c7eddcd94b4a177ca5449b3c036df09d7e73ad52568f85af9b 913 pybluez_0.19cvs-1.dsc
+ 88c7d9d312eab50c3034cd6c0db6519613401e7a67994fed99f922e2e47005b8 158006 pybluez_0.19cvs-1.tar.gz
+ 972610f932c58056faf657b67470ce69dab872bcafe9b38c74eed9bac5f7be34 64464 python-bluez_0.19cvs-1_i386.deb
+Files: 
+ ebc936c932f5e5aad975e8c153115060 913 python optional pybluez_0.19cvs-1.dsc
+ fee3a6b57bef136cacdecf6cac301d4a 158006 python optional pybluez_0.19cvs-1.tar.gz
+ bfa2b4fc1b956b18d237686914956ac9 64464 python optional python-bluez_0.19cvs-1_i386.deb
