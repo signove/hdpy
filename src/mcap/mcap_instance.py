@@ -25,10 +25,26 @@ class MCAPInstance:
 		self.ccl = self.dcl = None
 		self.mcls = []
 		self.peers = {}
-		if listen:
-			self.do_listen()
+		self.start()
 
-	def do_listen(self):
+	def stop(self):
+		while self.mcls:
+			self.remove_mcl(self.mcls[0])
+
+		if not self.listener:
+			return
+
+		if self.ccl:
+			self.ccl.stop()
+			self.ccl = None
+		if self.dcl:
+			self.dcl.stop()
+			self.dcl = None
+
+	def start(self):
+		if not self.listener:
+			return
+
 		self.ccl = ControlChannelListener(self.adapter, self)
 		self.cpsm = self.ccl.psm
 		self.dcl = DataChannelListener(self.adapter, self)
