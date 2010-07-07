@@ -57,13 +57,11 @@ def set_ertm(sock):
 
 def set_security(sock):
 	if SECURITY:
-		print "Security set"
 		sock.setl2capsecurity(bz.BT_SECURITY_MEDIUM)
 
 
 def set_streaming(sock):
 	if ENABLE_ERTM:
-		print "######################### streaming socket"
 		options = get_options(sock)
 		options[i_fcs] = 1
 		options[i_mode] = bz.L2CAP_MODE_STREAMING
@@ -216,7 +214,6 @@ def hci_read_clock(sock, remote_addr):
 	if remote_addr:
 		which_clock = 1
 		acl = bz.hci_acl_conn_handle(sock.fileno(), remote_addr)
-		print "ACL", acl
 		if acl < 0:
 			# probably a loopback connection, use native clock
 			which_clock = 0
