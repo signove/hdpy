@@ -17,12 +17,52 @@ sys.path.insert(0, "..")
 
 from mcap.mcap_instance import MCAPInstance
 
-# CreateInstance
-# CloseInstance
+
+class Adapter(object):
+	def __init__(self, addr, devid):
+		self.addr = addr
+		self.devid = devid
+
+	def CreateInstance(self, config):
+		return HDPInstance(self.addr, config)
+
+	def RegisterAgent(self, instance, agent):
+		instance.set_observer(agent)
+
+	def CloseInstance(self, instance):
+		instance.stop()
+
+
+DefaultAdapter = Adapter("00:00:00:00:00:00", -1)
+
+
+def GetAdapterList():
+	adapters = [DefaultAdapter]
+	# FIXME get the rest
+
+
+def RegisterAgent(instance, agent):
+	instance.set_observer(agent)
+
+
+def CloseInstance(instance):
+	instance.stop()
+
 
 class HDPInstance(MCAPInstance):
-	def __init__(self, config):
-		pass
+
+	def __init__(self, adapter, config):
+		self.adapter = adapter
+		self.listener = not not config
+		self.__init__(self.adapter, self.listener)
+		self.observer = HealthAgent()
+
+		# FIXME link list, link list housekeeping
+
+		if not config:
+			return		
+
+		# FIXME
 		"""
                 Dict is defined as bellow:
                 { "data_spec" : The data_spec is the data exchange specification
@@ -42,95 +82,137 @@ class HDPInstance(MCAPInstance):
                   }]
                 }
 
-		FIXME null config
 		FIXME publish sdp record
-		FIXME agent
-		FIXME default observer
 		"""
 
-	def set_observer_agent(self, observer):
+	def set_observer(self, observer):
 		if not isinstance(observer, HealthAgent):
-			raise Exception("Observers need be HealthAgent's")
+			raise Exception("Observer needs to be HealthAgent")
 		self.observer = observer
 
 	def CreateMCL(self, addr, dpsm):
+		# FIXME
 		pass
 	def DeleteMCL(self, mcl):
+		# FIXME
 		pass
 	def CloseMCL(self, mcl):
+		# FIXME
 		pass
 	def CreateMDLID(self, mcl):
+		# FIXME
 		pass
 	def CreateMDL(self, mcl, mdlid, mdepid, conf, reliable=True):
+		# FIXME
 		pass
 	def AbortMDL(self, mcl, mdlid):
+		# FIXME
 		pass
 	def ConnectMDL(self, mdl):
+		# FIXME
 		pass
 	def DeleteMDL(self, mdl):
+		# FIXME
 		pass
 	def DeleteAll(self, mcl):
+		# FIXME
 		pass
 	def CloseMDL(self, mdl):
+		# FIXME
 		pass
 	def ReconnectMDL(self, mdl):
+		# FIXME
 		pass
 	def TakeFd(self, mdl):
+		# FIXME
 		pass
 	def Send(self, mdl, data):
+		# FIXME
 		pass
 	def SyncTimestamp(self, mcl):
+		# FIXME
 		pass
 	def SyncBtClock(self, mcl):
+		# FIXME
 		pass
 	def SyncCapabilities(self, mcl, reqaccuracy):
+		# FIXME
 		pass
 	def SyncSet(self, mcl, update, btclock, timestamp):
+		# FIXME
 		pass
 	def Recv(self, mdl, data):
+		# FIXME
 		pass
 	def MCLConnected(self, mcl, err):
+		# FIXME
 		pass
 	def MCLDisconnected(self, mcl):
+		# FIXME
 		pass
 	def MCLReconnected(self, mcl, err):
+		# FIXME
 		pass
 	def MCLUncached(self, mcl):
+		# FIXME
 		pass
 	def MDLInquire(self, mdepid, config):
+		# FIXME
 		pass
 	def MDLReady(self, mcl, mdl, err):
+		# FIXME
 		pass
 	def MDLRequested(self, mcl, mdl, mdep_id, conf):
+		# FIXME
 		pass
 	def MDLAborted(self, mcl, mdl):
+		# FIXME
 		pass
 	def MDLConnected(self, mdl, err):
+		# FIXME
 		pass
 	def MDLDeleted(self, mdl):
+		# FIXME
 		pass
 	def MDLClosed(self, mdl):
+		# FIXME
 		pass
 	def MDLReconnected(self, mdl):
+		# FIXME
 		pass
 	def SyncCapabilitiesResponse(self, mcl, err, btclockres, synclead,
+		# FIXME
 				tmstampres, tmstampacc):
 		pass
 	def SyncSetResponse(self, mcl, err, btclock, tmstamp, tmstampacc):
+		# FIXME
 		pass
 	def SyncInfoIndication(self, mcl, btclock, tmstamp, accuracy):
+		# FIXME
 		pass
 
 
-# FIXME get list of devices
+def GetDeviceList():
+	# FIXME
+	pass
+
+
+def CheckDevice(addr):
+	# FIXME
+	pass
+
+
+def AddDeviceManually(addr, config):
+	# FIXME
+	pass
 
 
 class HealthDevice(object):
-	def __init__(self, adapter, addr):
-		self.adapter = adapter
+	def __init__(self, addr):
 		self.addr = addr
 
 	def GetHealthInstances(self):
+		# FIXME
 		pass
 		"""
 		Gets the information of the remote instances present in this
@@ -150,33 +232,16 @@ class HealthDevice(object):
 		}];
 		"""
 
-	def Connect(self, local_instance, remote_instance): # -> HealthLink
+	def Connect(self, local_instance, remote_instance, cb, *args): # -> HealthLink
+		# FIXME
 		pass
 		"""
-		Connects the local instance with the remote instance and returns
-		the path of the HealthLink object. You should get the remote
-		instance id running GetHealthInstances.
-
-		Only the bus client that created the local session will be able
-		to create connections using it.
-
-		Possible errors: org.bluez.Error.InvalidArguments
-				org.bluez.Error.HealthError
-
 		FIXME demands 'null' (no-listening) instance, created on demand
 		"""
 
 	def Disconnect(self, link):
+		# FIXME
 		pass
-		"""
-		Disconnect from the link the state will also be deleted. And
-		no future reconnections will be possible. For keeping the state
-		the method Pause of the health link should be used.
-
-		Possible errors: org.bluez.Error.InvalidArguments
-				org.bluez.Error.NotFound
-				org.bluez.Error.HealthError
-		"""
 
 
 class HealthLink(object):
@@ -184,6 +249,7 @@ class HealthLink(object):
 		self.mcl = mcl
 
 	def echo(self, string, cb, *args):
+		# FIXME
 		pass
 		"""
 		Sends an echo petition to the remote intance. Returns True if
@@ -193,7 +259,8 @@ class HealthLink(object):
 		Uses MDEP ID 00, connects MDL and disconnects.
 		"""
 
-	def OpenDataChannel(self, mdepid, config, cb, *args):
+	def OpenDataChannel(self, mdepid, config, cb, *args): # -> mdl id
+		# FIXME
 		pass
 		"""
 		Creates a new data channel with the indicated config to the
@@ -201,46 +268,33 @@ class HealthLink(object):
 		The configuration should indicate the channel quality of
 		service. In the current version of HDP, valid values are 0x01
 		for reliable channels and 0x02 for streaming data channel.
-
-		Returns the data channel id.
-
-		Possible errors: org.bluez.Error.InvalidArguments
-				org.bluez.Error.HealthError
 		"""
 
 	def ReconnectDataChannel(self, mdlid, cb, *args):
+		# FIXME
 		pass
-		"""
-		Reconnects a previously created data channel indicated by its
-		mdlid.
-
-		Possible errors: org.bluez.Error.InvalidArguments
-				org.bluez.Error.HealthError
-				org.bluez.Error.NotFound
-		"""
 
 	def GetDataChannelFileDescriptor(self, mdlid):
+		# FIXME
 		pass
 
 	def DeleteDataChannel(self, mdlid, cb, *args):
+		# FIXME
 		pass
 
 	def DeleteAllDataChannels(self):
+		# FIXME
 		pass
 
 	def GetDataChannelStatus(self):
+		# FIXME
 		pass
 		"""
-		Return a dictionary with all the data channels that
-		can be used to send data right now. The dictionary
-		is formed like follows:
 		{
 			"reliable": [mdlid_r1, mdlid_r2, ...],
 			"streaming" : [mdlid_s1, mdlid_s2, ...]
 		}
 
-		The fist reliable data channel will always be the first
-		data channel in reliable array.
 		"""
 
 
