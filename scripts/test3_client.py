@@ -87,6 +87,12 @@ class MI(MCAPInstance):
 		print "\tstreaming mdl id is", mdlid
 		instance.CreateMDL(mcl, mdlid, 0x02, 0x02, False)
 
+	def test_mdl_create_no_config(self, mcl, dummy):
+		self.response = self.MDLReady
+		mdlid = instance.CreateMDLID(mcl)
+		print "\tstreaming mdl id is", mdlid
+		instance.CreateMDL(mcl, mdlid, 0x01, 0x00)
+
 	def test_mdl_create_pending(self, mcl, dummy):
 		self.test_mdl_create(mcl, dummy)
 		# and now tries to create again
@@ -99,6 +105,7 @@ class MI(MCAPInstance):
 			pass
 
 	def test_mdl_connect(self, dummy, mdl):
+		print "MDL configuration:", mdl.config
 		self.response = self.MDLConnected
 		instance.ConnectMDL(mdl)
 
@@ -272,6 +279,11 @@ MI.tests = ( \
 	(MI.test_mdl_delete, ),
 	(MI.test_mdl_delete_all, ),
 	(MI.test_mdl_create_streaming, ),
+	(MI.test_mdl_connect, ),
+	(MI.test_mdl_send, ),
+	(MI.test_mdl_send, ),
+	(MI.test_mdl_close, ),
+	(MI.test_mdl_create_no_config, ),
 	(MI.test_mdl_connect, ),
 	(MI.test_mdl_send, ),
 	(MI.test_mdl_send, ),

@@ -499,8 +499,8 @@ class MCLStateMachine:
 						self.mcl, None, -2)
 					return
 
-				if config and config != \
-					self.last_request.config:
+				if self.last_request.config and \
+						config != self.last_request.config:
 					print "Conn resp of different config"
 					schedule(self.mcl.observer.mdlgranted_mcl,
 						self.mcl, None, -3)
@@ -696,14 +696,11 @@ class MCLStateMachine:
 				elif not self.support_more_mdeps():
 					rspcode = MCAP_RSP_MDEP_BUSY
 				else:
-					ok, reliable = \
+					ok, reliable, config = \
 						self.inquire_mdep(request.mdepid,
 								request.config)
 					if not ok:
 						rspcode = MCAP_RSP_CONFIGURATION_REJECTED
-	
-				if rspcode == MCAP_RSP_SUCCESS:
-					config = request.config
 		
 		if rspcode != MCAP_RSP_SUCCESS:
 			self.print_error_message(rspcode)
@@ -836,7 +833,15 @@ class MCLStateMachine:
 		return True
 
 	def inquire_mdep(self, mdepid, config):
-		return self.mcl.observer.mdlinquire_mcl(mdepid, config)
+		ok, reliable, accepted_config = \
+			self.mcl.observer.mdlinquire_mcl(mdepid, config)
+		if config and config != accepted_config:
+			print "ERROR: app returned different configuration"
+			ok = False
+		if not accepted_config:
+			print "ERROR: app returned null configuration"
+			ok = False
+		return ok, reliable, accepted_config
 
 	def print_error_message(self, error_rsp_code):
 		if error_rsp_code in error_rsp_messages:

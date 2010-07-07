@@ -70,7 +70,9 @@ class MCAPSessionServerStub:
 		print "MDL requested"
 
 	def mdlinquire_mcl(self, mdepid, config):
-		return True, True
+		if not config:
+			config = 0x01
+		return True, True, config
 
 	def new_dc(self, listener, sk, addr):
 		self.mcl.incoming_mdl_socket(sk)

@@ -184,7 +184,9 @@ class MCAPInstance:
 		is reliable or not
 		'''
 		print "MDLInquire not overridden"
-		return True, True # Default answer: ok and reliable, respectiv.
+		if not config:
+			config = 0x01
+		return True, True, config
 
 	def MDLReady(self, mcl, mdl, err):
 		''' Async confirmation of MDLCreate/MDLReconnect method '''
