@@ -70,7 +70,13 @@ class MyInstance(MCAPInstance):
 	def RecvDump(self, mcl, message):
 		print "Received raw msg", repr(message)
 		expected_msg = testmsg(received[self.counter])
-		assert(message == expected_msg)
+		if message != expected_msg:
+			print
+			print "Received control msg different from expected!"
+			print "Expected", repr(expected_msg)
+			print "Received", repr(message)
+			print
+			return
 		self.check_asserts(mcl)
 		self.counter += 1
 		if message[0:2] != "\x02\x00":
@@ -83,7 +89,13 @@ class MyInstance(MCAPInstance):
 	def SendDump(self, mcl, message):
 		print "Sent", repr(message)
 		expected_msg = testmsg(sent[self.counter])
-		assert(message == expected_msg)
+		if message != expected_msg:
+			print
+			print "Sent control msg different from expected!"
+			print "Expected", repr(expected_msg)
+			print "Received", repr(message)
+			print
+			return
 		return True
 
 	def check_asserts(self, mcl):
@@ -120,6 +132,7 @@ class MyInstance(MCAPInstance):
 
 	def MDLReady_post(self, mdl):
 		instance.ConnectMDL(mdl)
+		return False
 
 	def MDLConnected(self, mdl, err):
 		if err:

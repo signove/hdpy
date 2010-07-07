@@ -55,7 +55,13 @@ class MCAPSessionClientStub:
 		if recv:
 			print "Received raw msg", repr(message)
 			expected_msg = testmsg(self.received[self.counter])
-			assert(message == expected_msg)
+			if message != expected_msg:
+				print
+				print "Control msg different from expected!"
+				print "Expected", repr(expected_msg)
+				print "Received", repr(message)
+				print
+				return
 			self.check_asserts(mcl)
 			self.counter += 1
 			if message[0:2] != "\x02\x00":
