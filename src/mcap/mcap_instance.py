@@ -21,6 +21,7 @@ class MCAPInstance:
 		self.listener = listen
 		self.cpsm = 0
 		self.dpsm = 0
+		self.csp_enabled = True
 		self.ccl = self.dcl = None
 		self.mcls = []
 		self.peers = {}
@@ -61,6 +62,11 @@ class MCAPInstance:
 
 	def peer_mcl(self, remote_addr):
 		return self.peers[remote_addr[0]]
+
+### CSP enabling
+
+	def csp_config(self, enabled):
+		self.csp_enabled = enabled
 
 ### Commands
 
@@ -141,15 +147,21 @@ class MCAPInstance:
 		mcl.send_request(req)
 
 	def SyncTimestamp(self, mcl):
+		if not self.csp_enabled:
+			raise InvalidOperation("CSP not enabled for instance")
 		return mcl.get_timestamp()
 
 	def SyncBtClock(self, mcl):
 		'''
 		Returns (clock, accuracy), or None if failed
 		'''
+		if not self.csp_enabled:
+			raise InvalidOperation("CSP not enabled for instance")
 		return mcl.get_btclock()
 
 	def SyncCapabilities(self, mcl, reqaccuracy):
+		if not self.csp_enabled:
+			raise InvalidOperation("CSP not enabled for instance")
 		req = CSPCapabilitiesRequest(reqaccuracy)
 		mcl.send_request(req)
 
@@ -158,6 +170,8 @@ class MCAPInstance:
 		btclock None means immediate update
 		timestamp None means do not update
 		'''
+		if not self.csp_enabled:
+			raise InvalidOperation("CSP not enabled for instance")
 		req = CSPSetRequest(update, btclock, timestamp)
 		mcl.send_request(req)
 

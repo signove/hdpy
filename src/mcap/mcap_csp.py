@@ -110,7 +110,6 @@ class CSPStateMachine(object):
 		self.observer = mcl.observer
 		self.reset_timestamp(time.time(), 0)
 		self.request_in_flight = 0
-		self.enabled = True
 		self.indication_expected = False
 		self.indication_alarm = None
 		self.remote_got_caps = False
@@ -260,7 +259,7 @@ class CSPStateMachine(object):
 
 		clk = self.get_btclock()
 
-		if not self.enabled:
+		if not self.mcl.observer.csp_enabled:
 			rspcode = MCAP_RSP_REQUEST_NOT_SUPPORTED
 		elif message.reqaccuracy < self.tmstampacc:
 			rspcode = MCAP_RSP_REQUEST_NOT_SUPPORTED
@@ -295,7 +294,10 @@ class CSPStateMachine(object):
 		self.set_req_role = -2
 		rspcode = MCAP_RSP_SUCCESS
 
-		if message.btclock != btclock_immediate and \
+		if not self.mcl.observer.csp_enabled:
+			rspcode = MCAP_RSP_REQUEST_NOT_SUPPORTED
+
+		elif message.btclock != btclock_immediate and \
 			not self.valid_btclock(message.btclock):
 			rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 

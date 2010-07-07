@@ -42,7 +42,7 @@ class MCAPSessionServerStub:
 		]
 
 	def __init__(self):
-		pass
+		self.csp_enabled = True
 
 	def new_cc(self, listener, sk, remote_addr):
 		self.mcl = MCL(self, "00:00:00:00:00:00", MCAP_MCL_ROLE_ACCEPTOR, remote_addr, 0)

@@ -338,6 +338,7 @@ class MCL(object):
 	def get_btclock(self):
 		return self.sm.get_btclock()
 
+
 class MCLStateMachine:
 
 	def __init__(self, mcl):
@@ -417,14 +418,16 @@ class MCLStateMachine:
 
 		try:
 			opcode, rspcode = self.parser.get_opcode(message)
+
 			if self.csp.is_mine(opcode):
-				# shunt processing to CSP-specific machine
+				# shunt processing to CSP machine
 				return self.csp.receive_message(opcode, message)
 				
 			if (opcode % 2):
 				return self.receive_request(opcode, message)
 			else:
 				return self.receive_response(opcode, message)
+
 		except InvalidMessage:
 			# we assume that higher-level errors are caught by
 			# receive_request/response methods
@@ -850,9 +853,13 @@ class MCLStateMachine:
 			print "Unknown error rsp code %d" % error_rsp_code
 
 	def get_timestamp(self):
+		if not self.mcl.observer.csp_enabled:
+			raise InvalidOperation("CSP not enabled")
 		return self.csp.get_timestamp()
 
 	def get_btclock(self):
+		if not self.mcl.observer.csp_enabled:
+			raise InvalidOperation("CSP not enabled")
 		return self.csp.get_btclock()
 
 	def stop(self):
