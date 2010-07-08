@@ -13,7 +13,7 @@
 from hdp import hdp_record
 import gobject
 import dbus.mainloop.glib
-from dummy_ieee10404 import parse_message
+from hdp.dummy_ieee10404 import parse_message
 
 mcap_iface = 'org.bluez.mcap'
 mcap_control_psm = 0x1001

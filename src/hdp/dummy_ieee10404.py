@@ -11,6 +11,8 @@
 
 #From IEEE Standard 11073-10404 page 62
 
+from hdp_utils import *
+
 assoc_resp_msg = (0xe3, 0x00, #APDU CHOICE Type(AareApdu)
                   0x00, 0x2c, #CHOICE.length = 44
                   0x00, 0x00, #result=accept
@@ -49,3 +51,6 @@ def parse_message(msg):
                 0x00, 0x00) #event-reply-info.length = 0
         print '\nSpO2 Level: %d, Beats/second: %d\n' % (int(msg[35]), int(msg[49]))
     return resp
+
+def parse_message_str(msg):
+	return b2s(parse_message(s2b(msg)))

@@ -32,7 +32,7 @@ class MCAPInstance:
 		self.ccl = ControlChannelListener(self.adapter, self)
 		self.cpsm = self.ccl.psm
 		self.dcl = DataChannelListener(self.adapter, self)
-		self.dpsm = self.ccl.psm
+		self.dpsm = self.dcl.psm
 
 ### Housekeeping
 
