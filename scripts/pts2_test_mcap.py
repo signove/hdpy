@@ -37,11 +37,6 @@ class BluetoothUtils(object):
 		properties = self.adapter.GetProperties()
 		return properties['Devices']
 
-	# send connection request to an adapter. It is possible
-        # to request an encripted connection
-	def SendConnectionRequest(self, adapter, encrypted):
-		pass		
-
 ### Class to deal with MCAP issues
 
 class MyInstance(MCAPInstance):
@@ -76,14 +71,34 @@ class MyInstance(MCAPInstance):
 
 	def Recv(self, mdl, data):
 		print "MDL", id(mdl), "data", data
-		instance.Send(mdl, data + " PONG " + data)
 		return True
 
-def test():
-	bt_utils = BluetoothUtils()
 
-	available_adapters = bt_utils.GetAvailableAdapters()
-	for adp in available_adapters:
-		print "#", adp
+class TestStub(object):
 
-test()
+	def __init__(self):
+		self.current_adapter = None
+		self.bluetoothUtils = BluetoothUtils()
+
+	def SelectAdapter(self):
+		while True:
+			selectedAdapter = self.PrintAdaptersPrompt()
+			adapters = self.bluetoothUtils.GetAvailableAdapters()
+			totalAdapters = len(adapters)
+			if (selectedAdapter < 1 or selectedAdapter > totalAdapters):
+				print "Invalid adapter. Please, insert a valid number"
+			else:
+				return adapters[selectedAdapter - 1]
+		
+
+	def PrintAdaptersPrompt(self):
+		adapters = self.bluetoothUtils.GetAvailableAdapters()
+		print "Select an adapter: "
+		for index, adapter in enumerate(adapters, 1):
+			print index, "-", adapter
+		selectedAdapter = raw_input("#: ")
+		return int(selectedAdapter)
+
+test = TestStub()
+result = test.SelectAdapter()
+print ">>>", result
