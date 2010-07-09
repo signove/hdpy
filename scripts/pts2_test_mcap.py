@@ -91,6 +91,12 @@ class TestStub(object):
 	def EchoMCL(self):
 		print 'ECHO MCL'
 
+	def ShowAdapter(self):
+		if (self.current_adapter == None):
+			print 'No adapter is defined'
+		else:
+			print self.current_adapter
+
 	def SelectAdapter(self):
 		while True:
 			selectedAdapter = self.PrintAdaptersPrompt()
@@ -113,6 +119,7 @@ class TestStub(object):
 	
 	def SelectBTCommand(self):
 		selectedCommand = self.SelectCommands(BTCommands)
+		selectedCommand[1](self)
 		return selectedCommand
 
 	def PrintAdaptersPrompt(self):
@@ -146,6 +153,7 @@ GeneralCommands = [('bt_commads',    TestStub.SelectBTCommand),
                    ('exit_menu',     TestStub.Exit)]
 
 BTCommands = [('select_adp',     TestStub.SelectAdapter),
+	      ('current_adp',    TestStub.ShowAdapter),
               ('back_menu',      TestStub.SelectGeneralCommand)]
 
 MCAPCommands = [('create_mcl',   MyInstance.CreateMCL),
