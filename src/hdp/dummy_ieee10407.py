@@ -72,4 +72,4 @@ def parse_message(msg):
     return resp
 
 def parse_message_str(msg):
-	return b2s(parse_message(s2b(msg))
+	return b2s(parse_message(s2b(msg)))
