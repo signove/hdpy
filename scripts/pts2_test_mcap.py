@@ -15,6 +15,7 @@ from mcap.mcap_instance import MCAPInstance
 import gobject
 import dbus.mainloop.glib
 import glib
+import sys
 
 ### Class to deal with Bluetooth issues
 
@@ -73,24 +74,22 @@ class MyInstance(MCAPInstance):
 		print "MDL", id(mdl), "data", data
 		return True
 
-
 class TestStub(object):
-
-	GeneralCommands = ['bt_commads',
-			   'mcap_commands'
-			   'exit_menu']
-
-	MCAPCommands = ['open_mcl',
-			'close_mcl',
-			'echo_mcl',
-			'open_mdl',
-			'close_mdl',
-			'echo_mdl',
-			'back_menu']
 
 	def __init__(self):
 		self.current_adapter = None
 		self.bluetoothUtils = BluetoothUtils()
+
+	def Start(self):
+		while True:
+			self.SelectGeneralCommand()
+
+	def Exit(self):
+		sys.exit(0)
+		print "Finished"
+
+	def EchoMCL(self):
+		print 'ECHO MCL'
 
 	def SelectAdapter(self):
 		while True:
@@ -100,19 +99,25 @@ class TestStub(object):
 			if (selectedAdapter < 1 or selectedAdapter > totalAdapters):
 				print "\t> > Invalid adapter. Please, insert a valid number"
 			else:
-				return adapters[selectedAdapter - 1]
+				self.current_adapter = adapters[selectedAdapter - 1]
+				break
 
 	def SelectGeneralCommand(self):
-		selectedCommand = self.SelectCommands(self.GeneralCommands)
+		selectedCommand = self.SelectCommands(GeneralCommands)
+		selectedCommand[1](self)
 		return selectedCommand
 
 	def SelectMCAPCommand(self):
-		selectedCommand = self.SelectCommands(self.MCAPCommands)
+		selectedCommand = self.SelectCommands(MCAPCommands)
 		return selectedCommand
 	
+	def SelectBTCommand(self):
+		selectedCommand = self.SelectCommands(BTCommands)
+		return selectedCommand
+
 	def PrintAdaptersPrompt(self):
 		adapters = self.bluetoothUtils.GetAvailableAdapters()
-		print "Select an adapter: "
+		print "\nSelect an adapter: "
 		for index, adapter in enumerate(adapters, 1):
 			print index, "-", adapter
 		selectedAdapter = raw_input("#: ")
@@ -129,13 +134,31 @@ class TestStub(object):
 
 
 	def PrintCommandsPrompt(self, command_list):
-		print "Select a command:"
+		print "\nSelect a command:"
 		for index, command in enumerate(command_list,1):
-			print index, "-", command
+			print index, "-", command[0]
 		selectedCommand = raw_input("#: ")
 		return int(selectedCommand)
 
 
+GeneralCommands = [('bt_commads',    TestStub.SelectBTCommand),
+                   ('mcap_commands', TestStub.SelectMCAPCommand),
+                   ('exit_menu',     TestStub.Exit)]
+
+BTCommands = [('select_adp',     TestStub.SelectAdapter),
+              ('back_menu',      TestStub.SelectGeneralCommand)]
+
+MCAPCommands = [('create_mcl',   MyInstance.CreateMCL),
+                ('close_mcl',    MyInstance.CloseMCL),
+                ('delete_mcl',   MyInstance.DeleteMCL),
+                ('echo_mcl',     TestStub.EchoMCL),
+                ('create_mdl',   MyInstance.CreateMDL),
+                ('connect_mdl',  MyInstance.ConnectMDL),
+                ('delete_mdl',   MyInstance.DeleteMDL),
+                ('delete_all',   MyInstance.DeleteAll),
+                ('echo_mdl',     MyInstance.Send),
+                ('back_menu',    TestStub.SelectGeneralCommand)]
+
+
 test = TestStub()
-result = test.SelectMCAPCommand()
-print ">>>", result
+result = test.Start()
