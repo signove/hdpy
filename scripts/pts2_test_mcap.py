@@ -76,6 +76,18 @@ class MyInstance(MCAPInstance):
 
 class TestStub(object):
 
+	GeneralCommands = ['bt_commads',
+			   'mcap_commands'
+			   'exit_menu']
+
+	MCAPCommands = ['open_mcl',
+			'close_mcl',
+			'echo_mcl',
+			'open_mdl',
+			'close_mdl',
+			'echo_mdl',
+			'back_menu']
+
 	def __init__(self):
 		self.current_adapter = None
 		self.bluetoothUtils = BluetoothUtils()
@@ -86,11 +98,18 @@ class TestStub(object):
 			adapters = self.bluetoothUtils.GetAvailableAdapters()
 			totalAdapters = len(adapters)
 			if (selectedAdapter < 1 or selectedAdapter > totalAdapters):
-				print "Invalid adapter. Please, insert a valid number"
+				print "\t> > Invalid adapter. Please, insert a valid number"
 			else:
 				return adapters[selectedAdapter - 1]
-		
 
+	def SelectGeneralCommand(self):
+		selectedCommand = self.SelectCommands(self.GeneralCommands)
+		return selectedCommand
+
+	def SelectMCAPCommand(self):
+		selectedCommand = self.SelectCommands(self.MCAPCommands)
+		return selectedCommand
+	
 	def PrintAdaptersPrompt(self):
 		adapters = self.bluetoothUtils.GetAvailableAdapters()
 		print "Select an adapter: "
@@ -99,6 +118,24 @@ class TestStub(object):
 		selectedAdapter = raw_input("#: ")
 		return int(selectedAdapter)
 
+        def SelectCommands(self, command_list):
+                while True:
+                        selectedCommand = self.PrintCommandsPrompt(command_list)
+                        numberOfCommands = len(command_list)
+                        if (selectedCommand < 1 or selectedCommand > numberOfCommands):
+                                print "\t> > Invalid command. Please, insert a valid number"
+                        else:
+                                return command_list[selectedCommand - 1]
+
+
+	def PrintCommandsPrompt(self, command_list):
+		print "Select a command:"
+		for index, command in enumerate(command_list,1):
+			print index, "-", command
+		selectedCommand = raw_input("#: ")
+		return int(selectedCommand)
+
+
 test = TestStub()
-result = test.SelectAdapter()
+result = test.SelectMCAPCommand()
 print ">>>", result
