@@ -146,7 +146,7 @@ class MyInstance(MCAPInstance):
 		return True
 
 instance = MyInstance("00:00:00:00:00:00", True)
-# instance.csp_config(False)
+# instance.SyncDisable()
 
 health_record = {'features': [{	'mdep_id': 0x01,
 				'role': 'sink',

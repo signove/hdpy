@@ -67,7 +67,7 @@ class MyInstance(MCAPInstance):
 		return True
 
 instance = MyInstance("00:00:00:00:00:00", True)
-# instance.csp_config(False)
+# instance.SyncDisable()
 
 print "Waiting for connections on default dev"
 loop = glib.MainLoop()
