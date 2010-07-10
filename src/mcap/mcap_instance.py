@@ -25,6 +25,7 @@ class MCAPInstance:
 		self.ccl = self.dcl = None
 		self.mcls = []
 		self.peers = {}
+		self.watch_mdl = True
 		self.start()
 
 	def stop(self):
@@ -49,6 +50,9 @@ class MCAPInstance:
 		self.cpsm = self.ccl.psm
 		self.dcl = DataChannelListener(self.adapter, self)
 		self.dpsm = self.dcl.psm
+
+	def mdl_watch(self, enabled):
+		self.watch_mdl = enabled
 
 ### Housekeeping
 
@@ -299,8 +303,11 @@ class MCAPInstance:
 
 	def mdlconnected_mcl(self, mdl, reconn, err):
 		if not err:
-			mdl._instance_watch = \
-				watch_fd(mdl.sk, self.mdl_activity, mdl)
+			if self.watch_mdl:
+				mdl._instance_watch = \
+					watch_fd(mdl.sk, self.mdl_activity, mdl)
+			else:
+				mdl._instance_watch = None
 		self.MDLConnected(mdl, err)
 
 	def mdl_activity(self, sk, event, mdl):
