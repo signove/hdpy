@@ -35,7 +35,7 @@ class HealthManager(object):
 		self.applications.remove(application)
 
 	def UpdateServices(self):
-		# FIXME searches remote devices
+		# TODO searches remote devices
 		pass
 
 	def ServiceDiscovered(self, service):
@@ -59,6 +59,10 @@ class HealthApplication(MCAPInstance):
 		adapter = ""
 		MCAPInstance.__init__(self, adapter, listen)
 		self.mdl_watch(False)
+
+		self.services = [] # relationship 1:(0,1) with MCL
+		self.channels = [] # relationship 1:1 with MDL
+		self.stopped = False
 
 		self.publish()
 
@@ -130,47 +134,179 @@ class HealthApplication(MCAPInstance):
 		self.sdp_handle = None
 
 	def stop(self):	
-		# FIXME release agents
-		# FIXME call HealthService stop()
-		# FIXME call DeleteMCL()
+		self.stopped = True
+
+		self.agent.Release()
+		self.agent = None
+
+		for endpoint in self.endpoints:
+			endpoint['agent'].Release()
+			endpoint['agent'] = None
+
+		while self.services:
+			self.remove_service(self.services[-1])
+
 		self.unpublish()
 		MCAPInstance.stop(self)
 
+	def channel_by_mdl(self, mdl):
+		channel = self.got_channel_by_mdl(mdl)
+		if not channel:
+			print "WARNING: No channel for the given MDL"
+		return channel
+
+	def got_channel_by_mdl(self, mdl):
+		channel = None
+		for candidate in self.channels:
+			if candidate.mdl is mdl:
+				channel = candidate
+				break
+		return channel
+
+	def create_channel(self, mdl, acceptor):
+		channel = HealthDataChannel(self, mdl, acceptor)
+		self.add_channel(channel)
+		return channel
+
+	def add_channel(self, channel):
+		if channel not in self.channels:
+			self.channels.append(channel)
+
+	def remove_channel(self, channel):
+		try:
+			self.channels.remove(channel)
+		except ValueError:
+			print "WARNING: Channel unknown, not removed"
+
+	def service_by_mcl(self, mcl):
+		service = None
+		for candidate in self.services:
+			if candidate.mcl is mcl:
+				service = candidate
+				break
+		if not service:
+			# Case when we are acceptors of MCL
+			service = self.create_service_by_mcl(mcl)
+		return service
+
+	def create_service_by_mcl(self, mcl):
+		service = HealthService(self, mcl.remote_addr,
+					mcl.remote_addr_dc)
+		self.add_service(service)
+		return service
+
+	def create_service(self, control_addr, data_addr):
+		service = HealthService(self, control_addr, data_addr)
+		self.add_service(service)
+		return service
+
+	def add_service(self, service):
+		if service not in services:
+			self.services.append(service)
+			self.agent.ServiceDiscovered(service)
+
+	def remove_service(self, service):
+		try:
+			service.stop()
+			self.services.remove(service)
+		except ValueError:
+			print "Warning: service %s unkown, not removed"
+
 	def MCLConnected(self, mcl, err):
-		# FIXME
-		pass
+		if self.stopped:
+			return
+
+		service = self.service_by_mcl(mcl)
+		service.mcl_connected(mcl, err, False)
+
 	def MCLDisconnected(self, mcl):
-		# FIXME
-		pass
+		if self.stopped:
+			return
+
+		service = self.service_by_mcl(mcl)
+		service.mcl_disconnected(mcl)
+
 	def MCLReconnected(self, mcl, err):
-		# FIXME
-		pass
+		if self.stopped:
+			return
+
+		service = self.service_by_mcl(mcl)
+		service.mcl_connected(mcl, err, True)
+
 	def MCLUncached(self, mcl):
-		# FIXME
-		pass
+		if self.stopped:
+			return
+
+		service = self.service_by_mcl(mcl)
+		service.mcl_deleted(mcl)
+
 	def MDLInquire(self, mdepid, config):
-		# FIXME
-		pass
+		if self.stopped:
+			return
+		# FIXME verify against our endpoints
+		# FIXME called only in acceptor mode?
+
 	def MDLReady(self, mcl, mdl, err):
-		# FIXME
-		pass
+		if self.stopped:
+			return
+
+		if err:
+			# FIXME initiator method feedback
+			return
+
+		self.ConnectMDL(mdl)
+
 	def MDLRequested(self, mcl, mdl, mdep_id, conf):
-		# FIXME
+		if self.stopped:
+			return
+		# FIXME verify against our endpoints
+		# FIXME MDLRequested x MDLInquire?
+		# we are only interested in MDLConnected
 		pass
-	def MDLAborted(self, mcl, mdl):
-		# FIXME
-		pass
-	def MDLConnected(self, mdl, err):
-		# FIXME
-		pass
-	def MDLDeleted(self, mdl):
-		# FIXME
-		pass
-	def MDLClosed(self, mdl):
-		# FIXME
-		pass
+
 	def MDLReconnected(self, mdl):
-		# FIXME
+		# we are only interested in MDLConnected
+		pass
+
+	def MDLAborted(self, mcl, mdl):
+		# we do not initiate AbortMDL() and 
+		# we are only interested in MDLConnected
+		pass
+
+	def MDLConnected(self, mdl, err):
+		if self.stopped:
+			return
+
+		if err:
+			# FIXME notify error if initiator
+			return
+
+		channel = self.got_channel_by_mdl(mdl)
+		reconn = channel is not None
+
+		if not reconn:
+			# FIXME define acceptor?
+			channel = self.create_channel(mdl, acceptor)
+			
+		if acceptor:
+			agent = self.endpoint_agent(mdl.mdepid)
+			agent.DataChannelCreated(channel, reconn)
+		else:
+			# initiator: feedback to method
+			pass
+
+	def MDLDeleted(self, mdl):
+		if self.stopped:
+			return
+
+		channel = self.got_channel_by_mdl(mdl)
+		if channel:
+			service = self.service_by_mcl(mdl.mcl)
+			self.remove_channel(channel)
+			self.agent.DataChannelRemoved(service, channel)
+
+	def MDLClosed(self, mdl):
+		# Application discovers this via fd closure
 		pass
 
 
@@ -205,15 +341,16 @@ class HealthService(object):
 	DISCONNECTION = 2
 	DELETION = 3
 
-	def __init__(self, instance, addr, cpsm, dpsm):
+	def __init__(self, instance, addr_control, addr_data):
 		self.addr = addr
-		self.cpsm = cpsm
-		self.dpsm = dpsm
+		self.addr_control = addr_control
+		self.addr_data = addr_data
 		self.instance = instance
 		self.mcl = None
 		self.queue = []
 		self.queue_status = self.IDLE
 		self.endpoints = None
+		self.valid = True
 		# FIXME use endpoints format from SDP 
 
 	def mcl_connected(self, mcl, err, reconn):
@@ -242,6 +379,7 @@ class HealthService(object):
 		'''
 		self.queue = []
 		self.queue_state = IDLE
+		service.valid = False
 
 	def process_queue(self, event, err=0):
 		'''
@@ -284,13 +422,17 @@ class HealthService(object):
 		if not self.queue:
 			return
 
+		# FIXME protection against crossing requests
+		# FIXME easy way: 1-second timeout -> stop() consequences
+
 		if self.queue_status != self.IDLE:
 			# waiting for something to happen
 			return
 
 		if not self.mcl or not self.mcl.active():
 			self.queue_status = self.WAITING_MCL
-			self.instance.CreateMCL(addr, dpsm)
+			self.mcl = self.instance.CreateMCL(self.addr_control,
+						self.addr_data[1])
 			# how feedback comes here?
 		else:
 			self.queue_execute()
@@ -342,7 +484,7 @@ class HealthService(object):
 		mdlid = self.instance.CreateMDLID(self.mcl)
 		self.instance.CreateMDL(self.mcl, mdlid, mdepid, conf, reliable)
 		# FIXME where feedback comes from?
-		# FIXME we need to ConnectMDL too
+		# FIXME return HealthDataChannel in the end
 
 	def DeleteAllDataChannels(self):
 		"""
@@ -372,9 +514,11 @@ class HealthService(object):
 
 
 class HealthDataChannel(object):
-	def __init__(self, instance, mdl):
+	def __init__(self, instance, mdl, acceptor):
+		# FIXME we need to know our service instead of instance!
 		self.instance = instance
 		self.mdl = mdl
+		self.acceptor = acceptor
 		self.valid = True
 		self.fd_acquired = None
 
@@ -411,13 +555,20 @@ class HealthDataChannel(object):
 		if not self.valid:
 			raise HealthError("Data channel deleted")
 		self.valid = False
+		# FIXME use service queue
 		instance.DeleteMDL(self.mdl)
-		pass
 
 	def Reconnect(self, reply_handler, error_handler):
 		if not self.valid:
 			raise HealthError("Data channel deleted")
+		# FIXME use service queue
+		# FIXME reconection locally not supported
+		# FIXME reconnection remotely not supported
 		self.instance.ReconnectMDL(self.mdl)
+
+	def stop(self):
+		self.Release()
+		self.mdl.close()
 
 
 class HealthApplicationAgent(object):
