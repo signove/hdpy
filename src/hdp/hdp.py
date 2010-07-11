@@ -38,12 +38,6 @@ class HealthManager(object):
 		# TODO searches remote devices
 		pass
 
-	def ServiceDiscovered(self, service):
-		print "HealthManager.ServiceDiscovered not overridden"
-
-	def ServiceRemoved(self, service):
-		print "HealthManager.ServiceRemoved not overridden"
-
 
 class HealthApplication(MCAPInstance):
 	def __init__(self, agent, config):
@@ -164,7 +158,8 @@ class HealthApplication(MCAPInstance):
 		return channel
 
 	def create_channel(self, mdl, acceptor):
-		channel = HealthDataChannel(self, mdl, acceptor)
+		service = self.service_by_mcl(mdl.mcl)
+		channel = HealthDataChannel(service, mdl, acceptor)
 		self.add_channel(channel)
 		return channel
 
@@ -207,8 +202,9 @@ class HealthApplication(MCAPInstance):
 
 	def remove_service(self, service):
 		try:
-			service.stop()
+			service.kill()
 			self.services.remove(service)
+			self.agent.ServiceRemoved(service)
 		except ValueError:
 			print "Warning: service %s unkown, not removed"
 
@@ -310,26 +306,6 @@ class HealthApplication(MCAPInstance):
 		pass
 
 
-# TODO CSP API, implementation
-
-"""
-	def SyncTimestamp(self, mcl):
-
-	def SyncBtClock(self, mcl):
-
-	def SyncCapabilities(self, mcl, reqaccuracy):
-
-	def SyncSet(self, mcl, update, btclock, timestamp):
-
-	def SyncCapabilitiesResponse(self, mcl, err, btclockres, synclead,
-				tmstampres, tmstampacc):
-
-	def SyncSetResponse(self, mcl, err, btclock, tmstamp, tmstampacc):
-
-	def SyncInfoIndication(self, mcl, btclock, tmstamp, accuracy):
-"""
-
-
 class HealthService(object):
 	# Current queue processing status
 	IDLE = 0
@@ -379,7 +355,14 @@ class HealthService(object):
 		'''
 		self.queue = []
 		self.queue_state = IDLE
-		service.valid = False
+
+	def kill(self):
+		self.stop()
+		if self.mcl:
+			self.instance.DeleteMCL(self.mcl)
+		self.valid = False
+		self.mcl = None
+		self.instance = None
 
 	def process_queue(self, event, err=0):
 		'''
@@ -392,10 +375,10 @@ class HealthService(object):
 			if not err:
 				self.queue_proceed()
 			else:
-				self.queue_fail()
+				self.queue_fail(err)
 		else:
 			# disconnection/deletion
-			self.queue_fail()
+			self.queue_fail(-999)
 
 	def queue_proceed(self):
 		'''
@@ -406,13 +389,14 @@ class HealthService(object):
 
 		self.dispatch_queue()
 
-	def queue_fail(self):
+	def queue_fail(self, err):
 		'''
 		Called when MCL connection could not be done and therefore
 		the queued command can not be completed
 		'''
-		# FIXME error feedback
+
 		if self.queue_status != self.IDLE:
+			self.queue[0][3](err)
 			del self.queue[0]
 			self.queue_status = self.IDLE
 
@@ -433,7 +417,6 @@ class HealthService(object):
 			self.queue_status = self.WAITING_MCL
 			self.mcl = self.instance.CreateMCL(self.addr_control,
 						self.addr_data[1])
-			# how feedback comes here?
 		else:
 			self.queue_execute()
 
@@ -479,7 +462,7 @@ class HealthService(object):
 
 		self.dispatch_queue()
 
-	def _OpenDataChannel(args, reply_handler, error_handler):
+	def _OpenDataChannel(self, args, reply_handler, error_handler):
 		mdepid, conf, reliable = args
 		mdlid = self.instance.CreateMDLID(self.mcl)
 		self.instance.CreateMDL(self.mcl, mdlid, mdepid, conf, reliable)
@@ -494,9 +477,26 @@ class HealthService(object):
 		self.queue.append(self._DeleteAllDataChannels, (), None, None)
 		self.dispatch_queue()
 
-	def _DeleteAllDataChannels(self, dummy1, dummy2):
+	def _DeleteAllDataChannels(self, args, reply_handler, error_handler):
 		self.instance.DeleteAll(self.mcl)
-		# FIXME where feedback comes from?
+
+	def _DeleteMDL(self, mdl):
+		self.queue.append(self.__DeleteMDL, (mdl,), None, None)
+		self.dispatch_queue()
+
+	def __DeleteMDL(self, args, reply_handler, error_handler):
+		mdl = args[0]
+		instance.DeleteMDL(mdl)
+
+	def _ReconnectMDL(self, mdl, reply_handler, error_handler):
+		self.queue.append(self.__ReconnectMDL, (mdl,), reply_handler,
+								error_handler)
+		self.dispatch_queue()
+
+	def __ReconnectMDL(self, args, reply_handler, error_handler):
+		mdl = args[0]
+		self.instance.ReconnectMDL(self.mdl)
+		# FIXME Reconnection feedback? and err?
 
 	def GetProperties(self):
 		# FIXME convert SDP record format to this
@@ -514,9 +514,8 @@ class HealthService(object):
 
 
 class HealthDataChannel(object):
-	def __init__(self, instance, mdl, acceptor):
-		# FIXME we need to know our service instead of instance!
-		self.instance = instance
+	def __init__(self, service, mdl, acceptor):
+		self.service = service
 		self.mdl = mdl
 		self.acceptor = acceptor
 		self.valid = True
@@ -555,16 +554,15 @@ class HealthDataChannel(object):
 		if not self.valid:
 			raise HealthError("Data channel deleted")
 		self.valid = False
-		# FIXME use service queue
-		instance.DeleteMDL(self.mdl)
+		self.service._DeleteMDL(self.mdl)
 
 	def Reconnect(self, reply_handler, error_handler):
 		if not self.valid:
 			raise HealthError("Data channel deleted")
-		# FIXME use service queue
 		# FIXME reconection locally not supported
 		# FIXME reconnection remotely not supported
-		self.instance.ReconnectMDL(self.mdl)
+		self.service._ReconnectMDL(self.mdl, reply_handler,
+							error_handler)
 
 	def stop(self):
 		self.Release()
@@ -582,6 +580,9 @@ class HealthApplicationAgent(object):
 	def ServiceDiscovered(service):
 		print "HealthApplicationAgent.ServiceDiscovered not overridden"
 		pass
+
+	def ServiceRemoved(self, service):
+		print "HealthApplicationAgent.ServiceRemoved not overridden"
 
 	def DataChannelRemoved(service, data_channel):
 		print "HealthApplicationAgent.DataChannelRemoved not overridden"
