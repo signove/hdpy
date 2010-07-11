@@ -22,6 +22,7 @@ class MCAPInstance:
 		self.cpsm = 0
 		self.dpsm = 0
 		self.csp_enabled = True
+		self.reconn_enabled = True
 		self.ccl = self.dcl = None
 		self.mcls = []
 		self.peers = {}
@@ -93,6 +94,12 @@ class MCAPInstance:
 		self.csp_enabled = False;
 		return True;
 
+	def ReconnectionEnable(self):
+		self.reconn_enabled = True;
+
+	def ReconnectionDisable(self):
+		self.reconn_disabled = True;
+
 ### Commands
 
 	def CreateMCL(self, addr, dpsm):
@@ -152,6 +159,8 @@ class MCAPInstance:
 	def ReconnectMDL(self, mdl):
 		''' followed by ConnectMDL/AbortMDL, which should be '''
 		''' invoked when MDLReady callback is triggered '''
+		if not self.reconn_enabled:
+			raise InvalidOperation("MDL reconnection feature off")
 		mcl = mdl.mcl
 		req = ReconnectMDLRequest(mdl.mdlid)
 		mcl.send_request(req)
