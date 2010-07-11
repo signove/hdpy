@@ -239,8 +239,7 @@ class HealthApplication(MCAPInstance):
 	def MDLInquire(self, mdepid, config):
 		if self.stopped:
 			return
-		# FIXME verify against our endpoints
-		# FIXME called only in acceptor mode?
+		# FIXME verify against our endpoints (acceptor-only)
 
 	def MDLReady(self, mcl, mdl, err):
 		if self.stopped:
@@ -253,11 +252,7 @@ class HealthApplication(MCAPInstance):
 		self.ConnectMDL(mdl)
 
 	def MDLRequested(self, mcl, mdl, mdep_id, conf):
-		if self.stopped:
-			return
-		# FIXME verify against our endpoints
-		# FIXME MDLRequested x MDLInquire?
-		# we are only interested in MDLConnected
+		# already dealt with in MDLInquire
 		pass
 
 	def MDLReconnected(self, mdl):
