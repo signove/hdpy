@@ -73,6 +73,8 @@ class MDL(object):
 	def __init__(self, mcl, mdlid, mdepid, config, reliable):
 		self.mcl = mcl
 		self.mdlid = mdlid
+		if mdepid < MCAP_MDL_ID_INITIAL or mdepid > MCAP_MDL_ID_FINAL:
+			raise InvalidOperation("MDEP ID %d is invalid" % mdepid)
 		self.mdepid = mdepid
 		self.config = config
 		self.sk = None
@@ -879,3 +881,5 @@ class MCLStateMachine:
 # TODO PENDING state timeout (MCAP spec should tell what to do in this case)
 # TODO make sure first MDL is always reliable
 # TODO add test case for MDL config rejection and streaming channel
+
+# TODO Echo implementation (MDEP ID = 0?)

@@ -513,6 +513,7 @@ class HealthService(object):
 		"""
 		# FIXME
 		# FIXME Echo acceptor side inside Instance
+		# FIXME Add Echo feature to MCAP (read spec)
 		self.queue.append(self._Echo, (data,),
 				reply_handler, error_handler)
 		self.dispatch_queue()
