@@ -73,8 +73,8 @@ class MDL(object):
 	def __init__(self, mcl, mdlid, mdepid, config, reliable):
 		self.mcl = mcl
 		self.mdlid = mdlid
-		if mdepid < MCAP_MDL_ID_INITIAL or mdepid > MCAP_MDL_ID_FINAL:
-			raise InvalidOperation("MDEP ID %d is invalid" % mdepid)
+		if mdlid < MCAP_MDL_ID_INITIAL or mdlid > MCAP_MDL_ID_FINAL:
+			raise InvalidOperation("MDL ID %d is invalid" % mdlid)
 		self.mdepid = mdepid
 		self.config = config
 		self.sk = None
@@ -345,9 +345,13 @@ class MCL(object):
 
 	def create_mdlid(self):
 		mdlid = self.last_mdlid
-		if mdlid > MCAP_MDL_ID_FINAL:
-			return 0
 		self.last_mdlid += 1
+		if self.last_mdlid > MCAP_MDL_ID_FINAL:
+			self.last_mdlid = MCAP_MDL_ID_INITIAL
+		mdl = self.get_mdl(mdlid)
+		if mdl:
+			# remove mdl with same mdlid, if exists by accident
+			self.delete_mdl(mdlid)
 		return mdlid
 
 	def send_request(self, msg):
@@ -832,7 +836,7 @@ class MCLStateMachine:
 		return True
 
 	def support_more_mdls(self):
-		# TODO restrict mdlid counter etc.
+		# TODO
 		return True
 
 	def is_valid_mdepid(self, mdepid):
@@ -881,5 +885,3 @@ class MCLStateMachine:
 # TODO PENDING state timeout (MCAP spec should tell what to do in this case)
 # TODO make sure first MDL is always reliable
 # TODO add test case for MDL config rejection and streaming channel
-
-# TODO Echo implementation (MDEP ID = 0?)
