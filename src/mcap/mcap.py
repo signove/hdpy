@@ -78,6 +78,7 @@ class MDL(object):
 		self.sk = None
 		self.state = MCAP_MDL_STATE_CLOSED
 		self.reliable = reliable
+		self.acceptor = False
 
 	def close(self):
 		if self.abort():
@@ -112,6 +113,7 @@ class MDL(object):
 		sk.setblocking(True)
 		self.sk = sk
 		self.state = MCAP_MDL_STATE_ACTIVE
+		self.acceptor = True
 
 	def connect(self):
 		if self.state != MCAP_MDL_STATE_CLOSED:
@@ -135,6 +137,7 @@ class MDL(object):
 
 			if not self.mcl.connected_mdl_socket(self, 0):
 				self.abort()
+			self.acceptor = False
 		else:
 			self.state = MCAP_MDL_STATE_CLOSED
 			self.mcl.connected_mdl_socket(self, -2)
@@ -182,6 +185,7 @@ class MCL(object):
 		self.last_mdlid = MCAP_MDL_ID_INITIAL
 
 		self.sk = None
+		self.acceptor = False
 
 		self.mdl_list = {}
 		self.is_channel_open = False
@@ -200,6 +204,7 @@ class MCL(object):
 		set_reliable(sk, True)
 		sk.setblocking(True)
 		self.state = MCAP_MCL_STATE_CONNECTED
+		self.acceptor = True
 		watch_fd(sk, self.activity)
 
 	def close(self):
@@ -236,6 +241,7 @@ class MCL(object):
 			self.sk = sk
 			sk.setblocking(True)
 			self.state = MCAP_MCL_STATE_CONNECTED
+			self.acceptor = False
 			watch_fd(sk, self.activity)
 			schedule(self.observer.mclconnected_mcl, self, 0)
 		else:
