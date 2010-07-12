@@ -11,16 +11,14 @@
 ################################################################
 
 import sys
-
-# TODO remove this hack someday
-sys.path.insert(0, "..")
-
 from mcap.mcap_instance import MCAPInstance
 import mcap.misc
+from . import hdp_record
 
 _BlueZ = None
 
 def BlueZ():
+	global _BlueZ
 	if not _BlueZ:
 		_BlueZ = mcap.misc.BlueZ()
 	return _BlueZ
@@ -61,7 +59,7 @@ class HealthApplication(MCAPInstance):
 		if err:
 			raise HealthError("Bad config: %s" % err)
 
-		listen = len(self.endpoints > 0)
+		listen = bool(self.endpoints)
 		adapter = ""
 		MCAPInstance.__init__(self, adapter, listen)
 		self.mdl_watch(False)
@@ -92,28 +90,28 @@ class HealthApplication(MCAPInstance):
 		auto_mdepid = 1
 		is_auto_id = True
 
-		for endpoint in self.config['end_points']:
-			agent = end_point["agent"]
-			role = end_point["role"].lower()
+		for endpoint in config['end_points']:
+			agent = endpoint["agent"]
+			role = endpoint["role"].lower()
 
-			if not isinstance(agent, HealtEndPointAgent):
+			if not isinstance(agent, HealthEndPointAgent):
 				return "Endpoint agent not appropriate subclass"
 
 			if role not in ("source", "sink"):
 				return "Role must be 'source' or 'sink'"
 
-			if 'mdepid' not in end_point:
+			if 'mdepid' not in endpoint:
 				mdepid = auto_mdepid
 				auto_mdepid += 1
 			else:
-				mdepid = end_point['mdepid']
+				mdepid = endpoint['mdepid']
 
-			if 'config' not in end_point:
-				config = 0x01 # reliable
+			if 'config' not in endpoint:
+				mode_config = 0x01 # reliable
 			else:
-				config = end_point['config']
+				mode_config = endpoint['config']
 
-			if config not in (0x01, 0x02):
+			if mode_config not in (0x01, 0x02):
 				return "Config not 0x01 or 0x02"
 
 			if mdepid in self.endpoints:
@@ -122,10 +120,10 @@ class HealthApplication(MCAPInstance):
 			sink = (role == "sink" and 1 or 0)
 
 			data_types = []
-			self.endpoint[mdepid] = {'agent': agent,
-						'config': config}
+			self.endpoints[mdepid] = {'agent': agent,
+						'config': mode_config}
 
-			for spec in end_point["specs"]:
+			for spec in endpoint["specs"]:
 				data_type = spec["data_type"]
 				description = ""
 
@@ -149,7 +147,7 @@ class HealthApplication(MCAPInstance):
 		r = self.sdp_record
 		r['mcap_control_psm'] = self.cpsm
                 r['mcap_data_psm'] = self.dpsm
-                r['name'] = 'HDPy',
+                r['name'] = 'HDPy'
                 r['provider'] = 'HDPy'
                 r['description'] = 'HDPy'
 
@@ -171,14 +169,11 @@ class HealthApplication(MCAPInstance):
 		if not self.sdp_handle:
 			return
 		# FIXME do this for every adapter
-		BlueZ().remove_record(self.sdp_handle)
+		BlueZ().remove_record("", self.sdp_handle)
 		self.sdp_handle = None
 
 	def stop(self):	
 		self.stopped = True
-
-		self.agent.Release()
-		self.agent = None
 
 		for mdepid, endpoint in self.endpoints.items():
 			endpoint['agent'].Release()
@@ -186,6 +181,9 @@ class HealthApplication(MCAPInstance):
 
 		while self.services:
 			self.remove_service(self.services[-1])
+
+		self.agent.Release()
+		self.agent = None
 
 		self.unpublish()
 		MCAPInstance.stop(self)
@@ -243,7 +241,7 @@ class HealthApplication(MCAPInstance):
 		return service
 
 	def add_service(self, service):
-		if service not in services:
+		if service not in self.services:
 			self.services.append(service)
 			self.agent.ServiceDiscovered(service)
 
@@ -292,10 +290,10 @@ class HealthApplication(MCAPInstance):
 		if not ok:
 			print "requested MDEP ID %d not in our list" % mdepid
 
-		our_config = self.endpoints[mdepid].config
+		our_config = self.endpoints[mdepid]['config']
 		reliable = (our_config == 0x01)
 
-		if config and (config != our_config)
+		if config and (config != our_config):
 			print "MDEP reqs config %d, we offer %d, nak" \
 				% (config, our_config)
 			ok = False
@@ -337,6 +335,12 @@ class HealthApplication(MCAPInstance):
 			service.mdl_connected(mdl, None, err)
 			return
 
+		if mdl.acceptor:
+			if mdl.mdepid not in self.endpoints:
+				print "MDLConnected: bad MDEP ID received"
+				mdl.close()
+				return
+
 		channel = self.got_channel_by_mdl(mdl)
 		reconn = channel is not None
 
@@ -344,7 +348,7 @@ class HealthApplication(MCAPInstance):
 			channel = self.create_channel(mdl, mdl.acceptor)
 
 		if mdl.acceptor:
-			agent = self.endpoint_agent(mdl.mdepid)
+			agent = self.endpoints[mdl.mdepid]['agent']
 			agent.DataChannelCreated(channel, reconn)
 
 		service.mdl_connected(mdl, channel, err)
@@ -378,7 +382,6 @@ class HealthService(object):
 	MDL_CONNECTION = 5
 
 	def __init__(self, instance, addr_control, addr_data):
-		self.addr = addr
 		self.addr_control = addr_control
 		self.addr_data = addr_data
 		self.instance = instance
@@ -426,7 +429,7 @@ class HealthService(object):
 		Called back by instance when it is being stopped
 		'''
 		self.queue = []
-		self.queue_state = IDLE
+		self.queue_state = self.IDLE
 
 	def kill(self):
 		self.stop()
@@ -525,7 +528,7 @@ class HealthService(object):
 		pass
 
 	def OpenDataChannel(args, reply_handler, error_handler):
-		end_point, conf = args
+		endpoint, conf = args
 		try:
 			conf = conf.lower()
 			conf = {"reliable": 1, "streaming": 2, "any": 0}[conf]
@@ -533,12 +536,12 @@ class HealthService(object):
 			raise HealthError("Invalid channel config")
 
 		try:
-			end_point = int(end_point.split("/")[-1])
+			endpoint = int(endpoint.split("/")[-1])
 		except ValueError:
 			raise HealthError("Invalid endpoing identifier")
 			
 		self.queue.append(self._OpenDataChannel,
-				(end_point, conf, reliable),
+				(endpoint, conf, reliable),
 				reply_handler, error_handler)
 
 		self.dispatch_queue()
@@ -600,7 +603,6 @@ class HealthDataChannel(object):
 		self.mdl = mdl
 		self.acceptor = acceptor
 		self.valid = True
-		self.fd_acquired = None
 
 	def GetProperties(self):
 		if not self.valid:
@@ -614,22 +616,7 @@ class HealthDataChannel(object):
 	def Acquire(self):
 		if not self.valid:
 			raise HealthError("Data channel deleted")
-		if self.fd_acquired:
-			raise HealthError("File descriptor already acquired")
-		try:
-			self.fd_acquired = os.dup2(mdl.sk)
-		except IOError:
-			raise HealthError("File descriptor could not be duped")
-		return fd
-
-	def Release(self):
-		if not self.fd_acquired:
-			return
-		fd, self.fd_acquired = self.fd_acquired, None
-		try:
-			fd.close()
-		except IOError:
-			pass
+		return self.mdl.sk
 
 	def Delete(self):
 		if not self.valid:
@@ -651,31 +638,24 @@ class HealthDataChannel(object):
 
 
 class HealthApplicationAgent(object):
-	def __init__(self):
-		pass
-
 	def Release(self):
-		print "HealthApplicationAgent.Release not overridden"
 		pass
 
-	def ServiceDiscovered(service):
+	def ServiceDiscovered(self, service):
 		print "HealthApplicationAgent.ServiceDiscovered not overridden"
 		pass
 
 	def ServiceRemoved(self, service):
 		print "HealthApplicationAgent.ServiceRemoved not overridden"
+		pass
 
 	def DataChannelRemoved(service, data_channel):
 		print "HealthApplicationAgent.DataChannelRemoved not overridden"
 		pass
 
 
-def HealthEndPointAgent(object):
-	def __init__(self):
-		pass
-
+class HealthEndPointAgent(object):
 	def Release(self):
-		print "HealthEndPointAgent.Release not overridden"
 		pass
 
 	def DataChannelCreated(self, data_channel, reconn):

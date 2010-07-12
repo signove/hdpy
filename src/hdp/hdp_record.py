@@ -55,6 +55,8 @@ def add_attr(doc, parent, attr, data):
 			value = "0x%08x" % myuint(value)
 		elif element_type == 'uuid' and type(value) is int:
 			value = "0x%04x" % value
+		else:
+			value = str(value)
 		child = doc.createElement(element_type)
 		child.setAttribute("value", value)
 
