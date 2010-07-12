@@ -38,6 +38,12 @@ class BluetoothUtils(object):
 		properties = self.adapter.GetProperties()
 		return properties['Devices']
 
+	def GetAdapterAddress(self, adapter):
+		device = dbus.Interface(self.bus.get_object("org.bluez",adapter),"org.bluez.Device")
+		properties = device.GetProperties()
+		return properties['Address']
+		
+
 ### Class to deal with MCAP issues
 
 class MyInstance(MCAPInstance):
@@ -79,6 +85,7 @@ class TestStub(object):
 	def __init__(self):
 		self.current_adapter = None
 		self.bluetoothUtils = BluetoothUtils()
+		self.instance = MyInstance("00:00:00:00:00:00", False)
 
 	def Start(self):
 		while True:
@@ -90,6 +97,11 @@ class TestStub(object):
 
 	def EchoMCL(self):
 		print 'ECHO MCL'
+
+	def GetParam(self, message, number_of_params):
+		user_input = raw_input("\t" + message + " ")
+		params = user_input.split()
+		return tuple(params)
 
 	def ShowAdapter(self):
 		if (self.current_adapter == None):
@@ -115,6 +127,32 @@ class TestStub(object):
 
 	def SelectMCAPCommand(self):
 		selectedCommand = self.SelectCommands(MCAPCommands)
+		method = selectedCommand[1]
+		# parameters: MCL
+		if ( method in [MyInstance.CloseMCL, MyInstance.DeleteMCL, MyInstance.DeleteAll] ):
+			method(self.instance, self.current_mcl)
+
+		#parameters: MDL
+		elif ( method in [MyInstance.CloseMDL, MyInstance.DeleteMDL] ):
+			if (self.current_mcl == None):
+				print "\t > > Create a MCL before"
+			else:
+				mdlid = self.GetParam("Insert MDL ID:",1)
+				mdl = self.current_mcl.get_mdl(mdlid)
+				if (mdl == None):
+					print "\t > > Invalid MDL ID"
+				else:
+					method(self.instance, mdl)
+
+		#parameters: ADDR, DPSM
+		elif ( method in [MyInstance.CreateMCL] ):
+			if (self.current_adapter == None):
+				print "\t > > Select an adapter before"
+			else:
+				cpsm, dpsm = self.GetParam("Insert cPSM dPSM:", 2)
+				addr = self.bluetoothUtils.GetAdapterAddress(self.current_adapter)
+				self.current_mcl = method(self.instance, (addr, int(cpsm)), int(dpsm))		
+	
 		return selectedCommand
 	
 	def SelectBTCommand(self):
