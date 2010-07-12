@@ -16,6 +16,14 @@ import sys
 sys.path.insert(0, "..")
 
 from mcap.mcap_instance import MCAPInstance
+import mcap.misc
+
+_BlueZ = None
+
+def BlueZ():
+	if not _BlueZ:
+		_BlueZ = mcap.misc.BlueZ()
+	return _BlueZ
 
 
 class HealthManager(object):
@@ -45,6 +53,10 @@ class HealthApplication(MCAPInstance):
 			raise HealthError("Bad agent superclass")
 		self.agent = agent
 
+		self.endpoints = {}
+		self.sdp_record = {'features': []}
+		self.sdp_handle = None
+
 		err = self.process_config(config)
 		if err:
 			raise HealthError("Bad config: %s" % err)
@@ -73,7 +85,6 @@ class HealthApplication(MCAPInstance):
 		  }]
 		}
 		'''
-		self.endpoints = []
 
 		if 'end_points' not in config:
 			return None
@@ -81,7 +92,7 @@ class HealthApplication(MCAPInstance):
 		auto_mdepid = 1
 		is_auto_id = True
 
-		for end_point in config["end_points"]:
+		for endpoint in self.config['end_points']:
 			agent = end_point["agent"]
 			role = end_point["role"].lower()
 
@@ -97,10 +108,22 @@ class HealthApplication(MCAPInstance):
 			else:
 				mdepid = end_point['mdepid']
 
-			specs = []
-			sink = role == "sink" and 1 or 0
-			# FIXME use a format amenable for SDP record 
-			self.endpoints.append((agent, sink, mdepid, specs))
+			if 'config' not in end_point:
+				config = 0x01 # reliable
+			else:
+				config = end_point['config']
+
+			if config not in (0x01, 0x02):
+				return "Config not 0x01 or 0x02"
+
+			if mdepid in self.endpoints:
+				return "MDEP ID %d mentioned twice!"
+
+			sink = (role == "sink" and 1 or 0)
+
+			data_types = []
+			self.endpoint[mdepid] = {'agent': agent,
+						'config': config}
 
 			for spec in end_point["specs"]:
 				data_type = spec["data_type"]
@@ -112,19 +135,43 @@ class HealthApplication(MCAPInstance):
 				if data_type < 0 or data_type > 65535:
 					return "Bad data type"
 
-				specs.append((data_type, description))
+				self.sdp_record['features'].append({
+					'mdep_id': mdepid,
+					'role': role,
+					'data_type': data_type,
+					'description': description})
 
 		return None
 
 	def publish(self):
 		self.sdp_handle = None
-		pass
-		# FIXME create and publish SDP record
+
+		r = self.sdp_record
+		r['mcap_control_psm'] = self.cpsm
+                r['mcap_data_psm'] = self.dpsm
+                r['name'] = 'HDPy',
+                r['provider'] = 'HDPy'
+                r['description'] = 'HDPy'
+
+		procedures = []
+		if self.reconn_enabled:
+			procedures.append('reconnect_init')
+			procedures.append('reconnect_accept')
+		if self.csp_enabled:
+			procedures.append('csp')
+			procedures.append('csp_master')
+			
+                r['mcap_procedures'] = tuple(procedures)
+
+		xml_record = hdp_record.gen_xml(self.sdp_record)
+		# FIXME do this for every adapter
+		self.sdp_handle = BlueZ().add_record(None, xml_record)
 
 	def unpublish(self):
 		if not self.sdp_handle:
 			return
-		# FIXME remove SDP record
+		# FIXME do this for every adapter
+		BlueZ().remove_record(self.sdp_handle)
 		self.sdp_handle = None
 
 	def stop(self):	
@@ -133,7 +180,7 @@ class HealthApplication(MCAPInstance):
 		self.agent.Release()
 		self.agent = None
 
-		for endpoint in self.endpoints:
+		for mdepid, endpoint in self.endpoints.items():
 			endpoint['agent'].Release()
 			endpoint['agent'] = None
 
@@ -239,16 +286,32 @@ class HealthApplication(MCAPInstance):
 	def MDLInquire(self, mdepid, config):
 		if self.stopped:
 			return
-		# FIXME verify against our endpoints (acceptor-only)
+
+		ok = mdepid in self.endpoints
+
+		if not ok:
+			print "requested MDEP ID %d not in our list" % mdepid
+
+		our_config = self.endpoints[mdepid].config
+		reliable = (our_config == 0x01)
+
+		if config and (config != our_config)
+			print "MDEP reqs config %d, we offer %d, nak" \
+				% (config, our_config)
+			ok = False
+
+		return ok, reliable, our_config
 
 	def MDLReady(self, mcl, mdl, err):
 		if self.stopped:
 			return
 
 		if err:
-			# FIXME initiator method feedback
+			service = self.service_by_mcl(mcl)
+			service.mdl_ready(mdl, err)
 			return
 
+		# Nothing to do except go ahead
 		self.ConnectMDL(mdl)
 
 	def MDLRequested(self, mcl, mdl, mdep_id, conf):
@@ -268,23 +331,23 @@ class HealthApplication(MCAPInstance):
 		if self.stopped:
 			return
 
+		service = self.service_by_mcl(mdl.mcl)
+
 		if err:
-			# FIXME notify error if initiator
+			service.mdl_connected(mdl, None, err)
 			return
 
 		channel = self.got_channel_by_mdl(mdl)
 		reconn = channel is not None
 
 		if not reconn:
-			# FIXME define acceptor?
-			channel = self.create_channel(mdl, acceptor)
-			
-		if acceptor:
+			channel = self.create_channel(mdl, mdl.acceptor)
+
+		if mdl.acceptor:
 			agent = self.endpoint_agent(mdl.mdepid)
 			agent.DataChannelCreated(channel, reconn)
-		else:
-			# initiator: feedback to method
-			pass
+
+		service.mdl_connected(mdl, channel, err)
 
 	def MDLDeleted(self, mdl):
 		if self.stopped:
@@ -305,12 +368,14 @@ class HealthService(object):
 	# Current queue processing status
 	IDLE = 0
 	WAITING_MCL = 1
-	WAITING_MDL = 2
+	WAITING_MDL = 2 # used by Echo() only
 	IN_FLIGHT = 3
 
 	CONNECTION = 1
 	DISCONNECTION = 2
 	DELETION = 3
+	MDL_READY = 4
+	MDL_CONNECTION = 5
 
 	def __init__(self, instance, addr_control, addr_data):
 		self.addr = addr
@@ -329,20 +394,32 @@ class HealthService(object):
 		Called back by instance when related MCL is connected
 		'''
 		self.mcl = mcl
-		self.process_queue(self.CONNECTION, err)
+		self.process_queue(self.CONNECTION, err, None)
 
 	def mcl_disconnected(self, mcl):
 		'''
 		Called back by instance when MCL is disconnected
 		'''
-		self.process_queue(self.DISCONNECTION)
+		self.process_queue(self.DISCONNECTION, 0, None)
 
 	def mcl_deleted(self, mcl):
 		'''
 		Called back by instance when MCL is invalidated
 		'''
 		self.mcl = None
-		self.process_queue(self.DELETION)
+		self.process_queue(self.DELETION, 0, None)
+
+	def mdl_ready(self, mdl, err):
+		'''
+		Called back by instance when MDLReady triggers
+		'''
+		self.process_queue(self.MDL_READY, err, None)
+
+	def mdl_connected(self, mdl, channel, err):
+		'''
+		Called back by instance when MDLConnected triggers
+		'''
+		self.process_queue(self.MDL_CONNECTION, err, channel)
 
 	def stop(self):
 		'''
@@ -359,23 +436,30 @@ class HealthService(object):
 		self.mcl = None
 		self.instance = None
 
-	def process_queue(self, event, err=0):
+	def process_queue(self, event, err, other):
 		'''
 		Handles queue in face of events
 		'''
+
 		if not self.queue or not event:
 			return
 
+		if err:
+			self.queue_fail(err)
+			return
+
 		if event == self.CONNECTION:
-			if not err:
-				self.queue_proceed()
-			else:
-				self.queue_fail(err)
+			self.queue_mcl_conn_up()
+		elif event == self.MCL_READY:
+			pass
+		elif event == self.MCL_CONNECTION:
+			self.queue_mdl_conn_up(other)
+
 		else:
 			# disconnection/deletion
 			self.queue_fail(-999)
 
-	def queue_proceed(self):
+	def queue_mcl_conn_up(self):
 		'''
 		Called when a connection is successful
 		'''
@@ -384,12 +468,13 @@ class HealthService(object):
 
 		self.dispatch_queue()
 
-	def queue_fail(self, err):
-		'''
-		Called when MCL connection could not be done and therefore
-		the queued command can not be completed
-		'''
+	def queue_mdl_conn_up(self, channel):
+		if self.queue[0] is self._OpenDataChannel:
+			# we are expecting for this
+			self.queue[0][2](self.new_channel)
+			
 
+	def queue_fail(self, err):
 		if self.queue_status != self.IDLE:
 			self.queue[0][3](err)
 			del self.queue[0]
@@ -415,7 +500,7 @@ class HealthService(object):
 		else:
 			self.queue_execute()
 
-	def execute_queue(self):
+	def queue_execute(self):
 		self.queue_status = self.IN_FLIGHT
 		command, args, reply_cb, error_cb = self.queue[0]
 		command(args, reply_cb, error_cb)
@@ -595,3 +680,5 @@ def HealthEndPointAgent(object):
 	def DataChannelCreated(self, data_channel, reconn):
 		print "HealthEndPointAgent.DataChannelCreated not overridden"
 		pass
+
+# FIXME capture all "normal" InvalidOperation exceptions
