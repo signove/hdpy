@@ -7,7 +7,7 @@ from hdp.hdp import *
 
 watch_bitmap = glib.IO_IN | glib.IO_ERR | glib.IO_HUP | glib.IO_NVAL
 
-def data_received(sk, evt):
+def data_received(sk, evt, channel):
 	data = None
 	if evt & glib.IO_IN:
 		data = sk.recv(1024)
@@ -15,19 +15,26 @@ def data_received(sk, evt):
 			response = parse_message_str(data)
 			sk.send(response)
 
-	return evt == glib.IO_IN and data
+	more = (evt == glib.IO_IN and data)
+
+	if not more:
+		sk.close()
+		channel.Release()
+
+	return more
 
 
-class MyAgent(HealthApplicationAgent, HealthEndPointAgent):
-	def DataChannelCreated(self, channel, reconn):
-		print "Channel %d MDLID %d up" % \
-			(id(channel), channel.mdl.mdlid)
+class MyAgent(HealthAgent):
+	def ChannelConnected(self, channel):
 		fd = channel.Acquire()
-		glib.io_add_watch(fd, watch_bitmap, data_received)
 
-	def DataChannelRemoved(self, service, channel):
-		print "Service %d channel %d removed" % \
-			(id(service), id(channel))
+		glib.io_add_watch(fd, watch_bitmap, data_received, channel)
+
+		print "Channel %d from %d up" % \
+			(id(channel), id(channel.GetProperties()['Service']))
+
+	def ChannelDeleted(self, channel):
+		print "Channel %d deleted" % id(channel)
 
 	def ServiceDiscovered(self, service):
 		print "Service %d discovered %s" % \
@@ -39,22 +46,10 @@ class MyAgent(HealthApplicationAgent, HealthEndPointAgent):
 
 agent = MyAgent()
 
-config = {"end_points":
-		[
-		{"agent": agent,
-		 "role" : "sink",
-		 "specs":
-			[
-			{"data_type": 0x1004,
-			 "description": "Oximeter sink"}, 
-			]
-		},
-		]
-	}
-
+config = {"Role": "Sink", "DataType": 0x1004, "Description": "Oximeter sink"}
 
 manager = HealthManager()
-app = manager.RegisterApplication(agent, config)
+app = manager.CreateApplication(agent, config)
 
 try:
 	loop = glib.MainLoop()
@@ -62,7 +57,7 @@ try:
 except KeyboardInterrupt:
 	pass
 finally:
-	manager.UnregisterApplication(app)
+	manager.DestroyApplication(app)
 	print
 	print "Application stopped"
 	print
