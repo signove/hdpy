@@ -701,7 +701,7 @@ class MCLStateMachine:
 		mdl = None
 		reliable = True
 
-		if reconn and not self.observer.reconn_enabled:
+		if reconn and not self.mcl.observer.reconn_enabled:
 			rspcode = MCAP_RSP_REQUEST_NOT_SUPPORTED
 
 		elif not self.is_valid_mdlid(request.mdlid, False):
