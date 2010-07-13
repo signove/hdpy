@@ -9,51 +9,37 @@ Health Device Profile hierarchy
 ===============================
 
 Service		org.bluez
-Interface	org.bluez.HealthAdapter
-Object path	[variable prefix]/{hci0,hci1,...}
+Interface	org.bluez.HealthManager
+Object path	/org/bluez/
 
 Methods:
 
-	uint32	CreateInstance(object path, dict config)
+	object	CreateApplication(dict config, object agent)
 
-		Returns the id of the new created instance. The path parameter
-		is the path of the remote object with the callbacks to notify
-		events (see org.bluez.HealthAgent at the end of this document)
-		This petition starts an mcap instance and also register in the
-		SDP if is needed.
+		Returns the path of the new registered application. The agent
+		parameter is the path of the object with the callbacks to
+		notify events (see org.bluez.HealthAgent at the end
+		of this document).
 
 		Dict is defined as bellow:
-		{ "data_spec" : The data_spec is the data exchange specification
-				(see section 5.2.10 of the specification
-				document) possible values:
-					0x00 = reserved,
-					0x01 [IEEE 11073-20601],
-					0x02..0xff reserved,
-				(optional)
-		  "end_points" : [{ (optional)
-			"mdepid" : uint8, (optional)
-			"role" : ("source" or "sink"), (mandatory)
-			"specs" :[{ (mandatory)
-				"data_type" : uint16, (mandatory)
-				"description" : string, (optional)
-			}]
-		  }]
+		{
+			"DataType": uint16, (mandatory)
+			"Role" : ("Source" or "Sink"), (mandatory)
+			"Description" : string, (optional)
+			"ChannelType" : ("Reliable" or "Streaming")
+						(just for Sources, optional)
 		}
 
-		if "data_spec" is not set, no SDP record will be registered, so
-		all the other data in the dictionary will be ignored.
-
-		Instance will be closed by the call or implicitly when the
+		Application will be closed by the call or implicitly when the
 		programs leaves the bus.
 
 		Possible errors: org.bluez.Error.InvalidArguments
 
-	void	CloseInstance(uint32 )
+	void	DestroyApplication(object application)
 
-		Closes the HDP instance identified by the object path. Also
-		instance will be closed if the process that started leaves the
-		bus. If there is a SDP record associated to this instance it
-		will be removed.
+		Closes the HDP application identified by the object path. Also
+		application will be closed if the process that started it leaves
+		the bus.
 
 		Possible errors: org.bluez.Error.InvalidArguments
 				org.bluez.Error.NotFound
@@ -61,128 +47,82 @@ Methods:
 --------------------------------------------------------------------------------
 
 Service		org.bluez
-Interface	org.bluez.HealthDevice
-Object path	[variable prefix]/{hci0,hci1,...}/dev_XX_XX_XX_XX_XX_XX
+Interface	org.bluez.HealthApplication
+Object path	[variable prefix]/health_app_ZZZZ
 
 Methods:
 
-	array GetHealthInstances()
+	void Echo(object service)
 
-		Gets the information of the remote instances present in this
-		device and published on its SDP record. The returned data
-		follows this format.
-
-		[{"id": uint32,
-		  "data_spec" : data spec,
-		  "end_points":
-			["mdepid": uint8,
-			 "role"  : "source" or "sink" ,
-			 "specs" : [{
-				"dtype"       : uint16,
-				"description" : string, (optional)
-			 }]
-			]
-		}];
-
-	object Connect(uint32 local_instance_id, uint32 remote_instance_id)
-
-		Connects the local instance with the remote instance and returns
-		the path of the HealthLink object. You should get the remote
-		instance id running GetHealthInstances.
-
-		Only the bus client that created the local session will be able
-		to create connections using it.
-
-		Possible errors: org.bluez.Error.InvalidArguments
-				org.bluez.Error.HealthError
-
-	void Disconnect(object link)
-
-		Disconnect from the link the state will also be deleted. And
-		no future reconnections will be possible. For keeping the state
-		the method Pause of the health link should be used.
-
-		Possible errors: org.bluez.Error.InvalidArguments
-				org.bluez.Error.NotFound
-				org.bluez.Error.HealthError
-
---------------------------------------------------------------------------------
-
-Service		org.bluez
-Interface	org.bluez.HealthLink
-Object path	[variable prefix]/{hci0,hci1,...}/{hdp0,hdp1,...}/rem_inst_id
-
-Methods:
-
-	boolean Echo(array{byte})
-
-		Sends an echo petition to the remote intance. Returns True if
+		Sends an echo petition to the remote service. Returns True if
 		response matches with the buffer sent. If some error is detected
 		False value is returned and the associated MCL is closed.
 
-	uint16 OpenDataChannel(byte mdepid, byte config)
+		Possible errors: org.bluez.Error.InvalidArguments
+				org.bluez.Error.OutOfRange
+
+	object CreateChannel(object service, string type)
 
 		Creates a new data channel with the indicated config to the
-		remote MCAP Data End Point (MDEP).
+		remote Service.
 		The configuration should indicate the channel quality of
-		service. In the current version of HDP, valid values are 0x01
-		for reliable channels and 0x02 for streaming data channel.
+		service using one of this values "Reliable", "Streaming", "Any".
 
-		Returns the data channel id.
-
-		Possible errors: org.bluez.Error.InvalidArguments
-				org.bluez.Error.HealthError
-
-	void ReconnectDataChannel(uint16 mdlid)
-
-		Reconnects a previously created data channel indicated by its
-		mdlid.
+		Returns the object path that identifies the data channel that
+		is already connected.
 
 		Possible errors: org.bluez.Error.InvalidArguments
 				org.bluez.Error.HealthError
-				org.bluez.Error.NotFound
 
-	array GetDataChannelFileDescriptor(uint16 mdlid)
+	void DestroyChannel(object channel)
 
-		Gets a file descriptor where data can be read or
-		written for receive or sent by the data channel.
-		Returns an array of file descriptors one for write
-		and other for read.
+		Destroys the data channel object.
 
 		Possible errors: org.bluez.Error.InvalidArguments
-				org.bluez.Error.NotFound
-				org.bluez.Error.HealthError
+				orb.bluez.Error.NotFound
 
-	void DeleteDataChannel(uint16 mdlid)
+--------------------------------------------------------------------------------
 
-		Deletes a data channel so it will not be available for
-		use.
+Service		org.bluez
+Interface	org.bluez.HealthService
+Object path	[variable prefix]/{hci0,hci1,...}/dev_XX_XX_XX_XX_XX_XX/hdp_YYYY
 
-		Possible errors: org.bluez.Error.InvalidArguments
-				org.bluez.Error.NotFound
-				org.bluez.Error.HealthError
+--------------------------------------------------------------------------------
 
-	void DeleteAllDataChannels()
+Service		org.bluez
+Interface	org.bluez.HealthChannel
+Object path	[variable prefix]/{hci0,hci1,...}/dev_XX_XX_XX_XX_XX_XX/
+							hdp_YYYY/channel_ZZ
 
-		Deletes all data channels so they will not be available
-		for future use. Typically this function is called when the
-		connection with the remote device will be closed
-		permanently
+Methods:
 
-		Possible errors: org.bluez.Error.HealthError
+	dict GetProperties()
 
-	dict GetDataChannelStatus()
+		Returns all properties for the interface. See the properties
+		section for available properties.
 
-		Return a dictionary with all the data channels that
-		can be used to send data right now. The dictionary
-		is formed like follows:
-		{
-			"reliable": [mdlid_r1, mdlid_r2, ...],
-			"streaming" : [mdlid_s1, mdlid_s2, ...]
-		}
+	fd Acquire()
 
-		The fist reliable data channel will always be the first
-		data channel in reliable array.
+		Returns the file descriptor for this data channel. If the data
+		channel is not connected it will also reconnect.
+
+		Possible errors: org.bluez.Error.NotConnected
+
+	void Release()
+
+		Releases the fd. Application should also need to close() it.
+
+Properties:
+
+	string Type (read only)
+
+		The quality of service of the data channel. ("Reliable" or
+		"Streaming")
+
+	object Service (read only)
+
+		Identifies the Remote Service that is connected with. Maps with
+		a HealthService object.
 
 HealthAgent hierarchy
 =====================
@@ -195,60 +135,34 @@ Object path	freely definable
 
 Methods:
 
-	void LinkConnected(object path)
+	void Release()
 
-		This method is called whenever a new connection has been
-		established over the control channel of the current HDP
-		instance. The object path paremeter contains the object path of
-		the created HealthLink.
+		This method gets called when the service daemon unregisters the
+		agent. An agent can use it to do cleanup tasks. There is no need
+		to unregister the agent, because when this method gets called it
+		has already been unregistered.
 
-	void LinkPaused(object path)
+	void ServiceDiscovered(object service)
 
-		This method is called when a MCL is closed. Future reconnections
-		will be notified using the LinkRestarted callback.
-		All data channels associated to this device will be closed.
+		This method is called when a device containing an HDP
+		application is paired or when the method Update of the
+		HealthManager is called and new HealthServices are discovered.
+		The method will be called once for each HealthService.
 
-	void LinkResumed(object path)
+	void ServiceRemoved(object service)
 
-		This method is called whenever a MCL is reconnected. All data
-		channels associated are still closed but they will be able be
-		reconnected by skipping the configuration process.
+		This is called if during an Update some HealthServices
+		have disappeared. The method is called once for each removed
+		HealthService.
 
-	void LinkDisconnected(object path)
+	void ChannelConnected(object channel)
 
-		This method is called when a remote device is disconnected or
-		removed from MCAP cache. Any future reconnections will fail.
-		Also all data channels associated to this device will be closed.
+		This method is called when a new data channel is created or when
+		a known data channel is reconnected.
 
-	void CreatedDataChannel(object path, uint16 mdlid, byte conf)
-
-		This method is called when a new data channel is created
-
-		The path contains the object path of the HealthLink where the
-		new connection is created, the mdlid is the data channel
-		identificator and conf is the que quality of service of the data
-		channel (0x01 reliable, 0x02 streaming).
-
-	void DataChannelReconnected(object path, uint16 mdlid, byte conf)
-
-		This method is called when a closed data channel is reconnected
-		by the remote device.
-
-		The path contains the object path of the HealthLink where the
-		new connection is created, the mdlid is the data channel
-		identificator and conf is the que quality of service of the data
-		channel (0x01 reliable, 0x02 streaming).
-
-	void DeletedDataChannel(object path, uint16 mdlid)
+	void ChannelDeleted(object channel)
 
 		This method is called when a data channel is deleted.
 
-		After this call the data channel id will not be valid and can be
-		reused for future creation of data channels.
-
-	void DeletedAllDataChannels(object path)
-
-		This method is called when all data channels are deleted.
-
-		The path contains the object path of the HealthLink where the
-		data channels are deleted.
+		After this call the data channel path will not be valid and can
+		be reused for future creation of data channels.

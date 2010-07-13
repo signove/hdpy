@@ -1,7 +1,11 @@
 def s2b(msg):
+	if msg is None:
+		return None
 	return [ord(x) for x in msg]
 
 def b2s(msg):
+	if msg is None:
+		return None
 	return "".join([chr(int(x)) for x in msg])
 
 def test():
@@ -11,6 +15,8 @@ def test():
 	assert(s == b2s(b))
 	assert(b == s2b(b2s(b)))
 	assert(s == b2s(s2b(s)))
+	assert("" == b2s(None))
+	assert([] == s2b(None))
 	print "Test ok"
 
 if __name__ == '__main__':

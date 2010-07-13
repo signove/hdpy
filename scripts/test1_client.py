@@ -43,6 +43,8 @@ class MCAPSessionClientStub:
 
 	def __init__(self):
  		self.counter = 0
+		self.csp_enabled = False
+		self.reconn_enabled = True
 
 	def stop_session(self, mcl):
 		glib.MainLoop.quit(self.inLoop)
@@ -104,11 +106,17 @@ class MCAPSessionClientStub:
 			assert(mcl.sm.request_in_flight == 0)
 			assert(mcl.state == MCAP_MCL_STATE_PENDING)
 		elif (self.counter == 5):
-			assert(mcl.count_mdls() == 3)
+			if self.reconn_enabled:
+				assert(mcl.count_mdls() == 3)
+			else:
+				assert(mcl.count_mdls() == 2)
 			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
 			assert(mcl.sm.request_in_flight == 0)
 		elif (self.counter == 6):			
-			assert(mcl.count_mdls() == 3)
+			if self.reconn_enabled:
+				assert(mcl.count_mdls() == 3)
+			else:
+				assert(mcl.count_mdls() == 2)
 			assert(mcl.state == MCAP_MCL_STATE_ACTIVE)
 			assert(mcl.sm.request_in_flight == 0)
 		elif (self.counter == 7):

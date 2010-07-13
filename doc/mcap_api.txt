@@ -234,9 +234,13 @@ a reconnection failed, application can/should try CreateMDL().
 cb MDLInquire(self, mdepid, config)
 
 Acceptor only. Asks the application whether the MDEP IP and config
-are acceptable. Application should return synchronously a tuple
-of Boolean values: if the MDL is ok, and if the MDL should be
-reliable.
+are acceptable. Application should return synchronously a triple
+of values: if the MDL is ok, if the MDL should be reliable, and
+the accepted configuration.
+
+The accepted configuration must be equal to received config, unless
+the received config is zero; in such case, we can choose whatever
+we want.
 
 
 cb MDLRequested(self, mcl, mdl, mdep_id, conf)

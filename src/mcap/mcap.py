@@ -37,6 +37,11 @@ class ControlChannelListener(object):
 		schedule(self.observer.new_cc, self, sk, address)
 		return True
 
+	def stop(self):
+		if self.sk:
+			self.sk.close()
+			self.sk = None
+
 
 class DataChannelListener(object):
 	def __init__(self, adapter, observer):
@@ -57,17 +62,25 @@ class DataChannelListener(object):
 		schedule(self.observer.new_dc, self, sk, address)
 		return True
 
+	def stop(self):
+		if self.sk:
+			self.sk.close()
+			self.sk = None
+
 
 class MDL(object):
 
 	def __init__(self, mcl, mdlid, mdepid, config, reliable):
 		self.mcl = mcl
 		self.mdlid = mdlid
+		if mdlid < MCAP_MDL_ID_INITIAL or mdlid > MCAP_MDL_ID_FINAL:
+			raise InvalidOperation("MDL ID %d is invalid" % mdlid)
 		self.mdepid = mdepid
 		self.config = config
 		self.sk = None
 		self.state = MCAP_MDL_STATE_CLOSED
 		self.reliable = reliable
+		self.acceptor = False
 
 	def close(self):
 		if self.abort():
@@ -102,6 +115,7 @@ class MDL(object):
 		sk.setblocking(True)
 		self.sk = sk
 		self.state = MCAP_MDL_STATE_ACTIVE
+		self.acceptor = True
 
 	def connect(self):
 		if self.state != MCAP_MDL_STATE_CLOSED:
@@ -125,6 +139,7 @@ class MDL(object):
 
 			if not self.mcl.connected_mdl_socket(self, 0):
 				self.abort()
+			self.acceptor = False
 		else:
 			self.state = MCAP_MDL_STATE_CLOSED
 			self.mcl.connected_mdl_socket(self, -2)
@@ -172,6 +187,7 @@ class MCL(object):
 		self.last_mdlid = MCAP_MDL_ID_INITIAL
 
 		self.sk = None
+		self.acceptor = False
 
 		self.mdl_list = {}
 		self.is_channel_open = False
@@ -190,6 +206,7 @@ class MCL(object):
 		set_reliable(sk, True)
 		sk.setblocking(True)
 		self.state = MCAP_MCL_STATE_CONNECTED
+		self.acceptor = True
 		watch_fd(sk, self.activity)
 
 	def close(self):
@@ -226,6 +243,7 @@ class MCL(object):
 			self.sk = sk
 			sk.setblocking(True)
 			self.state = MCAP_MCL_STATE_CONNECTED
+			self.acceptor = False
 			watch_fd(sk, self.activity)
 			schedule(self.observer.mclconnected_mcl, self, 0)
 		else:
@@ -289,6 +307,10 @@ class MCL(object):
 		return mdlid in self.mdl_list
 
 	def add_mdl(self, mdl, reconn):
+		if mdl.mdlid == MCAP_MDL_ID_ALL:
+			# would cause big trouble in recursive delete_mdl
+			return
+
 		if mdl.mdlid in self.mdl_list:
 			if reconn:
 				print "Bug: MDL %d: MDLID %d already in list" \
@@ -296,28 +318,40 @@ class MCL(object):
 		self.mdl_list[mdl.mdlid] = mdl
 
 	def delete_mdl(self, mdlid):
+		if mdlid == MCAP_MDL_ID_ALL:
+			for mdlid in self.mdl_list.keys():
+				self.delete_mdl(mdlid)
+			return True
+
 		mdl = self.get_mdl(mdlid)
-		if mdl:
-			del self.mdl_list[mdlid]
-			mdl.close()
-			# change state so if someone holds a reference to
-			# this MDL, will see that it has been deleted
-			mdl.state = MCAP_MDL_STATE_DELETED
-		return mdl is not None
+		if not mdl:
+			return False
+
+		del self.mdl_list[mdlid]
+		mdl.close()
+		# change state so if someone holds a reference to
+		# this MDL, will see that it has been deleted
+		mdl.state = MCAP_MDL_STATE_DELETED
+		schedule(self.observer.mdldeleted_mcl, mdl)
+		return True
+
+	def delete_mdl_if_no_reconn(self, mdl):
+		if not self.observer.reconn_enabled:
+			self.delete_mdl(mdl.mdlid)
 	
 	def close_all_mdls(self):
 		for mdlid, mdl in self.mdl_list.items():
 			mdl.close()
 
-	def delete_all_mdls(self):
-		for mdlid in self.mdl_list.keys():
-			self.delete_mdl(mdlid)
-	
 	def create_mdlid(self):
 		mdlid = self.last_mdlid
-		if mdlid > MCAP_MDL_ID_FINAL:
-			return 0
 		self.last_mdlid += 1
+		if self.last_mdlid > MCAP_MDL_ID_FINAL:
+			self.last_mdlid = MCAP_MDL_ID_INITIAL
+		mdl = self.get_mdl(mdlid)
+		if mdl:
+			# remove mdl with same mdlid, if exists by accident
+			self.delete_mdl(mdlid)
 		return mdlid
 
 	def send_request(self, msg):
@@ -509,10 +543,7 @@ class MCLStateMachine:
 						self.mcl, None, -3)
 					return
 				
-				mdl = self.mcl.get_mdl(response.mdlid)
-				if mdl:
-					self.mcl.delete_mdl(mdl)
-					schedule(self.mcl.observer.mdldeleted_mcl, mdl)
+				self.mcl.delete_mdl(response.mdlid)
 
 				mdl = MDL(self.mcl, mdlid,
 					self.last_request.mdepid, config,
@@ -545,17 +576,7 @@ class MCLStateMachine:
 	def process_delete_response(self, response):		
 		if response.rspcode == MCAP_RSP_SUCCESS:
 
-			mdlid = response.mdlid
-			if self.is_mdlid_all(mdlid):
-				for mdlid, mdl in self.mcl.mdl_list.items():
-					schedule(self.mcl.observer.mdldeleted_mcl, mdl)
-				self.mcl.delete_all_mdls()
-			else:
-				if self.contains_mdlid(response.mdlid):
-					mdl = self.mcl.get_mdl(response.mdlid)
-					schedule(self.mcl.observer.mdldeleted_mcl, mdl)
-
-				self.mcl.delete_mdl(response.mdlid)
+			self.mcl.delete_mdl(response.mdlid)
 
 			if not self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
@@ -577,6 +598,7 @@ class MCLStateMachine:
 			if self.contains_mdlid(response.mdlid):
 				mdl = self.mcl.get_mdl(response.mdlid)
 				schedule(self.mcl.observer.mdlaborted_mcl, self.mcl, mdl)
+				self.mcl.delete_mdl_if_no_reconn(mdl)
 		else:
 			self.print_error_message( response.rspcode )
 
@@ -645,6 +667,7 @@ class MCLStateMachine:
 	def closed_mdl(self, mdl):
 		''' called back by MDL itself '''
 		schedule(self.mcl.observer.mdlclosed_mcl, mdl)
+		self.mcl.delete_mdl_if_no_reconn(mdl)
 
 
 ## PROCESS REQUEST METHODS
@@ -678,12 +701,16 @@ class MCLStateMachine:
 		mdl = None
 		reliable = True
 
-		if not self.is_valid_mdlid(request.mdlid, False):
+		if reconn and not self.mcl.observer.reconn_enabled:
+			rspcode = MCAP_RSP_REQUEST_NOT_SUPPORTED
+
+		elif not self.is_valid_mdlid(request.mdlid, False):
 			rspcode = MCAP_RSP_INVALID_MDL
 
 		elif self.mcl.state == MCAP_MCL_STATE_PENDING:
 			print "Pending MDL connection",
 			rspcode = MCAP_RSP_INVALID_OPERATION
+
 		else:
 			if reconn:
 				mdl = self.mcl.get_mdl(mdlid)
@@ -720,7 +747,6 @@ class MCLStateMachine:
 				mdl = self.mcl.get_mdl(mdlid)
 				if mdl:
 					self.mcl.delete_mdl(mdl)
-					schedule(self.mcl.observer.mdldeleted_mcl, mdl)
 
 				mdl = MDL(self.mcl, mdlid,
 					request.mdepid, request.config,
@@ -751,12 +777,9 @@ class MCLStateMachine:
 		if not self.is_valid_mdlid(mdlid, True):
 			rspcode = MCAP_RSP_INVALID_MDL
 
-		elif not self.is_mdlid_all(mdlid) and \
-		   not self.contains_mdlid(mdlid):
+		elif mdlid != MCAP_MDL_ID_ALL and \
+					not self.contains_mdlid(mdlid):
 			rspcode = MCAP_RSP_INVALID_MDL
-
-		elif not self.support_more_mdls():
-			rspcode = MCAP_RSP_MDL_BUSY
 
 		elif self.mcl.state == MCAP_MCL_STATE_PENDING:
 			print "Pending MDL connection"
@@ -767,15 +790,7 @@ class MCLStateMachine:
 
 		if success and (rspcode == MCAP_RSP_SUCCESS):
 			self.pending_passive_mdl = None
-			if self.is_mdlid_all(mdlid):
-				for mdlid, mdl in self.mcl.mdl_list.items():
-					schedule(self.mcl.observer.mdldeleted_mcl,
-						mdl)
-				self.mcl.delete_all_mdls()
-			else:
-				mdl = self.mcl.get_mdl(mdlid)
-				schedule(self.mcl.observer.mdldeleted_mcl, mdl)
-				self.mcl.delete_mdl(mdlid)
+			self.mcl.delete_mdl(mdlid)
 
 			if not self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED	
@@ -797,6 +812,7 @@ class MCLStateMachine:
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
 			mdl = self.mcl.get_mdl(request.mdlid)
 			schedule(self.mcl.observer.mdlaborted_mcl, self.mcl, mdl)
+			self.mcl.delete_mdl_if_no_reconn(mdl)
 
 ## UTILITY METHODS
 
@@ -820,6 +836,7 @@ class MCLStateMachine:
 		return True
 
 	def support_more_mdls(self):
+		# TODO
 		return True
 
 	def is_valid_mdepid(self, mdepid):

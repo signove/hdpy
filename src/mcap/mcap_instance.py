@@ -22,17 +22,38 @@ class MCAPInstance:
 		self.cpsm = 0
 		self.dpsm = 0
 		self.csp_enabled = True
+		self.reconn_enabled = True
 		self.ccl = self.dcl = None
 		self.mcls = []
 		self.peers = {}
-		if listen:
-			self.do_listen()
+		self.watch_mdl = True
+		self.start()
 
-	def do_listen(self):
+	def stop(self):
+		while self.mcls:
+			self.remove_mcl(self.mcls[0])
+
+		if not self.listener:
+			return
+
+		if self.ccl:
+			self.ccl.stop()
+			self.ccl = None
+		if self.dcl:
+			self.dcl.stop()
+			self.dcl = None
+
+	def start(self):
+		if not self.listener:
+			return
+
 		self.ccl = ControlChannelListener(self.adapter, self)
 		self.cpsm = self.ccl.psm
 		self.dcl = DataChannelListener(self.adapter, self)
 		self.dpsm = self.dcl.psm
+
+	def mdl_watch(self, enabled):
+		self.watch_mdl = enabled
 
 ### Housekeeping
 
@@ -72,6 +93,12 @@ class MCAPInstance:
 	def SyncDisable(self):
 		self.csp_enabled = False;
 		return True;
+
+	def ReconnectionEnable(self):
+		self.reconn_enabled = True;
+
+	def ReconnectionDisable(self):
+		self.reconn_disabled = True;
 
 ### Commands
 
@@ -132,6 +159,8 @@ class MCAPInstance:
 	def ReconnectMDL(self, mdl):
 		''' followed by ConnectMDL/AbortMDL, which should be '''
 		''' invoked when MDLReady callback is triggered '''
+		if not self.reconn_enabled:
+			raise InvalidOperation("MDL reconnection feature off")
 		mcl = mdl.mcl
 		req = ReconnectMDLRequest(mdl.mdlid)
 		mcl.send_request(req)
@@ -283,8 +312,11 @@ class MCAPInstance:
 
 	def mdlconnected_mcl(self, mdl, reconn, err):
 		if not err:
-			mdl._instance_watch = \
-				watch_fd(mdl.sk, self.mdl_activity, mdl)
+			if self.watch_mdl:
+				mdl._instance_watch = \
+					watch_fd(mdl.sk, self.mdl_activity, mdl)
+			else:
+				mdl._instance_watch = None
 		self.MDLConnected(mdl, err)
 
 	def mdl_activity(self, sk, event, mdl):
