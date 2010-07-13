@@ -12,8 +12,11 @@ def data_received(sk, evt, channel):
 	if evt & glib.IO_IN:
 		data = sk.recv(1024)
 		if data:
+			print "Data received"
 			response = parse_message_str(data)
-			sk.send(response)
+			if response:
+				sk.send(response)
+				print "Response sent"
 
 	more = (evt == glib.IO_IN and data)
 
