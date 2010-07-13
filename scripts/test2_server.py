@@ -12,6 +12,8 @@
 
 
 from mcap.mcap_instance import MCAPInstance
+import sys
+from mcap.misc import parse_srv_params
 import glib
 
 class MyInstance(MCAPInstance):
@@ -49,8 +51,10 @@ class MyInstance(MCAPInstance):
 		instance.Send(mdl, data + " PONG " + data)
 		return True
 
-instance = MyInstance("00:00:00:00:00:00", True)
+adapter = parse_srv_params(sys.argv)
 
-print "Waiting for connections on default dev"
+instance = MyInstance(adapter, True)
+
+print "Waiting for connections on", adapter
 loop = glib.MainLoop()
 loop.run()

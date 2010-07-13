@@ -87,16 +87,8 @@ def get_available_psm(adapter):
 	raise Exception("No free PSM could be found")
 
 
-def create_socket(btaddr, psm):
-	if psm is None:
-		psm = 0
-	if btaddr == "00:00:00:00:00:00":
-		btaddr = ""
-	s = BluetoothSocket(proto=L2CAP)
-	if psm or btaddr:
-		# print "Bound to (%s,%d)" % (btaddr, psm)
-		s.bind((btaddr, psm))
-	return s
+def create_socket():
+	return BluetoothSocket(proto=L2CAP)
 
 
 def set_reliable(s, reliable):
@@ -132,22 +124,16 @@ def do_accept(s):
 		return False
 
 
-def create_control_socket(btaddr, psm=None):
-	dev_id = bz.hci_devid(btaddr)
-	if dev_id < 0:
-		if btaddr and btaddr != "00:00:00:00:00:00":
-			print "WARNING: the adapter address %s is invalid, " \
-				"using default adapter" % btaddr
-	
-	s = create_socket(btaddr, psm)
+def create_control_socket():
+	s = create_socket()
 	set_security(s)
 	set_reliable(s, True)
 	set_mtu(s, 48)
 	return s
 
 
-def create_data_socket(btaddr, psm, reliable):
-	s = create_socket(btaddr, psm)
+def create_data_socket(reliable):
+	s = create_socket()
 	set_security(s)
 	set_reliable(s, reliable)
 	set_mtu(s, DC_MTU)
@@ -157,7 +143,15 @@ def create_data_socket(btaddr, psm, reliable):
 def create_control_listening_socket(btaddr):
 	psm = get_available_psm(btaddr)
 	print "Control socket: PSM %d" % psm
-	s = create_control_socket(btaddr, psm)
+	s = create_control_socket()
+
+	dev_id = bz.hci_devid(btaddr)
+	if dev_id < 0 and btaddr and btaddr != "00:00:00:00:00:00":
+		print "WARNING: the adapter address %s is invalid, " \
+			"using default adapter" % btaddr
+		btaddr = ""
+	
+	s.bind((btaddr, psm))
 	s.listen(5)
 	defer_setup(s)
 	return (s, psm)
@@ -166,7 +160,15 @@ def create_control_listening_socket(btaddr):
 def create_data_listening_socket(btaddr):
 	psm = get_available_psm(btaddr)
 	# print "Data socket: PSM %d" % psm
-	s = create_data_socket(btaddr, psm, DC_MTU)
+	s = create_data_socket(DC_MTU)
+
+	dev_id = bz.hci_devid(btaddr)
+	if dev_id < 0 and btaddr and btaddr != "00:00:00:00:00:00":
+		print "WARNING: the adapter address %s is invalid, " \
+			"using default adapter" % btaddr
+		btaddr = ""
+	
+	s.bind((btaddr, psm))
 	s.listen(5)
 	defer_setup(s)
 	return (s, psm)
@@ -248,15 +250,15 @@ def test():
 	print "Listening data socket at PSM %d" % psm
 	print "Options", get_options(t)
 
-	v = create_control_socket("00:00:00:00:00:00")
+	v = create_control_socket()
 	print "Control socket"
 	print "Options", get_options(v)
 
-	w = create_data_socket("00:00:00:00:00:00", None, True)
+	w = create_data_socket(True)
 	print "Reliable data socket at PSM"
 	print "Options", get_options(w)
 
-	x = create_data_socket("00:00:00:00:00:00",  None, False)
+	x = create_data_socket(False)
 	print "Streaming data socket"
 	print "Options", get_options(x)
 

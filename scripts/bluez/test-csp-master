@@ -1,0 +1,336 @@
+#!/usr/bin/env python
+# Run something like a test2_server in the other side
+
+import sys
+import dbus
+import time
+import gobject
+import dbus.mainloop.glib
+from dbus.exceptions import *
+from mcap.misc import parse_params
+import glib
+
+bt_immediate = 0xffffffff;
+btclock_max = 0x0fffffff;
+btclock_field = btclock_max + 1;
+btclock_half = btclock_field // 2;
+ts_dontset = 0xffffffffffffffff;
+
+mcap_iface = "org.bluez.mcap"
+
+dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+bus = dbus.SystemBus()
+
+class MCLInstance(object):
+	def signal(self, *args, **kwargs):
+		if 'interface' in kwargs and 'member' in kwargs and \
+			kwargs['interface'] == 'org.bluez.mcap' and \
+			kwargs['member'] == 'SyncInfoIndication' and \
+			len(args) == 4 and args[0] == self.mcl:
+
+			self.SyncInfoIndication(*args[1:4])
+			return True
+
+		return False
+
+	def async_error(self, *args):
+		print "Async error (unexpected)"
+		print "\t", args
+		print "\t", kwargs
+
+	def __init__(self, adapter, instance, mcl):
+		self.adapter = adapter
+		self.instance = instance
+		self.mcl = mcl
+
+	def bye(self):
+		glib.MainLoop.quit(loop)
+
+	### CSP-specifc part
+
+	def begin(self):
+		self.test_step = 0
+		self.test(None, None)
+
+	def test(self, response, err):
+		if response is not None and response != self.test_response:
+			print "Test %d expected %d came %d" % \
+				(self.test_step, self.test_response, response)
+			self.bye()
+			return False
+
+		if err is not None and err != self.test_err:
+			print "Test %d expected err %s came %s" % \
+				(self.test_step, self.test_err, err)
+			self.bye()
+			return False
+
+		self.test_step += 1
+		print "Round %d" % self.test_step
+
+		if self.test_step == 1:
+			self.test_preposterous()
+
+		elif self.test_step == 2:
+			# requests invalid 0ppm precision
+			self.test_req_cap(0, True)
+
+		elif self.test_step == 3:
+			# requests too accurate 2ppm precision
+			self.test_req_cap(2, True)
+
+		elif self.test_step == 4:
+			# requests 20ppm precision
+			self.test_req_cap(20, False)
+
+		elif self.test_step == 5:
+			self.test_set_future_indication()
+
+		elif self.test_step == 6:
+			self.test_response = 3 # Indications
+			pass
+
+		elif self.test_step == 7:
+			self.test_stop_indications()
+
+		elif self.test_step in range(8, 28):
+			self.test_invalid_set(self.test_step - 8)
+
+		elif self.test_step == 28:
+			self.test_stop_indications()
+
+		else:
+			print "All tests ok"
+			glib.timeout_add(5000, self.bye)
+
+		return False
+
+
+	def test_invalid_set(self, seq):
+		self.test_response = 2 # Set
+		self.test_err = True
+
+		btclock = self.adapter.SyncBtClock(self.mcl)
+
+		saved_btclock = btclock
+		# resets timestamp in 0.5s
+		btclock += 1600
+		# begins with a timestamp of 100 full seconds
+		initial_tmstamp = 100000000
+
+		self.test_indications = -100000
+		self.test_err_ma = None
+
+		if seq % 2:
+			update = True
+		else:
+			update = False
+
+		# Until here we have perfectly valid parameters
+		# Now we inject errors
+
+		seq //= 2
+
+		reset = seq % 2
+		if not reset:
+			# "don't set" (DS) timestamp
+			initial_tmstamp = 0xffffffffffffffff
+
+		seq //= 2
+
+		if seq == 0:
+			# btclock in past tense
+			btclock -= 3200
+		elif seq == 1:
+			# btclock too into future
+			btclock += 3200 * 63
+		elif seq == 2:
+			# invalid btclock
+			btclock = 0xfffffff + 5
+		elif seq == 3:
+			# immediate btclock (makes req VALID)
+			btclock = 0xffffffff
+			self.test_err = False
+		elif seq == 4:
+			# leave btclock as it is (makes req VALID)
+			self.test_err = False
+			pass
+
+		if reset and not self.test_err:
+			self.test_initial_ts = initial_tmstamp
+
+		if reset and not self.test_err:
+			if btclock != 0xffffffff:
+				self.test_initial_btclk = btclock
+			else:
+				# immediate update: save recently read clock
+				self.test_initial_btclk = saved_btclock
+
+		# print "\t", update, btclock, initial_tmstamp
+
+		self.adapter.SyncSet(self.mcl, update, btclock, initial_tmstamp,
+			reply_handler=self.SyncSetResponse,
+			error_handler=self.async_error)
+
+
+
+
+	def test_req_cap(self, ppm, err):
+		print "Requesting capabilities, ppm %d" % ppm
+
+		self.test_response = 1 # Req
+		self.test_err = err
+		self.adapter.SyncCapabilities(self.mcl, ppm,
+			reply_handler=self.SyncCapabilitiesResponse,
+			error_handler=self.async_error)
+
+		try:
+			self.adapter.SyncCapabilities(self.mcl, 20)
+			print "Error: should not have accepted two requests"
+			self.bye()
+			return
+		except DBusException:
+			pass
+
+
+	def test_set_future_indication(self):
+		self.test_response = 2 # Set
+		self.test_err = False
+
+		btclock = self.adapter.SyncBtClock(self.mcl)
+
+		# resets timestamp in 1s
+		btclock += 3200
+		# begins with a timestamp of 5 full seconds
+		initial_tmstamp = 5000000
+
+		self.test_indications = 0
+		self.test_initial_ts = initial_tmstamp
+		self.test_initial_btclk = btclock
+		self.test_err_ma = None
+
+		self.adapter.SyncSet(self.mcl, 1, btclock, initial_tmstamp,
+			reply_handler=self.SyncSetResponse,
+			error_handler=self.async_error)
+
+	def test_stop_indications(self):
+		self.test_response = 2 # Set
+		self.test_err = False
+
+		self.adapter.SyncSet(self.mcl, 0, bt_immediate, ts_dontset,
+			reply_handler=self.SyncSetResponse,
+			error_handler=self.async_error)
+
+
+	def test_preposterous(self):
+		self.test_err = True
+		self.test_response = 2 # Set
+		try:
+			self.adapter.SyncSet(self.mcl, 1, bt_immediate, 0x123)
+			print "Preposterous CSP sync set must fail locally"
+			self.bye()
+			return
+		except DBusException:
+			glib.timeout_add(0, self.test, 2, True);
+
+
+	def SyncCapabilitiesResponse(self, err, btclockres, synclead,
+					tmstampres, tmstampacc):
+		print "CSP Caps resp %s btres %d lead %d tsres %d tsacc %d" % \
+			(err and "Err" or "Ok", btclockres,
+				synclead, tmstampres, tmstampacc)
+
+		self.test(1, not not err)
+
+
+	def SyncSetResponse(self, err, btclock, tmstamp, tmstampacc):
+		print "CSP Set resp: %s btclk %d ts %d tsacc %d" % \
+			(err and "Err" or "Ok", btclock,
+				tmstamp, tmstampacc)
+		if not err:
+			self.calc_drift(btclock, tmstamp)
+
+		glib.timeout_add(500, self.test, 2, not not err)
+
+
+	def SyncInfoIndication(self, btclock, tmstamp, accuracy):
+		print "CSP Indication btclk %d ts %d tsacc %d" % \
+			(btclock, tmstamp, accuracy)
+		self.calc_drift(btclock, tmstamp)
+
+		self.test_indications += 1
+		if self.test_indications > 5:
+			self.test(3, False)
+
+	@staticmethod
+	def btdiff(btclock1, btclock2):
+		offset = btclock2 - btclock1
+		if offset <= -btclock_half:
+			offset += btclock_field
+		elif offset > btclock_half:
+			offset -= btclock_field
+		return offset
+
+	def calc_drift(self, btclock, tmstamp):
+		btdiff = self.btdiff(self.test_initial_btclk, btclock)
+		btdiff *= 312.5
+		tmdiff = tmstamp - self.test_initial_ts
+		err = tmdiff - btdiff
+
+		if self.test_err_ma is None:
+			errma = self.test_err_ma = err
+		else:
+			last_ma = self.test_err_ma
+			errma = self.test_err_ma = 0.05 * err + \
+				0.95 * last_ma
+
+		print "\terror %dus moving avg %dus " % (err, errma),
+
+		if tmdiff > 10000000:
+			drift = float(errma) / (float(tmdiff) / 1000000)
+			print "drift %dus/h" % (drift * 3600)
+		else:
+			print
+
+################################################
+
+manager = dbus.Interface(bus.get_object("org.bluez", "/"), "org.bluez.Manager")
+
+adapter, device, cpsm, dpsm, addr = parse_params(sys.argv, False)
+
+ad = manager.FindAdapter(adapter)
+print "Binding to adapter", ad
+
+adapter = dbus.Interface(bus.get_object("org.bluez", ad), mcap_iface)
+
+loop = gobject.MainLoop()
+
+instance = adapter.StartSession(cpsm + 16, dpsm + 16)
+
+try:
+	mcl = adapter.CreateMCL(instance, device, cpsm)
+	print "MCL handle is %d" % mcl
+
+	if mcl:
+		instance_obj = MCLInstance(adapter, instance, mcl)
+
+		bus.add_signal_receiver(instance_obj.signal,
+					bus_name="org.bluez",
+					member_keyword="member",
+					path_keyword="path",
+					interface_keyword="interface",
+					dbus_interface=mcap_iface,
+					byte_arrays=True)
+
+	print "Connecting..."
+
+	if mcl:
+		instance_obj.begin()
+
+	loop.run()
+
+finally:
+	adapter.StopSession(instance)
+	print
+	print "Stopped instance, thanks"
+	print

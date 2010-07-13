@@ -14,6 +14,7 @@
 
 from mcap.mcap_instance import MCAPInstance
 from mcap import mcap
+from mcap.misc import parse_params
 import time
 import sys
 import glib
@@ -64,7 +65,7 @@ class MI(MCAPInstance):
 
 	def test_reconnect(self, mcl, dummy):
 		self.response = self.MCLReconnected
-		new_mcl = instance.CreateMCL(remote_addr, dpsm)
+		new_mcl = instance.CreateMCL(addr, dpsm)
 		assert(mcl is new_mcl)
 
 	def test_delete(self, mcl, dummy):
@@ -73,7 +74,7 @@ class MI(MCAPInstance):
 
 	def test_connect(self, mcl, dummy):
 		self.response = self.MCLConnected
-		instance.CreateMCL(remote_addr, dpsm)
+		instance.CreateMCL(addr, dpsm)
 
 	def test_mdl_create(self, mcl, dummy):
 		self.response = self.MDLReady
@@ -299,15 +300,11 @@ MI.tests = ( \
 	(MI.finish, ),
 	)
 
-try:
-	remote_addr = (sys.argv[1], int(sys.argv[2]))
-	dpsm = int(sys.argv[3])
-except:
-	print "Usage: %s <remote addr> <cPSM> <dPSM>" % sys.argv[0]
-	sys.exit(1)
 
-instance = MI("00:00:00:00:00:00", False)
-print "Connecting..."
-mcl = instance.CreateMCL(remote_addr, dpsm)
+adapter, device, cpsm, dpsm, addr = parse_params(sys.argv)
+
+instance = MI(adapter, False)
+print "Connecting to", device
+mcl = instance.CreateMCL(addr, dpsm)
 
 loop.run()

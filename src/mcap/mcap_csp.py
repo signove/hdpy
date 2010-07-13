@@ -23,8 +23,7 @@ import math
 class BluetoothClock:
 	clock_latency = None
 
-	def __init__(self, adapter, remote_addr):
-		self.adapter = adapter
+	def __init__(self, remote_addr):
 		self.addr = remote_addr
 		self.raw_socket, self.dev_id = mcap_sock.hci_open_dev(remote_addr)
 		if BluetoothClock.clock_latency is None:
@@ -123,8 +122,7 @@ class CSPStateMachine(object):
 
 	def clock(self):
 		if not self._clock:
-			self._clock = BluetoothClock(self.mcl.adapter,
-						self.mcl.remote_addr[0])
+			self._clock = BluetoothClock(self.mcl.remote_addr[0])
 		return self._clock
 
 	def latency(self):

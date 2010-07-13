@@ -13,7 +13,9 @@
 from hdp import hdp_record
 from mcap.mcap_instance import MCAPInstance
 import glib
+import sys
 from hdp.dummy_ieee10404 import parse_message_str
+from mcap.misc import parse_srv_params
 import dbus.mainloop.glib
 
 TEST_CSP = True
@@ -145,7 +147,9 @@ class MyInstance(MCAPInstance):
 		instance.Send(mdl, response)
 		return True
 
-instance = MyInstance("00:00:00:00:00:00", True)
+adapter = parse_srv_params(sys.argv)
+
+instance = MyInstance(adapter, True)
 # instance.SyncDisable()
 
 health_record = {'features': [{	'mdep_id': 0x01,
@@ -169,14 +173,17 @@ xml_record = hdp_record.gen_xml(health_record)
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 bus = dbus.SystemBus()
 manager = dbus.Interface(bus.get_object('org.bluez', '/'), 'org.bluez.Manager')
-path = manager.DefaultAdapter()
+if not adapter:
+	path = manager.DefaultAdapter()
+else:
+	path = manager.FindAdapter(adapter)
 service = dbus.Interface(bus.get_object('org.bluez', path), 'org.bluez.Service')
 hdp_record_handle = service.AddRecord(xml_record)
 
 print 'Service record with handle 0x%04x added' % (hdp_record_handle)
 
 try:
-	print "Waiting for connections %d %d" % (instance.cpsm, instance.dpsm)
+	print "Waiting for connections on %s %d" % (adapter, instance.cpsm)
 	loop = glib.MainLoop()
 	loop.run()
 finally:

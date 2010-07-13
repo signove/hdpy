@@ -1,0 +1,114 @@
+#!/usr/bin/python
+
+import os
+import sys
+import dbus
+import time
+import gobject
+import dbus.mainloop.glib
+import passfd
+import socket
+import glib
+from mcap.misc import parse_params
+
+mcap_iface = "org.bluez.mcap"
+
+def object_signal(*args, **kwargs):
+	print "Value", args
+	print "Details", kwargs
+
+dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+bus = dbus.SystemBus()
+
+manager = dbus.Interface(bus.get_object("org.bluez", "/"), "org.bluez.Manager")
+
+adapter, device, cpsm, dpsm, addr = parse_params(sys.argv, False)
+
+ad = manager.FindAdapter(adapter)
+print "Binding to adapter", ad
+
+adapter = dbus.Interface(bus.get_object("org.bluez", ad), mcap_iface)
+
+bus.add_signal_receiver(object_signal, bus_name="org.bluez",
+				member_keyword="member",
+				path_keyword="path",
+				interface_keyword="interface",
+				dbus_interface=mcap_iface,
+				byte_arrays=True)
+
+def TakeFd_gotfd(sk, evt):
+	if evt & glib.IO_IN:
+		sk2, dummy = sk.accept()
+		mdl_fd, dummy = passfd.recvfd(sk2)
+
+		# DIRTY TRICK AHEAD
+		# This socket is actually a Bluetooth L2CAP socket, but
+		# since it is already connected, it should not be a problem
+		# to encapsulate in a Python 'unix socket'...
+
+		mdl_fd = socket.fromfd(mdl_fd.fileno(), socket.AF_UNIX,
+					socket.SOCK_STREAM)
+		sk.close()
+		sk2.close()
+		glib.io_add_watch(mdl_fd,
+			glib.IO_IN | glib.IO_ERR | glib.IO_HUP,
+			mdl_fd_data)
+
+		# provoke remote side
+		mdl_fd.send("2 + 3")
+
+	return False
+
+def mdl_fd_data(sk, evt):
+	if evt == glib.IO_IN:
+		msg = sk.recv(2048)
+		print "Received msg %s len %d" % (msg, len(msg))
+
+		mdl_fd_data.count += 1
+		if mdl_fd_data.count < 10:
+			sk.send("2 + 4")
+		else:
+			sk.shutdown(2)
+
+		return True
+
+	sk.close()
+	return False
+
+mdl_fd_data.count = 0
+
+trampoline_name = "/tmp/test-mcap-tramp" # this should be random!
+
+try:
+	os.unlink(trampoline_name)
+except OSError:
+	pass
+
+trampoline = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+trampoline.bind(trampoline_name)
+trampoline.listen(1)
+glib.io_add_watch(trampoline, glib.IO_IN | glib.IO_ERR | glib.IO_HUP,
+			TakeFd_gotfd)
+
+
+handle = adapter.StartSession(cpsm + 0x10, dpsm + 0x10)
+
+try:
+	print "Handle: ", handle
+
+	mcl = adapter.CreateMCL(handle, device, cpsm)
+
+	mdl = adapter.CreateMDL(mcl, 0x01, 0x00)
+	adapter.ConnectMDL(mdl, dpsm)
+
+	err = adapter.TakeFd(mdl, trampoline_name)
+	print "TakeFd err =", err
+
+	mainloop = gobject.MainLoop()
+	mainloop.run()
+
+finally:
+	adapter.StopSession(handle)
+	print
+	print "Stopped instance, thanks"
+	print

@@ -13,6 +13,7 @@
 
 from mcap.mcap_defs import *
 from mcap.mcap import *
+from mcap.misc import parse_srv_params
 import sys
 import time
 import glib
@@ -45,8 +46,8 @@ class MCAPSessionServerStub:
 		self.csp_enabled = True
 		self.reconn_enabled = True
 
-	def new_cc(self, listener, sk, remote_addr):
-		self.mcl = MCL(self, "00:00:00:00:00:00", MCAP_MCL_ROLE_ACCEPTOR, remote_addr, 0)
+	def new_cc(self, listener, sk, addr):
+		self.mcl = MCL(self, MCAP_MCL_ROLE_ACCEPTOR, addr, 0)
 		assert(self.mcl.state == MCAP_MCL_STATE_IDLE)
 		self.mcl.accept(sk)
 		assert(self.mcl.state == MCAP_MCL_STATE_CONNECTED)
@@ -105,10 +106,11 @@ class MCAPSessionServerStub:
 		self.inLoop.run()
 
 
-if __name__=='__main__':
-	session = MCAPSessionServerStub()
-	mcl_listener = ControlChannelListener("00:00:00:00:00:00", session)
-	mdl_listener = DataChannelListener("00:00:00:00:00:00", session)
+adapter = parse_srv_params(sys.argv)
 
-	print "Waiting for connections on default dev"
-	session.loop()
+session = MCAPSessionServerStub()
+mcl_listener = ControlChannelListener(adapter, session)
+mdl_listener = DataChannelListener(adapter, session)
+
+print "Waiting for connections on", adapter
+session.loop()

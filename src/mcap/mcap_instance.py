@@ -107,8 +107,7 @@ class MCAPInstance:
 			mcl = self.peer_mcl(addr)
 			mcl.virgin = False
 		else:
-			mcl = MCL(self, self.adapter, MCAP_MCL_ROLE_INITIATOR,
-				addr, dpsm)
+			mcl = MCL(self, MCAP_MCL_ROLE_INITIATOR, addr, dpsm)
 			self.add_mcl(mcl)
 			mcl.virgin = True
 
@@ -284,8 +283,7 @@ class MCAPInstance:
 			mcl = self.peer_mcl(addr)
 			event = self.MCLReconnected
 		else:
-			mcl = MCL(self, self.adapter, MCAP_MCL_ROLE_ACCEPTOR,
-				addr, 0)
+			mcl = MCL(self, MCAP_MCL_ROLE_ACCEPTOR, addr, 0)
 			self.add_mcl(mcl)
 
 		if mcl.state == MCAP_MCL_STATE_IDLE:

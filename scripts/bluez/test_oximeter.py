@@ -14,6 +14,8 @@ from hdp import hdp_record
 import gobject
 import dbus.mainloop.glib
 from hdp.dummy_ieee10404 import parse_message
+from mcap.misc import parse_srv_params
+import sys
 import glib
 
 mcap_iface = 'org.bluez.mcap'
@@ -146,12 +148,12 @@ bus = dbus.SystemBus()
 
 manager = dbus.Interface(bus.get_object('org.bluez', '/'), 'org.bluez.Manager')
 
-adapter = dbus.Interface(bus.get_object('org.bluez', manager.DefaultAdapter()),
-							mcap_iface)
+ad = manager.FindAdapter(parse_srv_params(sys.argv, False))
+print "Bound to", ad
 
-path = manager.DefaultAdapter()
+adapter = dbus.Interface(bus.get_object('org.bluez', ad), mcap_iface)
 
-service = dbus.Interface(bus.get_object('org.bluez', path), 'org.bluez.Service')
+service = dbus.Interface(bus.get_object('org.bluez', ad), 'org.bluez.Service')
 
 hdp_record_handle = service.AddRecord(xml_record)
 

@@ -12,21 +12,12 @@
 
 import sys
 from mcap.mcap_instance import MCAPInstance
-import mcap.misc
+from mcap.misc import BlueZ
 from . import hdp_record
 
 
 class HealthError(Exception):
 	pass
-
-
-_BlueZ = None
-
-def BlueZ():
-	global _BlueZ
-	if not _BlueZ:
-		_BlueZ = mcap.misc.BlueZ()
-	return _BlueZ
 
 
 class HealthManager(object):

@@ -123,8 +123,7 @@ class MDL(object):
 
 		try:
 			self.state = MCAP_MDL_STATE_WAITING
-			sk = create_data_socket(self.mcl.adapter, None,
-						self.reliable)
+			sk = create_data_socket(self.reliable)
 			async_connect(sk, self.mcl.remote_addr_dc)
 
 			watch_fd_connect(sk, self.connect_cb)
@@ -175,9 +174,8 @@ class MDL(object):
 
 class MCL(object):
 
-	def __init__(self, observer, adapter, role, remote_addr, dpsm):
+	def __init__(self, observer, role, remote_addr, dpsm):
 		self.observer = observer
-		self.adapter = adapter 
 		self.role = role
 		self.remote_addr = remote_addr
 		self.remote_addr_dc = (remote_addr[0], dpsm)
@@ -232,7 +230,7 @@ class MCL(object):
 
 		try:
 			self.state = MCAP_MCL_STATE_WAITING
-			sk = create_control_socket(self.adapter)
+			sk = create_control_socket()
 			async_connect(sk, self.remote_addr)
 			watch_fd_connect(sk, self.connect_cb)
 		except IOError:

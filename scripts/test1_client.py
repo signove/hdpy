@@ -13,6 +13,7 @@
 
 from mcap.mcap_defs import *
 from mcap.mcap import *
+from mcap.misc import parse_params
 import time
 import sys
 import glib
@@ -187,19 +188,14 @@ class MCAPSessionClientStub:
 	def mdlclosed_mcl(self, mdl):
 		print "MDL closed"
 
-try:
-	remote_addr = (sys.argv[1], int(sys.argv[2]))
-	dpsm = int(sys.argv[3])
-except:
-	print "Usage: %s <remote addr> <control PSM> <data PSM>" % sys.argv[0]
-	sys.exit(1)
+adapter, device, cpsm, dpsm, addr = parse_params(sys.argv)
 
 session = MCAPSessionClientStub()
-mcl = MCL(session, "00:00:00:00:00:00", MCAP_MCL_ROLE_INITIATOR, remote_addr, dpsm)
+mcl = MCL(session, MCAP_MCL_ROLE_INITIATOR, addr, dpsm)
 
 assert(mcl.state == MCAP_MCL_STATE_IDLE)
 
-print "Requesting connection..."
+print "Requesting connection to", device
 mcl.connect()
 
 session.loop()

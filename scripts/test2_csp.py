@@ -14,6 +14,7 @@
 
 from mcap.mcap_instance import MCAPInstance
 from mcap import mcap
+from mcap.misc import parse_params
 import time
 import sys
 import glib
@@ -285,15 +286,12 @@ class MyInstance(MCAPInstance):
 		else:
 			print
 
-try:
-	remote_addr = (sys.argv[1], int(sys.argv[2]))
-except:
-	print "Usage: %s <remote addr> <control PSM>" % sys.argv[0]
-	sys.exit(1)
 
-instance = MyInstance("00:00:00:00:00:00", False)
-print "Connecting..."
-mcl = instance.CreateMCL(remote_addr, 0)
+adapter, device, cpsm, dpsm, addr = parse_params(sys.argv)
+
+instance = MyInstance(adapter, False)
+print "Connecting to", device
+mcl = instance.CreateMCL(addr, dpsm)
 
 try:
 	instance.SyncCapabilities(mcl, 100)

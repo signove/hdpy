@@ -1,0 +1,129 @@
+#!/usr/bin/python
+
+import glib
+import os
+import socket
+import sys
+import dbus
+import time
+import gobject
+import dbus.mainloop.glib
+import passfd
+from mcap.misc import parse_srv_params
+
+mcap_iface = "org.bluez.mcap"
+
+def object_signal(*args, **kwargs):
+	if 'member' in kwargs:
+		if kwargs['member'] == 'MDLConnected':
+			adapter.TakeFd(args[1], trampoline_name)
+		if kwargs['member'] == 'MDLReconnected':
+			adapter.TakeFd(args[1], trampoline_name)
+
+	print "Value", args
+	print "Details", kwargs
+
+def adapter_signal(value, path, interface, member):
+	hci = str(value)
+	if hci.split("/")[-1] == ad.split("/")[-1]:
+		print "Adapter went out, quitting"
+		mainloop.quit()
+
+dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+bus = dbus.SystemBus()
+
+manager = dbus.Interface(bus.get_object("org.bluez", "/"), "org.bluez.Manager")
+
+ad = manager.FindAdapter(parse_srv_params(sys.argv, False))
+print "Bound to", ad
+
+adapter = dbus.Interface(bus.get_object("org.bluez", ad), mcap_iface)
+
+bus.add_signal_receiver(object_signal, bus_name="org.bluez",
+				member_keyword="member",
+				path_keyword="path",
+				interface_keyword="interface",
+				dbus_interface=mcap_iface,
+				byte_arrays=True)
+
+bus.add_signal_receiver(adapter_signal, bus_name="org.bluez",
+				signal_name = "AdapterAdded",
+				path_keyword="path",
+				member_keyword="member",
+				interface_keyword="interface")
+
+bus.add_signal_receiver(adapter_signal, bus_name="org.bluez",
+				signal_name = "AdapterRemoved",
+				path_keyword="path",
+				member_keyword="member",
+				interface_keyword="interface")
+
+
+def TakeFd_gotfd(sk, evt):
+	if evt & glib.IO_IN:
+		sk2, dummy = sk.accept()
+		mdl_fd, dummy = passfd.recvfd(sk2)
+
+		# DIRTY TRICK AHEAD
+		# This socket is actually a Bluetooth L2CAP socket, but
+		# since it is already connected, it should not be a problem
+		# to encapsulate in a Python 'unix socket'...
+
+		mdl_fd = socket.fromfd(mdl_fd.fileno(), socket.AF_UNIX,
+					socket.SOCK_STREAM)
+		sk2.close()
+		glib.io_add_watch(mdl_fd,
+			glib.IO_IN | glib.IO_ERR | glib.IO_HUP,
+			mdl_fd_data)
+
+		print
+		print "Took fd from MDL:", mdl_fd
+		print
+
+	return evt == glib.IO_IN
+
+
+def mdl_fd_data(sk, evt):
+	if evt == glib.IO_IN:
+		msg = sk.recv(2048)
+		print "Received msg %s len %d" % (msg, len(msg))
+		sk.send("RESPONSE TO " + msg)
+		return True
+
+	sk.close()
+	return False
+
+
+trampoline_name = "/tmp/test-mcap-tramp" # this should be random!
+try:
+	os.unlink(trampoline_name)
+except OSError:
+	pass
+trampoline = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+trampoline.bind(trampoline_name)
+trampoline.listen(1)
+glib.io_add_watch(trampoline, glib.IO_IN | glib.IO_ERR | glib.IO_HUP,
+			TakeFd_gotfd)
+
+
+
+handle = adapter.StartSession(0x1001, 0x1003)
+
+try:
+	print "Handle: ", handle
+	adapter.StopSession(handle - 1000)
+	print "'Stopped' invalid handle %d (for testing purposes)" % (handle - 1000)
+	adapter.StopSession(0)
+	print "'Stopped' NULL handle (for testing purposes)"
+
+	mainloop = gobject.MainLoop()
+	mainloop.run()
+finally:
+	try:
+		adapter.StopSession(handle)
+		print
+		print "Stopped instance, thanks"
+		print
+	except:
+		pass
+

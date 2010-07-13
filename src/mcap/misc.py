@@ -11,28 +11,47 @@
 ################################################################
 
 import dbus
+from sys import exit
 
-class BlueZ(object):
-	BDADDR_ANY = "00:00:00:00:00:00"
+BDADDR_ANY = "00:00:00:00:00:00"
+
+class BlauZ(object):
 
 	def __init__(self):
 		self.bus = dbus.SystemBus()
 		obj = self.bus.get_object("org.bluez", "/")
 		self.manager = dbus.Interface(obj, "org.bluez.Manager")
 
+	def is_hci(self, s):
+		return s.lower()[0:3] == "hci"
+
+	def is_name(self, s):
+		s = s.lower()
+		return self.is_hci(s) or s in ("any", "default")
+
+	def normalize(self, s):
+		if self.is_name(s):
+			return s.lower()
+		else:
+			return s.upper()
+
 	def adapter_path(self, name_or_addr):
-		if name_or_addr:
+		name_or_addr = self.normalize(name_or_addr)
+		path = None
+		if name_or_addr and name_or_addr == "default":
+			try:
+				path = self.manager.DefaultAdapter()
+			except:
+				path = None
+		elif name_or_addr:
 			try:
 				path = self.manager.FindAdapter(name_or_addr)
 			except:
 				path = None
-		else:
-			path = self.manager.DefaultAdapter()
 		return path
 
 	def is_wildcard(self, name_or_addr):
-		return name_or_addr is None or \
-			name_or_addr in ("any", self.BDADDR_ANY, "")
+		return name_or_addr in ("any", BDADDR_ANY, "", None)
 
 	def adapter_iface(self, name_or_addr):
 		path = self.adapter_path(name_or_addr)
@@ -53,9 +72,14 @@ class BlueZ(object):
 			return None
 		return props['Address']
 
+	def device_addr(self, name):
+		if self.is_hci(name):
+			return self.adapter_addr(name)
+		return name
+
 	def adapter_addr_w(self, name):
 		if self.is_wildcard(name):
-			return self.BDADDR_ANY
+			return BDADDR_ANY
 		return self.adapter_addr(name)
 
 	def adapter_name(self, addr):
@@ -89,6 +113,78 @@ class BlueZ(object):
 		service.RemoveRecord(dbus.UInt32(handle))
 
 
+_BlueZ = None
+
+def BlueZ():
+	global _BlueZ
+	if not _BlueZ:
+		_BlueZ = BlauZ()
+	return _BlueZ
+
+
+def parse_srv_params(args, wildcard=True):
+	try:
+		if len(args) < 2 or args[1] not in ("-a", "--adapter"):
+			adapter = wildcard and "any" or "default"
+		else:
+			adapter = args[2]
+		
+		if wildcard:
+			adapter = BlueZ().adapter_addr_w(adapter)
+		else:
+			adapter = BlueZ().adapter_addr(adapter)
+
+		if adapter is None:
+			raise ValueError("")
+
+		return adapter
+
+	except ValueError:
+		print "Usage: %s [-a <adapter>]" % args[0]
+		exit(1)
+		
+
+def parse_params(args, wildcard=True):
+	try:
+		if len(args) < 2:
+			raise ValueError("")
+
+		if args[1] in ("-a", "--adapter"):
+			adapter = args[2]
+			del args[1]
+			del args[1]
+		else:
+			adapter = wildcard and "any" or "default"
+		
+		if wildcard:
+			adapter = BlueZ().adapter_addr_w(adapter)
+		else:
+			adapter = BlueZ().adapter_addr(adapter)
+
+		device = BlueZ().device_addr(args[1])
+
+		if adapter is None or device is None:
+			raise ValueError("")
+
+		if len(args) > 2:
+			cpsm = int(args[2])
+		else:
+			cpsm = 0x1001
+
+		if len(args) > 3:
+			dpsm = int(args[3])
+		else:
+			dpsm = cpsm + 2
+
+		return adapter, device, cpsm, dpsm, (str(device), cpsm)
+
+	except ValueError:
+		print "Usage: %s [ -a <adapter> ] <device> [ cPSM [ dPSM ] ]" \
+			% args[0]
+		print "(default adapter = auto; default dPSM = cPSM + 2)"
+		exit(1)
+
+
 def test():
 	# good ones
 	name = "hci0"
@@ -114,8 +210,8 @@ def test():
 	assert(b.adapter_name(namew) is None)
 	assert(b.adapter_addr(addrw) is None)
 	assert(b.adapter_name(addrw) is None)
-	assert(b.adapter_addr_w(namew) == BlueZ.BDADDR_ANY)
-	assert(b.adapter_addr_w(addrw) == BlueZ.BDADDR_ANY)
+	assert(b.adapter_addr_w(namew) == BDADDR_ANY)
+	assert(b.adapter_addr_w(addrw) == BDADDR_ANY)
 	assert(b.adapter_name_w(namew) == "any")
 	assert(b.adapter_name_w(addrw) == "any")
 	print "Tests ok"

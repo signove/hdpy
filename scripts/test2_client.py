@@ -13,6 +13,7 @@
 
 from mcap.mcap_instance import MCAPInstance
 from mcap.mcap_defs import *
+from mcap.misc import parse_params
 import time
 import sys
 import glib
@@ -192,15 +193,10 @@ received = [
        	"0800FFFF", # receive a DELETE_MD_RSP (0x08) with RSP Sucess (0x00)
 	]
 
-try:
-	remote_addr = (sys.argv[1], int(sys.argv[2]))
-	dpsm = int(sys.argv[3])
-except:
-	print "Usage: %s <remote addr> <control PSM> <data PSM>" % sys.argv[0]
-	sys.exit(1)
+adapter, device, cpsm, dpsm, addr = parse_params(sys.argv)
 
-instance = MyInstance("00:00:00:00:00:00", False)
-print "Connecting..."
-mcl = instance.CreateMCL(remote_addr, dpsm)
+instance = MyInstance(adapter, False)
+print "Connecting to", device
+mcl = instance.CreateMCL(addr, dpsm)
 
 loop.run()
