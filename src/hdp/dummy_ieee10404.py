@@ -35,10 +35,10 @@ def parse_message(msg):
     global assoc_resp_msg
     resp = ()
     if int(msg[0]) == 0xe2:
-        print 'Association request'
+        print 'IEEE association request'
         resp = assoc_resp_msg
     elif int(msg[0])==0xe7:
-        print 'Data received'
+        print 'IEEE agent data'
         resp = (0xe7, 0x00, #APDU CHOICE Type(PrstApdu)
                 0x00, 0x12, #CHOICE.length = 18
                 0x00, 0x10, #OCTET STRING.length = 16
