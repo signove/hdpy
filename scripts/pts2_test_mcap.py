@@ -21,16 +21,18 @@ import sys
 
 class BluetoothUtils(object):
 
-	def __init__(self):
+	def __init__(self, adapter_name):
         	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         	self.bus = dbus.SystemBus()
-		self.InitDBus()
+		self.InitDBus(adapter_name)
 
 	# initialize DBus things here
-	def InitDBus(self):
+	def InitDBus(self, adapter_name):
 		self.root_obj = self.bus.get_object("org.bluez", "/")
 		self.manager = dbus.Interface(self.root_obj, "org.bluez.Manager")
-		self.adapter_obj = self.bus.get_object("org.bluez", self.manager.DefaultAdapter())	
+		self.adapter_path = self.manager.FindAdapter(adapter_name)
+		
+		self.adapter_obj = self.bus.get_object("org.bluez", self.adapter_path)	
 		self.adapter = dbus.Interface(self.adapter_obj, "org.bluez.Adapter")
 
 	# return a list of availble adapters
@@ -46,7 +48,11 @@ class BluetoothUtils(object):
 
 ### Class to deal with MCAP issues
 
-class MyInstance(MCAPInstance):
+class MyTestInstance(MCAPInstance):
+
+	def __init__(self, adapter, listener):
+                MCAPInstance.__init__(self, adapter, listener)
+	
 	def MCLConnected(self, mcl, err):
 		print "MCL has connected", id(mcl)
 
@@ -82,10 +88,10 @@ class MyInstance(MCAPInstance):
 
 class TestStub(object):
 
-	def __init__(self):
+	def __init__(self, adapter_name):
 		self.current_adapter = None
-		self.bluetoothUtils = BluetoothUtils()
-		self.instance = MyInstance("00:00:00:00:00:00", False)
+		self.bluetoothUtils = BluetoothUtils(adapter_name)
+		self.instance = MyTestInstance("00:00:00:00:00:00", False)
 
 	def Start(self):
 		while True:
@@ -128,12 +134,29 @@ class TestStub(object):
 	def SelectMCAPCommand(self):
 		selectedCommand = self.SelectCommands(MCAPCommands)
 		method = selectedCommand[1]
+
+		# parameters: MDLID, MDEPID, CONF
+		if ( method in [MyTestInstance.CreateMDL] ):
+			if (self.current_mcl == None):
+				print "\t > > Create a MCL before"
+			else:
+				mdepid, conf = self.GetParam("Insert MDEPID, CONF:",2)	
+				mdlid = self.instance.CreateMDLID(self.current_mcl)
+				print '**', self.current_mcl.state
+				if (mdlid != 0):
+					method(self.instance, self.current_mcl, mdlid, int(mdepid), int(conf))
+					print "MDL created with ID", mdlid
+				else:	
+					print "Could not create MDL" 
+				
+
 		# parameters: MCL
-		if ( method in [MyInstance.CloseMCL, MyInstance.DeleteMCL, MyInstance.DeleteAll] ):
+		elif ( method in [MyTestInstance.CloseMCL, MyTestInstance.DeleteMCL, MyTestInstance.DeleteAll] ):
+			print '**', self.current_mcl.remote_addr
 			method(self.instance, self.current_mcl)
 
 		#parameters: MDL
-		elif ( method in [MyInstance.CloseMDL, MyInstance.DeleteMDL] ):
+		elif ( method in [MyTestInstance.CloseMDL, MyTestInstance.DeleteMDL] ):
 			if (self.current_mcl == None):
 				print "\t > > Create a MCL before"
 			else:
@@ -144,15 +167,17 @@ class TestStub(object):
 				else:
 					method(self.instance, mdl)
 
-		#parameters: ADDR, DPSM
-		elif ( method in [MyInstance.CreateMCL] ):
+		#parameters: ADDR, CPSM, DPSM
+		elif ( method in [MyTestInstance.CreateMCL] ):
 			if (self.current_adapter == None):
 				print "\t > > Select an adapter before"
 			else:
 				cpsm, dpsm = self.GetParam("Insert cPSM dPSM:", 2)
 				addr = self.bluetoothUtils.GetAdapterAddress(self.current_adapter)
+				print '--', addr
 				self.current_mcl = method(self.instance, (addr, int(cpsm)), int(dpsm))		
-	
+				print '++', self.current_mcl.remote_addr
+		
 		return selectedCommand
 	
 	def SelectBTCommand(self):
@@ -194,17 +219,22 @@ BTCommands = [('select_adp',     TestStub.SelectAdapter),
 	      ('current_adp',    TestStub.ShowAdapter),
               ('back_menu',      TestStub.SelectGeneralCommand)]
 
-MCAPCommands = [('create_mcl',   MyInstance.CreateMCL),
-                ('close_mcl',    MyInstance.CloseMCL),
-                ('delete_mcl',   MyInstance.DeleteMCL),
+MCAPCommands = [('create_mcl',   MyTestInstance.CreateMCL),
+                ('close_mcl',    MyTestInstance.CloseMCL),
+                ('delete_mcl',   MyTestInstance.DeleteMCL),
                 ('echo_mcl',     TestStub.EchoMCL),
-                ('create_mdl',   MyInstance.CreateMDL),
-                ('connect_mdl',  MyInstance.ConnectMDL),
-                ('delete_mdl',   MyInstance.DeleteMDL),
-                ('delete_all',   MyInstance.DeleteAll),
-                ('echo_mdl',     MyInstance.Send),
+                ('create_mdl',   MyTestInstance.CreateMDL),
+                ('connect_mdl',  MyTestInstance.ConnectMDL),
+                ('delete_mdl',   MyTestInstance.DeleteMDL),
+                ('delete_all',   MyTestInstance.DeleteAll),
+                ('echo_mdl',     MyTestInstance.Send),
                 ('back_menu',    TestStub.SelectGeneralCommand)]
 
+try:
+        adapter_name = sys.argv[1]
+except:
+        print "Usage: %s <adapter name>" % sys.argv[0]
+        sys.exit(1)
 
-test = TestStub()
+test = TestStub(adapter_name)
 result = test.Start()
