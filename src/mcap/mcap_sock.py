@@ -94,7 +94,7 @@ def create_socket(btaddr, psm):
 		btaddr = ""
 	s = BluetoothSocket(proto=L2CAP)
 	if psm or btaddr:
-		print "Bound to (%s,%d)" % (btaddr, psm)
+		# print "Bound to (%s,%d)" % (btaddr, psm)
 		s.bind((btaddr, psm))
 	return s
 
@@ -138,10 +138,6 @@ def create_control_socket(btaddr, psm=None):
 		if btaddr and btaddr != "00:00:00:00:00:00":
 			print "WARNING: the adapter address %s is invalid, " \
 				"using default adapter" % btaddr
-		else:
-			print "Using default adapter"
-	else:
-		print "Adapter ID is %d" % dev_id
 	
 	s = create_socket(btaddr, psm)
 	set_security(s)
@@ -169,7 +165,7 @@ def create_control_listening_socket(btaddr):
 
 def create_data_listening_socket(btaddr):
 	psm = get_available_psm(btaddr)
-	print "Data socket: PSM %d" % psm
+	# print "Data socket: PSM %d" % psm
 	s = create_data_socket(btaddr, psm, DC_MTU)
 	s.listen(5)
 	defer_setup(s)
@@ -201,10 +197,7 @@ def connection_ok(sk):
 
 def hci_open_dev(remote_addr):
 	dev_id = bz.hci_get_route(remote_addr)
-	print "Device ID: %d" % dev_id
-	# if dev_id < 0:
-	#	# take the first one and pray
-	#	dev_id = 0
+	# print "Device ID: %d" % dev_id
 	return bz.hci_open_dev(dev_id), dev_id
 
 
