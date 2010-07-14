@@ -418,28 +418,28 @@ class QueueItem(object):
 		   Prototype is op(arg, queue_item)
 	arg: a single argument for operation. May be a tuple if several
 		arguments must be passed, but it is NOT expanded.
-	cb_ok, cb_err: callbacks to be notified on success or failure,
+	cb_ok, cb_nok: callbacks to be notified on success or failure,
 		   respectively
 	ident: some 'cargo' data that may be needed when async operation
  		completes, so we can check if the completed operation
 		matches with the queue item being processed.
 	'''
-	def __init__(self, operation, arg, cb_ok, cb_err, ident):
+	def __init__(self, operation, arg, cb_ok, cb_nok, ident):
 		self.operation = operation
 		self.arg = arg
 		self.cb_ok = cb_ok
-		self.cb_err = cb_err
+		self.cb_nok = cb_nok
 		self.ident = ident
 
-	def start():
+	def start(self):
 		self.operation(self.arg, self)
 
-	def ok(*args):
+	def ok(self, *args):
 		if self.cb_ok:
 			self.cb_ok(*args)
 			self.cb_ok = None
 
-	def nok(*args):
+	def nok(self, *args):
 		if self.cb_nok:
 			self.cb_nok(*args)
 			self.cb_nok = None
@@ -663,7 +663,9 @@ class HealthService(object):
 			timeout_call(1000, self.queue_dispatch)
 			return False
 
-		if self.queue[0][0] is self.__Echo:
+		pending = self.in_flight()
+
+		if pending and pending.operation is self.__Echo:
 			# for Echo, we need the echo MDL up, too
 			if not self.mdl_echo:
 				self.queue_status = self.WAITING_MDL
@@ -697,12 +699,7 @@ class HealthService(object):
 		self.mdl_echo.send(data)
 
 	def _CreateChannel(self, conf, reply_handler, error_handler):
-		try:
-			conf = {"Reliable": 1, "Streaming": 2, "Any": 0}[conf]
-			reliable = (conf == 0x01)
-		except KeyError:
-			raise HealthError("Invalid channel config")
-
+		reliable = (conf == 0x01)
 		self.enqueue(self.__CreateChannel, (conf, reliable),
 				reply_handler, error_handler)
 

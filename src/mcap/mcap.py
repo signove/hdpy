@@ -194,9 +194,12 @@ class MCL(object):
 
 		self.sm = MCLStateMachine(self)
 
-	def clear_to_send():
+	def clear_to_send(self):
 		return self.state in (MCAP_MCL_STATE_CONNECTED,
 					MCAP_MCL_STATE_ACTIVE)
+
+	def active(self):
+		return self.state != MCAP_MCL_STATE_IDLE
 
 	def accept(self, sk):
 		# complete deferred setup
