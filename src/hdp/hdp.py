@@ -138,14 +138,15 @@ class HealthApplication(MCAPInstance):
                 r['mcap_procedures'] = tuple(procedures)
 
 		xml_record = hdp_record.gen_xml(self.sdp_record)
-		# FIXME do this for every adapter
-		self.sdp_handle = BlueZ().add_record(None, xml_record)
+		self.sdp_handle = BlueZ().add_record("any", xml_record)
 
 	def unpublish(self):
 		if not self.sdp_handle:
 			return
-		# FIXME do this for every adapter
-		BlueZ().remove_record("", self.sdp_handle)
+		try:
+			BlueZ().remove_record("any", self.sdp_handle)
+		except:
+			pass
 		self.sdp_handle = None
 
 	def stop(self):	
@@ -631,7 +632,9 @@ class HealthChannel(object):
 			raise HealthError("Data channel deleted")
 		return self.mdl.sk
 
-		# FIXME reconnect if closed
+		# FIXME reconnect MCL if closed
+		# FIXME reconnect MDL if closed
+		# FIXME asynchronous
 		# FIXME reconection locally not supported
 		# FIXME reconnection remotely not supported
 		# self.service._ReconnectMDL(self.mdl, reply_handler,

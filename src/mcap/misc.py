@@ -43,8 +43,8 @@ class BlauZ(object):
 		return [self.adapter_from_path(str(path)) for path in roll]
 
 	def adapter_path(self, name_or_addr):
-		name_or_addr = self.normalize(name_or_addr)
 		path = None
+		name_or_addr = self.normalize(name_or_addr)
 		if name_or_addr and name_or_addr == "default":
 			try:
 				path = self.manager.DefaultAdapter()
@@ -232,3 +232,6 @@ def test():
 
 if __name__ == '__main__':
 	test()
+
+# TODO detect adapter add/removal, notify agent
+# TODO detect bluez died, notify agent
