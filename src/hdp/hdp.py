@@ -12,6 +12,7 @@
 
 import sys
 from mcap.mcap_instance import MCAPInstance
+from mcap.mcap_loop import watch_fd, IO_IN, schedule
 from mcap.misc import BlueZ
 from . import hdp_record
 
@@ -315,9 +316,11 @@ class HealthApplication(MCAPInstance):
 			return
 
 		service = self.service_by_mcl(mdl.mcl)
+		channel = self.got_channel_by_mdl(mdl)
+		reconn = channel is not None
 
 		if err:
-			service.mdl_connected(mdl, None, err)
+			service.mdl_connected(mdl, channel, reconn, err)
 			return
 
 		if mdl.mdepid == 0:
@@ -329,21 +332,35 @@ class HealthApplication(MCAPInstance):
 				mdl.close()
 				return
 
-		channel = self.got_channel_by_mdl(mdl)
-		reconn = channel is not None
-
 		if not reconn:
 			channel = self.create_channel(mdl, mdl.acceptor)
 
 		if mdl.acceptor:
 			self.agent.ChannelConnected(channel)
 
-		service.mdl_connected(mdl, channel, err)
+		service.mdl_connected(mdl, channel, reconn, err)
 
 	def MDLConnectedEcho(self, mdl):
-		# FIXME set up watch
+		watch_fd(mdl.sk, self.echo_watch, mdl)
 		if not mdl.acceptor:
+			service = self.service_by_mcl(mdl.mcl)
 			service.mdlecho_connected(mdl)
+
+	def echo_watch(self, sk, evt, mdl):
+		data = ""
+		if evt & IO_IN:
+			data = sk.recv()
+
+		if not mdl.acceptor:
+			service = self.service_by_mcl(mdl.mcl)
+			service.mdlecho_pong(mdl, data)
+		else:
+			if data:
+				# send back the same data and close
+				mdl.write(data)
+
+		self.DeleteMDL(mdl)
+		return False
 
 	def MDLDeleted(self, mdl):
 		if self.stopped:
@@ -388,8 +405,44 @@ class HealthApplication(MCAPInstance):
 	def DestroyChannel(self, channel):
 		if channel.valid:
 			channel.valid = False
-			channel.service._DeleteMDL(self.mdl)
+			channel.service._DeleteChannel(channel)
 		return True
+
+
+class QueueItem(object):
+	'''
+	This is an auxiliary class that represents a queued
+	operation.
+
+	operation: function/method to be called when queue dispatches.
+		   Prototype is op(arg, queue_item)
+	arg: a single argument for operation. May be a tuple if several
+		arguments must be passed, but it is NOT expanded.
+	cb_ok, cb_err: callbacks to be notified on success or failure,
+		   respectively
+	ident: some 'cargo' data that may be needed when async operation
+ 		completes, so we can check if the completed operation
+		matches with the queue item being processed.
+	'''
+	def __init__(self, operation, arg, cb_ok, cb_err, ident):
+		self.operation = operation
+		self.arg = arg
+		self.cb_ok = cb_ok
+		self.cb_err = cb_err
+		self.ident = ident
+
+	def start():
+		self.operation(self.arg, self)
+
+	def ok(*args):
+		if self.cb_ok:
+			self.cb_ok(*args)
+			self.cb_ok = None
+
+	def nok(*args):
+		if self.cb_nok:
+			self.cb_nok(*args)
+			self.cb_nok = None
 
 
 class HealthService(object):
@@ -431,43 +484,65 @@ class HealthService(object):
 		self.valid = True
 		self.mdl_echo = None
 
+	def in_flight(self):
+		if self.queue_status == self.IDLE or not self.queue:
+			return None
+		return self.queue[0]
+
 	def mcl_connected(self, mcl, err, reconn):
 		'''
 		Called back by app when related MCL is connected
 		'''
 		self.mcl = mcl
-		self.process_queue(self.CONNECTION, err, None)
+		self.queue_event_process(self.CONNECTION, err)
 
 	def mcl_disconnected(self, mcl):
 		'''
 		Called back by app when MCL is disconnected
 		'''
-		self.process_queue(self.DISCONNECTION, 0, None)
+		self.queue_event_process(self.DISCONNECTION, 0)
 
 	def mcl_deleted(self, mcl):
 		'''
 		Called back by app when MCL is invalidated
 		'''
 		self.mcl = None
-		self.process_queue(self.DELETION, 0, None)
+		self.queue_event_process(self.DELETION, 0)
 
 	def mdl_ready(self, mdl, err):
 		'''
 		Called back by app when MDLReady triggers
 		'''
-		self.process_queue(self.MDL_READY, err, None)
+		self.queue_event_process(self.MDL_READY, err)
 
-	def mdl_connected(self, mdl, channel, err):
+	def mdl_connected(self, mdl, channel, reconn, err):
 		'''
 		Called back by app when MDLConnected triggers
 		'''
-		self.process_queue(self.MDL_CONNECTION, err, channel)
+		self.queue_event_process(self.MDL_CONNECTION, err,
+			{"channel": channel, "reconn": reconn})
 
 	def mdlecho_connected(self, mdl):
 		'''
 		Called back when an Echo MDL initiated by us has connected
 		'''
-		self.process_queue(self.MDL_ECHO_CONNECTION, 0, None)
+		self.queue_event_process(self.MDL_ECHO_CONNECTION, 0,
+			{"mdl": mdl})
+
+	def mdlecho_pong(self, mdl, data):
+		'''
+		Called back when an Echo MDL returned data
+		'''
+		pending = self.in_flight()
+		if not pending:
+			return
+
+		if pending.operation is self.__Echo:
+			if data == pending.ident:
+				pending.ok()
+			else:
+				pending.nok(-99)
+			self.queue_flush()
 
 	def stop(self):
 		'''
@@ -484,7 +559,7 @@ class HealthService(object):
 		self.mcl = None
 		self.app = None
 
-	def process_queue(self, event, err, other):
+	def queue_event_process(self, event, err, details={}):
 		'''
 		Handles queue in face of events
 		'''
@@ -498,16 +573,22 @@ class HealthService(object):
 
 		if event == self.CONNECTION:
 			self.queue_mcl_conn_up()
-		if event == self.DISCONNECTION:
+
+		elif event == self.DISCONNECTION:
 			self.queue_fail(-998)
-		if event == self.DELETION:
+
+		elif event == self.DELETION:
 			self.queue_fail(-999)
+
 		elif event == self.MDL_READY:
 			pass
+
 		elif event == self.MDL_CONNECTION:
-			self.queue_mdl_conn_up(other)
+			self.queue_mdl_conn_up(details["channel"],
+						details["reconn"])
+
 		elif event == self.MDL_ECHO_CONNECTION:
-			self.queue_mdl_echo_conn_up(mdl)
+			self.queue_mdl_echo_conn_up(details["mdl"])
 
 	def queue_mcl_conn_up(self):
 		'''
@@ -516,29 +597,52 @@ class HealthService(object):
 		if self.queue_status == self.WAITING_MCL:
 			self.queue_status = self.IDLE
 
-		self.dispatch_queue()
+		self.queue_dispatch()
 
-	def queue_mdl_conn_up(self, channel):
-		if self.queue[0][0] is self._OpenChannel:
-			# we are expecting for this
-			self.queue[0][2](self.new_channel)
+	def queue_mdl_conn_up(self, channel, reconn):
+		pending = self.in_flight()
+		if not pending:
+			return
+
+		op = pending.operation
+
+		if not reconn and op is self._OpenChannel:
+			mdlid = channel.mdl.mdlid
+			if pending.ident == mdlid:
+				pending.ok(channel)
+				self.queue_flush()
+			else:
+				print "queue_mdl_conn_up bad ID %d" % mdlid
+
+		if reconn and op is self._ReconnectChannel:
+			if channel is pending.ident:
+				pending.ok()
+				self.queue_flush()
+			else:
+				print "queue_mdl_conn_up reconn diff chan"
 
 	def queue_mdl_echo_conn_up(self, mdl):
 		if self.queue_status == self.WAITING_MDL:
 			self.queue_status = self.IDLE
 
 		self.echo_mdl = mdl
-		self.dispatch_queue()
+		self.queue_dispatch()
 
 	def queue_fail(self, err):
-		if self.queue_status != self.IDLE:
-			self.queue[0][3](err)
-			del self.queue[0]
-			self.queue_status = self.IDLE
+		pending = self.in_flight()
+		if pending:
+			pending.nok(err)
+			self.queue_flush()
+		else:
+			self.queue_dispatch()
 
-		self.dispatch_queue()
+	def queue_flush(self):
+		del self.queue[0]
+		self.queue_status = self.IDLE
+		self.queue_priv = None
+		self.queue_dispatch()
 
-	def dispatch_queue(self):
+	def queue_dispatch(self):
 		if not self.queue:
 			return
 
@@ -550,12 +654,14 @@ class HealthService(object):
 			return
 
 		if not self.mcl or not self.mcl.active():
+			# we can't do nothing if MCL is not up
 			self.queue_status = self.WAITING_MCL
 			self.mcl = self.app.CreateMCL(self.addr_control,
 						self.addr_data[1])
 			return
 
 		if self.queue[0][0] is self.__Echo:
+			# for Echo, we need the echo MDL up, too
 			if not self.mdl_echo:
 				self.queue_status = self.WAITING_MDL
 				mdlid = self.app.CreateMDLID(self.mcl)
@@ -566,16 +672,24 @@ class HealthService(object):
 
 	def queue_execute(self):
 		self.queue_status = self.IN_FLIGHT
-		command, args, reply_cb, error_cb = self.queue[0]
-		command(args, reply_cb, error_cb)
+		pending = self.in_flight()
+		if pending:
+			pending.start()
+
+	def enqueue(self, op, arg, reply, error, ident=None):
+		qitem = QueueItem(op, arg, reply, error, ident)
+		self.queue.append(qitem)
+		self.queue_dispatch()
 
 	def _Echo(self, reply_handler, error_handler):
-		self.queue.append(self.__Echo, reply_handler, error_handler)
-		self.dispatch_queue()
+		self.enqueue(self.__Echo, None, reply_handler, error_handler)
 
-	def __Echo(self, args, reply_handler, error_handler):
+	def __Echo(self, dummy, queueop):
+		length = random.randint(1, 48)
+		data = [ chr(random.randint(0, 255)) for x in range(0, length) ]
+		data = "".join(data)
+		queueop.ident = data
 		self.mdl_echo.send(data)
-		# FIXME where feedback comes from?
 
 	def _CreateChannel(self, conf, reply_handler, error_handler):
 		try:
@@ -584,34 +698,29 @@ class HealthService(object):
 		except KeyError:
 			raise HealthError("Invalid channel config")
 
-		self.queue.append(self.__CreateChannel,
-				(conf, reliable),
+		self.enqueue(self.__CreateChannel, (conf, reliable),
 				reply_handler, error_handler)
 
-		self.dispatch_queue()
-
-	def __CreateChannel(self, args, reply_handler, error_handler):
+	def __CreateChannel(self, args, queueop):
 		conf, reliable = args
 		mdlid = self.app.CreateMDLID(self.mcl)
+		queueop.ident = mdlid
 		self.app.CreateMDL(self.mcl, mdlid, self.mdepid, conf, reliable)
 
-	def _DeleteMDL(self, mdl):
-		self.queue.append(self.__DeleteMDL, (mdl,), None, None)
-		self.dispatch_queue()
+	def _DeleteChannel(self, channel):
+		self.enqueue(self.__DeleteChannel, channel, None, None)
 
-	def __DeleteMDL(self, args, reply_handler, error_handler):
-		mdl = args[0]
-		app.DeleteMDL(mdl)
+	def __DeleteChannel(self, channel, queueop):
+		app.DeleteMDL(channel.mdl)
 
-	def _ReconnectMDL(self, mdl, reply_handler, error_handler):
-		self.queue.append(self.__ReconnectMDL, (mdl,), reply_handler,
-								error_handler)
-		self.dispatch_queue()
+	def _ReconnectChannel(self, channel, reply_handler, error_handler):
+		self.enqueue(self.__ReconnectChannel, channel,
+				reply_handler, error_handler)
 
-	def __ReconnectMDL(self, args, reply_handler, error_handler):
-		mdl = args[0]
-		self.app.ReconnectMDL(self.mdl)
-		# FIXME Reconnection feedback? and err?
+	def __ReconnectChannel(self, channel, queueop):
+		mdl = channel.mdl
+		queueop.ident = channel
+		self.app.ReconnectMDL(mdl)
 
 
 class HealthChannel(object):
@@ -627,18 +736,20 @@ class HealthChannel(object):
 		data_type = self.mdl.reliable and "Reliable" or "Streaming"
 		return {"Type": data_type, "Service": self.service}
 
-	def Acquire(self):
+	def Acquire(self, reply_handler, error_handler):
 		if not self.valid:
 			raise HealthError("Data channel deleted")
-		return self.mdl.sk
 
-		# FIXME reconnect MCL if closed
-		# FIXME reconnect MDL if closed
-		# FIXME asynchronous
-		# FIXME reconection locally not supported
-		# FIXME reconnection remotely not supported
-		# self.service._ReconnectMDL(self.mdl, reply_handler,
-		#					error_handler)
+		if self.mdl.active():
+			schedule(reply_handler, self.mdl.sk)
+			return
+
+		# Pass this closure as reply handler
+		def reconnected():
+			reply_handler(self.mdl.sk)
+
+		self.service._ReconnectChannel(self, reconnected,
+							error_handler)
 
 	def Release(self):
 		self.mdl.close()
@@ -671,3 +782,4 @@ class HealthAgent(object):
 		pass
 
 # FIXME capture all "normal" InvalidOperation exceptions
+# FIXME test echo between two HDPys, and HDPy x instance

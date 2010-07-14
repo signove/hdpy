@@ -7,7 +7,7 @@ from hdp.hdp import *
 
 watch_bitmap = glib.IO_IN | glib.IO_ERR | glib.IO_HUP | glib.IO_NVAL
 
-def data_received(sk, evt, channel):
+def data_received(sk, evt):
 	data = None
 	if evt & glib.IO_IN:
 		data = sk.recv(1024)
@@ -21,20 +21,28 @@ def data_received(sk, evt, channel):
 	more = (evt == glib.IO_IN and data)
 
 	if not more:
+		print "EOF"
+		try:
+			sk.shutdown(2)
+		except IOError:
+			pass
 		sk.close()
-		channel.Release()
 
 	return more
 
 
 class MyAgent(HealthAgent):
 	def ChannelConnected(self, channel):
-		fd = channel.Acquire()
-
-		glib.io_add_watch(fd, watch_bitmap, data_received, channel)
-
+		channel.Acquire(self.FdAcquired, self.FdNotAcquired)
 		print "Channel %d from %d up" % \
 			(id(channel), id(channel.GetProperties()['Service']))
+
+	def FdAcquired(self, fd):
+		glib.io_add_watch(fd, watch_bitmap, data_received)
+		print "FD acquired"
+
+	def FdNotAcquired(self, err):
+		print "FD not acquired"
 
 	def ChannelDeleted(self, channel):
 		print "Channel %d deleted" % id(channel)
