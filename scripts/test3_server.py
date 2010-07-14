@@ -70,7 +70,12 @@ class MyInstance(MCAPInstance):
 
 adapter = parse_srv_params(sys.argv)
 instance = MyInstance(adapter, True)
-# instance.SyncDisable()
+if "-r" in sys.argv:
+	instance.ReconnectionDisable()
+	print "Reconnections disabled"
+if "-c" in sys.argv:
+	instance.SyncDisable()
+	print "CSP support disabled"
 
 print "Waiting for connections on", adapter
 loop = glib.MainLoop()

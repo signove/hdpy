@@ -40,16 +40,31 @@ class MI(MCAPInstance):
 		return True
 
 	def test(self, mcl, mdl, response, *args):
-		if response is not None and response != self.response:
+		exhausted = True
+		if type(self.response) is list:
+			expected = self.response[0]
+			del self.response[0]
+			if self.response:
+				exhausted = False
+		else:
+			expected = self.response
+
+		if response is not None and response != expected:
 			print "Test %d expected %s came %s" % \
-				(self.test_step, self.response.__name__,
+				(self.test_step, expected.__name__,
 					response.__name__)
 			sys.exit(1)
 
-		test_item = MI.tests[self.test_step]
-		self.test_step += 1
+		if not exhausted:
+			return False
+
+		test_item = (None, False)
+		while len(test_item) > 1 and not test_item[1]:
+			test_item = MI.tests[self.test_step]
+			self.test_step += 1
+
 		print "Round %d %s" % (self.test_step, test_item[0].__name__)
-		test_item[0](self, mcl, mdl, *test_item[1:])
+		test_item[0](self, mcl, mdl)
 
 		return False
 
@@ -121,8 +136,22 @@ class MI(MCAPInstance):
 					self.test_mdl_connect_connected)
 
 	def test_mdl_reconnect(self, dummy, mdl):
-		self.response = self.MDLReady
+		if reconn_disabled:
+			self.response = self.MDLReady_error
+		else:
+			self.response = self.MDLReady
 		instance.ReconnectMDL(mdl)
+
+	def test_mdl_reconnect_unsupp(self, dummy, mdl):
+		self.ReconnectionDisable()
+		self.response = self.test_mdl_reconnect_unsupp
+		try:
+			instance.ReconnectMDL(mdl)
+			print "ReconnectMDL should have failed"
+		except mcap.InvalidOperation:
+			pass
+			glib.timeout_add(0, self.test, dummy, mdl,
+					self.test_mdl_reconnect_unsupp)
 
 	def test_mdl_reconnect_pending(self, mcl, mdl):
 		self.test_mdl_reconnect(mcl, mdl)
@@ -163,7 +192,10 @@ class MI(MCAPInstance):
 		instance.DeleteMDL(mdl)
 
 	def test_mdl_delete_all(self, mcl, dummy):
-		self.response = self.MDLDeleted
+		if reconn_disabled:
+			self.response = [self.MDLDeleted, self.MDLDeleted]
+		else:
+			self.response = self.MDLDeleted
 		instance.DeleteAll(mcl)
 
 	def test_mdl_getfd(self, dummy, mdl):
@@ -211,11 +243,14 @@ class MI(MCAPInstance):
 
 	def MDLReady(self, mcl, mdl, err):
 		if err:
-			print "MDL creation/reconnection failed"
+			self.test(mcl, mdl, self.MDLReady_error)
 			return
 
 		print "\tinitiated MDL ready"
 		self.test(mcl, mdl, self.MDLReady)
+
+	def MDLReady_error(self):
+		pass
 
 	def MDLConnected(self, mdl, err):
 		if err:
@@ -254,6 +289,15 @@ class MI(MCAPInstance):
 		self.test(mcl, mdl, self.fd_activity)
 		return True
 
+try:
+	i = sys.argv.index("-r")
+	# we mean: disabled at server side.
+	reconn_disabled = True
+	del sys.argv[i]
+except ValueError:
+	reconn_disabled = False
+	pass
+
 MI.tests = ( \
 	(MI.test_disconnect, ),
 	(MI.test_reconnect, ),
@@ -263,21 +307,24 @@ MI.tests = ( \
 	(MI.test_mdl_create, ),
 	(MI.test_mdl_connect, ),
 	(MI.test_mdl_send, ),
+	(MI.test_mdl_send, ),
+	(MI.test_mdl_connect_connected, ),
+	(MI.test_mdl_send, ),
 	(MI.test_mdl_close, ),
 	(MI.test_mdl_create, ),
 	(MI.test_mdl_abort, ),
 	(MI.test_mdl_reconnect, ),
-	(MI.test_mdl_connect2, ),
-	(MI.test_mdl_close, ),
-	(MI.test_mdl_reconnect_pending, ),
-	(MI.test_mdl_connect2, ),
-	(MI.test_mdl_send, ),
-	(MI.test_mdl_send, ),
-	(MI.test_mdl_connect_connected, ),
-	(MI.test_mdl_send, ),
-	(MI.test_mdl_send, ),
-	(MI.test_mdl_close, ),
-	(MI.test_mdl_delete, ),
+	(MI.test_mdl_connect2, not reconn_disabled),
+	(MI.test_mdl_close, not reconn_disabled),
+	(MI.test_mdl_reconnect_pending, not reconn_disabled),
+	(MI.test_mdl_connect2, not reconn_disabled),
+	(MI.test_mdl_send, not reconn_disabled),
+	(MI.test_mdl_send, not reconn_disabled),
+	(MI.test_mdl_connect_connected, not reconn_disabled),
+	(MI.test_mdl_send, not reconn_disabled),
+	(MI.test_mdl_send, not reconn_disabled),
+	(MI.test_mdl_close, not reconn_disabled),
+	(MI.test_mdl_delete, not reconn_disabled),
 	(MI.test_mdl_delete_all, ),
 	(MI.test_mdl_create_streaming, ),
 	(MI.test_mdl_connect, ),
@@ -296,14 +343,15 @@ MI.tests = ( \
 	(MI.test_mdl_getfd, ),
 	(MI.test_mdl_sendfd, ),
 	(MI.test_mdl_close, ),
+	(MI.test_mdl_reconnect_unsupp, ),
 	(MI.test_disconnect, ),
 	(MI.finish, ),
 	)
 
-
 adapter, device, cpsm, dpsm, addr = parse_params(sys.argv)
 
 instance = MI(adapter, False)
+
 print "Connecting to", device
 mcl = instance.CreateMCL(addr, dpsm)
 

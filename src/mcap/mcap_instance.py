@@ -87,18 +87,18 @@ class MCAPInstance:
 ### CSP enabling
 
 	def SyncEnable(self):
-		self.csp_enabled = True;
+		self.csp_enabled = True
 		return True;
 
 	def SyncDisable(self):
-		self.csp_enabled = False;
+		self.csp_enabled = False
 		return True;
 
 	def ReconnectionEnable(self):
-		self.reconn_enabled = True;
+		self.reconn_enabled = True
 
 	def ReconnectionDisable(self):
-		self.reconn_disabled = True;
+		self.reconn_enabled = False
 
 ### Commands
 
