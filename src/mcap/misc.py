@@ -35,6 +35,13 @@ class BlauZ(object):
 		else:
 			return s.upper()
 
+	def adapter_from_path(self, path):
+		return path.split("/")[-1]
+
+	def adapters(self):
+		roll = self.manager.ListAdapters()
+		return [self.adapter_from_path(str(path)) for path in roll]
+
 	def adapter_path(self, name_or_addr):
 		name_or_addr = self.normalize(name_or_addr)
 		path = None
@@ -55,7 +62,7 @@ class BlauZ(object):
 
 	def adapter_iface(self, name_or_addr):
 		path = self.adapter_path(name_or_addr)
-		if not path or path[-3:] == "any":
+		if not path or self.adapter_from_path(path) == "any":
 			return None
 		obj = self.bus.get_object("org.bluez", path)
 		return dbus.Interface(obj, "org.bluez.Adapter")
@@ -84,9 +91,12 @@ class BlauZ(object):
 
 	def adapter_name(self, addr):
 		path = self.adapter_path(addr)
-		if not path or path[-3:] == "any":
+		if not path:
 			return None
-		return path.split("/")[-1]
+		adapter = self.adapter_from_path(path)
+ 		if adapter == "any":
+			return None
+		return adapter
 
 	def adapter_name_w(self, addr):
 		if self.is_wildcard(addr):
@@ -188,18 +198,18 @@ def parse_params(args, wildcard=True):
 def test():
 	# good ones
 	name = "hci0"
-	addr = "00:1B:DC:0F:C8:A9"
+	addr = "00:1b:DC:0F:C8:A9"
 	# bad ones
 	namef = "hci2"
-	addrf = "00:1B:DC:0F:C8:A8"
+	addrf = "00:1B:DC:0f:C8:A8"
 	# wildcards 
 	namew = "any"
 	addrw = "00:00:00:00:00:00"
 
 	print "Beginning tests"
 	b = BlueZ()
-	assert(addr == b.adapter_addr(addr))
-	assert(addr == b.adapter_addr(name))
+	assert(addr.lower() == b.adapter_addr(addr).lower())
+	assert(addr.lower() == b.adapter_addr(name).lower())
 	assert(name == b.adapter_name(name))
 	assert(name == b.adapter_name(addr))
 	assert(b.adapter_addr(addrf) is None)
@@ -210,10 +220,13 @@ def test():
 	assert(b.adapter_name(namew) is None)
 	assert(b.adapter_addr(addrw) is None)
 	assert(b.adapter_name(addrw) is None)
+	assert(b.adapter_addr('default') == addr.upper())
+	assert(b.adapter_name('default') == name)
 	assert(b.adapter_addr_w(namew) == BDADDR_ANY)
 	assert(b.adapter_addr_w(addrw) == BDADDR_ANY)
 	assert(b.adapter_name_w(namew) == "any")
 	assert(b.adapter_name_w(addrw) == "any")
+	assert(b.adapters() == ['hci0', 'hci1'])
 	print "Tests ok"
 
 
