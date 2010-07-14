@@ -644,21 +644,24 @@ class HealthService(object):
 
 	def queue_dispatch(self):
 		if not self.queue:
-			return
-
-		# FIXME protection against crossing requests
-		# FIXME easy way: 1-second timeout -> stop() consequences
+			return False
 
 		if self.queue_status != self.IDLE:
 			# waiting for something to happen
-			return
+			return False
 
 		if not self.mcl or not self.mcl.active():
 			# we can't do nothing if MCL is not up
 			self.queue_status = self.WAITING_MCL
 			self.mcl = self.app.CreateMCL(self.addr_control,
 						self.addr_data[1])
-			return
+			return False
+
+		if not self.mcl.clear_to_send():
+			# some other MCL operation in flight, might have been
+			# initiated by remote, we wait a bit and try again
+			timeout_call(1000, self.queue_dispatch)
+			return False
 
 		if self.queue[0][0] is self.__Echo:
 			# for Echo, we need the echo MDL up, too
@@ -667,8 +670,10 @@ class HealthService(object):
 				mdlid = self.app.CreateMDLID(self.mcl)
 				self.app.CreateMDL(self.mcl, mdlid,
 							0, 1, True)
+				return False
 
 		self.queue_execute()
+		return False
 
 	def queue_execute(self):
 		self.queue_status = self.IN_FLIGHT
