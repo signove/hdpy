@@ -199,7 +199,7 @@ class BlauZ(object):
 			if not self.start_manager(False):
 				return
 
-		print value, path, member # FIXME
+		# print value, path, member
 		if member not in BlauZ.signal_handlers:
 			return
 		handler = BlauZ.signal_handlers[member]

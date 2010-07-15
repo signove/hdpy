@@ -38,8 +38,7 @@ class HealthManager(object):
 		self.applications.remove(application)
 
 	def UpdateServices(self):
-		# TODO searches remote devices
-		pass
+		BlueZ().search()
 
 
 class HealthApplication(MCAPInstance):
@@ -63,14 +62,87 @@ class HealthApplication(MCAPInstance):
 
 		self.publish()
 
-		# If I am sink, I want to learn about sources (0x1401)
-		# and vice-versa
+		BlueZ().register_observer(self, self.remote_uuid)
 
-		BlueZ().register_observer(self, sink and "1401" or "1402")
+	def device_created(self, addr):
+		print "HDP: device created", addr
 
-		# FIXME observer methods here
-		# FIXME here: test for stopped
-		# FIXME: interpret SDP records and create services
+		def closure_ok(records):
+			self.device_created2(addr, records)
+
+		def closure_nok(*args):
+			# Ignore
+			pass
+
+		BlueZ().get_record(addr, self.remote_uuid,
+			closure_ok, closure_nok)
+
+	def device_created2(sel, addr, records):
+		'''
+		Gets the SDP records for the discovered device
+		and transverses them to extract individual services
+		'''
+		print records
+		for record in records:
+			hdprec = hdp_record.parse_xml(record)
+			if not hdprec:
+				continue
+			for feature in hdprec["features"]:
+				self.device_created3(addr, hdprec, feature)
+		
+	def device_created3(self, addr, hdprec, feature):
+		'''
+		Gets a particular feature of an HDP record and
+		makes a HealthService out of it
+		'''
+		feat_sink = (feature['role'] == 'sink')
+		if feature['data_type'] != self.data_type or feat_sink == sink:
+			return
+		
+		# FIXME create services
+		# FIXME remove old, different services
+		# FIXME keep 'equal' services'
+
+	def device_removed(self, addr):
+		# FIXME remove services
+		print "HDP: device removed", addr
+
+	def device_found(self, addr):
+		''' Can be extended by subclasses '''
+
+		def closure_ok(records):
+			self.device_created2(addr, records)
+
+		def closure_nok(*args):
+			# Ignore
+			pass
+
+		BlueZ().get_record(addr, self.remote_uuid,
+			closure_ok, closure_nok)
+
+		print "HDP: device found", addr
+
+	def device_disappeared(self, addr):
+		''' Can be extended by subclasses '''
+		print "HDP: device disappeared", addr
+
+	def bluetooth_dead(self):
+		''' Can be extended by subclasses '''
+		# FIXME stop listening
+		print "Obs: bt dead"
+
+	def bluetooth_alive(self):
+		''' Can be extended by subclasses '''
+		# FIXME re-listen
+		print "Obs: bt alive"
+
+	def adapter_added(self, name):
+		''' Can be extended by subclasses '''
+		pass
+
+	def adapter_removed(self, name):
+		''' Can be extended by subclasses '''
+		pass
 
 	def process_config(self, config):
 		self.sdp_record = {'features': []}
@@ -85,6 +157,11 @@ class HealthApplication(MCAPInstance):
 			return "Role must be 'Source' or 'Sink'"
 
 		self.sink = (role == "Sink" and 1 or 0)
+
+		# If I am sink, I want to learn about sources (0x1401)
+		# and vice-versa
+
+		self.remote_uuid = sink and "1401" or "1402"
 
 		if 'MDEPID' not in config:
 			self.mdepid = 1
