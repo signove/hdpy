@@ -33,7 +33,8 @@ def data_received(sk, evt):
 
 class MyAgent(HealthAgent):
 	def ChannelConnected(self, channel):
-		channel.Acquire(self.FdAcquired, self.FdNotAcquired)
+		channel.Acquire(reply_handler=self.FdAcquired,
+				error_handler=self.FdNotAcquired)
 		print "Channel %d from %d up" % \
 			(id(channel), id(channel.GetProperties()['Service']))
 

@@ -12,6 +12,7 @@
 #From IEEE Standard 11073-10404 page 62
 
 from hdp_utils import *
+from random import randint
 
 assoc_resp_msg = (
 	0xe3, 0x00, #APDU CHOICE Type(AareApdu)
@@ -34,7 +35,6 @@ assoc_resp_msg = (
 
 
 def parse_message(msg):
-	global assoc_resp_msg
 	resp = ()
 
 	if int(msg[0]) == 0xe2:
@@ -63,3 +63,27 @@ def parse_message(msg):
 
 def parse_message_str(msg):
 	return b2s(parse_message(s2b(msg)))
+
+
+# Dumped from Nonin Oximeter
+sample_assoc_request = ('e2', '0', '0', '32', '80', '0', '0', '0', '0', '1', '0', '2a', '50', '79', '0', '26', '80', '0', '0', '0', '80', '0', '80', '0', '0', '0', '0', '0', '0', '0', '0', '80', '0', '0', '0', '8', '0', '1c', '5', '1', '0', '0', '28', '85', '1', '91', '0', '1', '1', '0', '0', '0', '0', '0')
+
+
+# Dumped from Nonin Oximeter
+sample_indication = ('e7', '0', '0', '36', '0', '34', '80', '0', '1', '0', '0', '2e', '0', '0', '0', '8', 'a3', '40', 'd', '1d', '0', '24', 'f0', '0', '0', '0', '0', '2', '0', '1c', '0', '1', '0', 'a', '0', '62', '20', '7', '10', '1', '8', '31', '42', '0', '0', 'a', '0', 'a', '0', '69', '20', '7', '10', '1', '8', '31', '42', '0')
+
+
+def make_assoc():
+	return sample_assoc_request
+
+def make_assoc_str():
+	return b2s(make_assoc())
+
+def make_sample():
+	ind = sample_indication[:]
+	ind[35] = randint(90, 100)
+	ind[49] = randint(55, 105)
+	return tuple(ind)
+
+def make_sample_str():
+	return b2s(make_example())
