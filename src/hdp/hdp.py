@@ -63,6 +63,15 @@ class HealthApplication(MCAPInstance):
 
 		self.publish()
 
+		# If I am sink, I want to learn about sources (0x1401)
+		# and vice-versa
+
+		BlueZ().register_observer(self, sink and "1401" or "1402")
+
+		# FIXME observer methods here
+		# FIXME here: test for stopped
+		# FIXME: interpret SDP records and create services
+
 	def process_config(self, config):
 		self.sdp_record = {'features': []}
 		self.sdp_handle = None
@@ -152,6 +161,7 @@ class HealthApplication(MCAPInstance):
 
 	def stop(self):	
 		self.stopped = True
+		BlueZ().unregister_observer(self)
 
 		while self.services:
 			self.remove_service(self.services[-1])

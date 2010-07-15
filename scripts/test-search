@@ -1,0 +1,64 @@
+#!/usr/bin/env python
+# -*- coding: utf-8
+
+################################################################
+#
+# Copyright (c) 2010 Signove. All rights reserved.
+# See the COPYING file for licensing details.
+#
+# Autors: Elvis Pfützenreuter < epx at signove dot com >
+#         Raul Herbster < raul dot herbster at signove dot com >
+################################################################
+
+import dbus
+from sys import exit
+import dbus.mainloop.glib
+dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+from mcap import misc
+import glib
+
+class Obs(object):
+	def device_created(self, addr):
+		print "Obs: created", addr
+
+	def device_removed(self, addr):
+		print "Obs: removed", addr
+
+	def device_found(self, addr):
+		print "Obs: found", addr
+
+	def device_disappeared(self, addr):
+		print "Obs: disapp", addr
+
+	def bluetooth_dead(self):
+		print "Obs: bt dead"
+
+	def bluetooth_alive(self):
+		print "Obs: bt alive"
+
+	def adapter_added(self, name):
+		print "Obs: adapter added", name
+
+	def adapter_removed(self, name):
+		print "Obs: adapter removed", name
+
+
+bz = misc.BlueZ()
+o = Obs()
+
+def register():
+	# We are interested in Health Sources only
+	bz.register_observer(o, "1401")
+	bz.search()
+	return False
+
+glib.timeout_add(5000, register)
+
+try:
+	loop = glib.MainLoop()
+	loop.run()
+except KeyboardInterrupt:
+	print
+	pass
+finally:
+	bz.unregister_observer(o)
