@@ -19,11 +19,13 @@ dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 BDADDR_ANY = "00:00:00:00:00:00"
 
-# FIXME detect bluez out/in again (survives restarts)
-# FIXME convert prints to DBG
-
 exc = dbus.exceptions.DBusException
 
+debug_level = 3
+
+def DBG(level, *msg):
+	if level <= debug_level:
+		print(" ".join(msg))
 
 class ObserverProxy():
 	def __init__(self, obj, uuid):
@@ -42,7 +44,7 @@ class ObserverProxy():
 		self.AdapterRemoved = getattr(obj, "adapter_removed", self.noop)
 		
 	def noop(self, *args):
-		print "noop", args
+		DBG(3, "noop " + str(args))
 		pass
 
 	def interesting(self, uuids):
@@ -66,7 +68,7 @@ class ObserverProxy():
 	def adapter_added(self, name):
 		self.AdapterAdded(name)
 
-	def adapter_removed(self, path):
+	def adapter_removed(self, name):
 		self.AdapterRemoved(name)
 
 	def dead(self):
@@ -109,46 +111,102 @@ class BlauZ(object):
 	def __init__(self):
 		self.observers = {}
 		self.devmap = {}
+		self._manager = None
 		self.search_timeout = None
 		self.bus = dbus.SystemBus()
-		self.start_dbus()
+
+		# Signal handlers added this ugly way survive BlueZ restarts
+		self.bus.add_signal_receiver(
+			self.signal_switchboard,
+			bus_name="org.bluez",
+			signal_name = "AdapterAdded",
+			path_keyword="path",
+			member_keyword="member",
+			interface_keyword="interface"
+			)
+
+		self.bus.add_signal_receiver(
+			self.signal_switchboard,
+			bus_name="org.bluez",
+			signal_name = "AdapterRemoved",
+			path_keyword="path",
+			member_keyword="member",
+			interface_keyword="interface"
+			)
+
+		self.bus.add_signal_receiver(
+			self.signal_switchboard,
+			bus_name="org.bluez",
+			signal_name = "DefaultAdapterChanged",
+			path_keyword="path",
+			member_keyword="member",
+			interface_keyword="interface"
+			)
+
+		self.start_manager(True)
 
 	def handle_err(self, exception):
 		name = exception.get_dbus_name()
 
 		if name == "org.freedesktop.DBus.Error.ServiceUnknown":
-			# BlueZ is out
+			DBG(3, exception.get_dbus_name())
+			DBG(3, exception.get_dbus_message())
 			self.dead()
 		else:
-			print
-			print exception.get_dbus_name()
-			print exception.get_dbus_message()
-			print
+			DBG(1, exception.get_dbus_name())
+			DBG(2, exception.get_dbus_message())
 
-	def start_dbus(self):
+	def start_manager(self, first):
+		had_manager = not not self._manager
+
 		try:
 			obj = self.bus.get_object("org.bluez", "/")
-			self.manager = dbus.Interface(obj, "org.bluez.Manager")
-
-       			self.manager.connect_to_signal("AdapterAdded",
-				self.signal_adapter_added)
-       			self.manager.connect_to_signal("AdapterRemoved",
-				self.signal_adapter_removed)
-       			self.manager.connect_to_signal("DefaultAdapterChanged",
-				self.signal_default_adapter_changed)
+			self._manager = dbus.Interface(obj, "org.bluez.Manager")
 		except exc, e:
 			self.handle_err(e)
-			self.manager = None
-			return
+			self._manager = None
+			return False
 
-		for handle, observer in self.observers.items():
-			observer.alive()
+		if not had_manager:
+			# Observers think we are dead
+			for handle, observer in self.observers.items():
+				observer.alive()
 
+		if not first:
+			# BlueZ died and resurrected, everything will
+			# come via signals, one at a time.
+			return True
+
+		# BlueZ was already up, we need to sync current dev list
 		for path in self._adapters():
 			self.signal_adapter_added(path, True)
 
+	def manager(self):
+		if self._manager:
+			# Try something stupid to see if it is valid
+			try:
+				self._manager.ListAdapters()
+			except exc, e:
+				# Invalidated; try to renew
+				self.start_manager(False)
+
+		return self._manager
+				
+
+	def signal_switchboard(self, value, path, interface, member):
+		if not self.alive():
+			# if a signal arrived, must have ressurected
+			if not self.start_manager(False):
+				return
+
+		print value, path, member # FIXME
+		if member not in BlauZ.signal_handlers:
+			return
+		handler = BlauZ.signal_handlers[member]
+		handler(self, value)
+
 	def signal_adapter_added(self, path, forced=False):
-		print "Added", path
+		DBG(3, "Added " + path)
 		name = self.adapter_from_path(path)
 		adapter_iface = self._adapter_iface(path)
 		if not adapter_iface:
@@ -175,7 +233,7 @@ class BlauZ(object):
 			self.handle_err(e)
 
 	def signal_adapter_removed(self, path):
-		print "Removed", path
+		DBG(3, "Removed " + path)
 
 		name = self.adapter_from_path(path)
 
@@ -188,7 +246,7 @@ class BlauZ(object):
 			observer.adapter_removed(name)
 
 	def signal_default_adapter_changed(self, path):
-		print "Default", path
+		DBG(3, "Default " + path)
 
 	def _device_iface(self, path):
 		obj = self.bus.get_object("org.bluez", path)
@@ -208,7 +266,7 @@ class BlauZ(object):
 		if path in self.devmap:
 			return
 
-		print "Device created:", path
+		DBG(3, "Device created: " + path)
 		props = self.device_props(path)
 		addr = str(props["Address"]).upper()
 		adapter = str(props["Adapter"])
@@ -224,7 +282,7 @@ class BlauZ(object):
 		if path not in self.devmap:
 			return
 
-		print "Device removed:", path
+		DBG(3, "Device removed:" + path)
 		for handle, observer in self.observers.items():
 			observer.device_removed(path)
 
@@ -239,25 +297,25 @@ class BlauZ(object):
 		else:
 			return
 
-		print "Device found:", path
+		DBG(3, "Device found: " + path)
 		for handle, observer in self.observers.items():
 			props = self.device_props(path)
 			observer.device_found(path)
 
 	def signal_device_disappeared(self, path):
-		print "Device disappeared:", path
+		DBG(3, "Device disappeared:" + path)
 		for handle, observer in self.observers.items():
 			observer.device_disappeared(path)
 
 	def dead(self):
-		print "D-Bus BlueZ shot down"
-		self.manager = None
+		DBG(1, "D-Bus BlueZ shot down")
+		self._manager = None
 		self.devmap = {}
 		for handle, observer in self.observers.items():
 			observer.dead()
 
 	def alive(self):
-		return self.manager is not None
+		return self.manager() is not None
 
 	def register_observer(self, observer, uuid):
 		obj = ObserverProxy(observer, uuid)
@@ -299,11 +357,11 @@ class BlauZ(object):
 		return path.split("/")[-1]
 
 	def _adapters(self):
-		if not self.manager:
+		if not self.manager():
 			return []
 
 		try:
-			roll = self.manager.ListAdapters()
+			roll = self.manager().ListAdapters()
 		except exc, e:
 			self.handle_err(e)
 			roll = []
@@ -315,7 +373,7 @@ class BlauZ(object):
 		return [self.adapter_from_path(str(path)) for path in roll]
 
 	def adapter_path(self, name_or_addr):
-		if not self.manager:
+		if not self.manager():
 			return None
 
 		path = None
@@ -323,14 +381,14 @@ class BlauZ(object):
 
 		if name_or_addr and name_or_addr == "default":
 			try:
-				path = self.manager.DefaultAdapter()
+				path = self.manager().DefaultAdapter()
 			except exc, e:
 				self.handle_err(e)
 				path = None
 
 		elif name_or_addr:
 			try:
-				path = self.manager.FindAdapter(name_or_addr)
+				path = self.manager().FindAdapter(name_or_addr)
 			except exc, e:
 				self.handle_err(e)
 				path = None
@@ -445,13 +503,22 @@ class BlauZ(object):
 
 	def search(self, to=60000):
 		try:
+			adapters = self._adapters()
+			if not adapters:
+				return False
+
 			for path in self._adapters():
 				adapter_iface = self._adapter_iface(path)
 				adapter_iface.StartDiscovery()
-			self.search_timeout = timeout_call(to, self.stop_search)
-			print "Search begun"
+
 		except exc, e:
 			self.handle_err(e)
+			return False
+
+		self.search_timeout = timeout_call(to, self.stop_search)
+
+		DBG(2, "Search begun")
+		return True
 
 	def stop_search(self):
 		if not self.alive():
@@ -468,9 +535,15 @@ class BlauZ(object):
 		except exc, e:
 			self.handle_err(e)
 
-		print "Search stopped"
+		DBG(2, "Search stopped")
 		return False
 
+BlauZ.signal_handlers = {
+	"AdapterAdded": BlauZ.signal_adapter_added,
+	"AdapterRemoved": BlauZ.signal_adapter_removed,
+	"DefaultAdapterChanged": BlauZ.signal_default_adapter_changed,
+	}
+		
 _BlueZ = None
 
 def BlueZ():
