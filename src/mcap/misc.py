@@ -475,15 +475,11 @@ class BlauZ(object):
 		service.RemoveRecord(dbus.UInt32(handle))
 
 	def get_records(self, device, uuid, cb_ok, cb_nok):
-		def closure_ok(services):
-			cb_ok(device, services)
-
-		def closure_nok(*args):
-			cb_ok(device, [])
-
 		device = device.upper()
-		for path, adapter, addr in self.devmap.items():
-			if addr.upper() == device():
+
+		for path, item in self.devmap.items():
+			adapter, addr, dummy = item
+			if addr.upper() == device:
 				break
 		else:
 			return False
@@ -493,8 +489,8 @@ class BlauZ(object):
 			devif = self._device_iface(path)
 			
 			devif.DiscoverServices(uuid,
-				reply_handler=closure_ok,
-				error_handler=closure_nok)
+				reply_handler=cb_ok,
+				error_handler=cb_nok)
 		except exc, e:
 			self.handle_err(e)
 			return False

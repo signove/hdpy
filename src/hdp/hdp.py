@@ -13,7 +13,7 @@
 import sys
 from mcap.mcap_instance import MCAPInstance
 from mcap.mcap_loop import watch_fd, IO_IN, schedule
-from mcap.misc import BlueZ
+from mcap.misc import BlueZ, DBG
 from . import hdp_record
 
 
@@ -59,39 +59,41 @@ class HealthApplication(MCAPInstance):
 		self.services = [] # relationship 1:(0,1) with MCL
 		self.channels = [] # relationship 1:1 with MDL
 		self.stopped = False
+		self.suspended = False
 
 		self.publish()
 
 		BlueZ().register_observer(self, self.remote_uuid)
 
 	def device_created(self, addr):
-		print "HDP: device created", addr
-
 		def closure_ok(records):
 			self.device_created2(addr, records)
 
 		def closure_nok(*args):
 			# Ignore
+			print "SDP query failed"
 			pass
 
-		BlueZ().get_record(addr, self.remote_uuid,
+		BlueZ().get_records(addr, self.remote_uuid,
 			closure_ok, closure_nok)
 
-	def device_created2(sel, addr, records):
+	def device_created2(self, addr, records):
 		'''
 		Gets the SDP records for the discovered device
 		and transverses them to extract individual services
 		'''
-		new_services = []
-		print records
 
-		for record in records:
-			hdprec = hdp_record.parse_xml(record)
+		new_services = []
+
+		for handle in records:
+			hdprec = hdp_record.parse_xml(str(records[handle]))
 			if not hdprec:
 				continue
-			for feature in hdprec["features"]:
-				srv = self.device_created3(addr, hdprec, feature)
-				new_services.append(srv)
+			for subrec in hdprec:
+				for feature in subrec["features"]:
+					srv = self.device_created3(addr,
+							subrec, feature)
+					new_services.append(srv)
 
 		self.remove_old_services(addr, new_services)
 
@@ -101,13 +103,16 @@ class HealthApplication(MCAPInstance):
 		Gets a particular feature of an HDP record and
 		makes a HealthService out of it
 		'''
+
 		feat_sink = (feature['role'] == 'sink')
-		if feature['data_type'] != self.data_type or feat_sink == sink:
+
+		if feature['data_type'] != self.data_type or \
+					feat_sink == self.sink:
 			return
 
-		cpsm = hdprec['control_psm']
-		dpsm = hdprec['data_psm']
-		mdepid = feature['mdepid']
+		cpsm = hdprec['mcap_control_psm']
+		dpsm = hdprec['mcap_data_psm']
+		mdepid = feature['mdep_id']
 
 		preexists = self.match_service(addr, cpsm, dpsm, mdepid)
 		if preexists:
@@ -173,7 +178,7 @@ class HealthApplication(MCAPInstance):
 		# If I am sink, I want to learn about sources (0x1401)
 		# and vice-versa
 
-		self.remote_uuid = sink and "1401" or "1402"
+		self.remote_uuid = self.sink and "1401" or "1402"
 
 		if 'MDEPID' not in config:
 			self.mdepid = 1
@@ -252,16 +257,24 @@ class HealthApplication(MCAPInstance):
 		'''
 		Reversible 'stopping'
 		'''
+		if self.suspended:
+			return
+
 		while self.services:
 			self.remove_service(self.services[-1])
 
 		self.unpublish()
 		MCAPInstance.stop(self)
+		self.suspended = True
 
 	def resume(self):
 		'''
 		Resume operations
 		'''
+		if not self.suspended:
+			return
+
+		self.suspended = False
 		MCAPInstance.start(self)
 		self.publish()
 
@@ -333,6 +346,8 @@ class HealthApplication(MCAPInstance):
 		data_addr = (bdaddr, dpsm)
 		service = HealthService(self, control_addr, data_addr, mdepid)
 		self.add_service(service)
+		print "Creating discovered srv %s %d %d" % \
+			(bdaddr, cpsm, mdepid)
 		return service
 
 	def match_service(self, bdaddr, cpsm, dpsm, mdepid):
