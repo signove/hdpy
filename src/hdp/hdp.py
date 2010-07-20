@@ -697,7 +697,7 @@ class HealthService(object):
 		if not pending:
 			return
 
-		if pending.operation is self.__Echo:
+		if pending.operation == self.__Echo:
 			if data == pending.ident:
 				pending.ok()
 			else:
@@ -723,6 +723,7 @@ class HealthService(object):
 		'''
 		Handles queue in face of events
 		'''
+		DBG(3, "queue_event_process %d %d" % (event, err))
 
 		if not self.queue or not event:
 			return
@@ -754,19 +755,24 @@ class HealthService(object):
 		'''
 		Called when a connection is successful
 		'''
+		DBG(3, "queue_mcl_conn_up")
+
 		if self.queue_status == self.WAITING_MCL:
 			self.queue_status = self.IDLE
 
 		self.queue_dispatch()
 
 	def queue_mdl_conn_up(self, channel, reconn):
+		DBG(3, "queue_mdl_conn_up %s %s" % (str(channel), str(reconn)))
+
 		pending = self.in_flight()
 		if not pending:
 			return
 
 		op = pending.operation
 
-		if not reconn and op is self._OpenChannel:
+		if (not reconn) and (op == self.__CreateChannel):
+			DBG(3, "\tRequested channel created")
 			mdlid = channel.mdl.mdlid
 			if pending.ident == mdlid:
 				pending.ok(channel)
@@ -774,7 +780,7 @@ class HealthService(object):
 			else:
 				print "queue_mdl_conn_up bad ID %d" % mdlid
 
-		if reconn and op is self._ReconnectChannel:
+		if reconn and (op == self.__ReconnectChannel):
 			if channel is pending.ident:
 				pending.ok()
 				self.queue_flush()
@@ -782,6 +788,8 @@ class HealthService(object):
 				print "queue_mdl_conn_up reconn diff chan"
 
 	def queue_mdl_echo_conn_up(self, mdl):
+		DBG(3, "queue_mdl_echo_conn_up")
+
 		if self.queue_status == self.WAITING_MDL:
 			self.queue_status = self.IDLE
 
@@ -789,6 +797,8 @@ class HealthService(object):
 		self.queue_dispatch()
 
 	def queue_fail(self, err):
+		DBG(3, "queue_fail")
+
 		pending = self.in_flight()
 		if pending:
 			pending.nok(err)
@@ -797,12 +807,16 @@ class HealthService(object):
 			self.queue_dispatch()
 
 	def queue_flush(self):
+		DBG(3, "queue_flush")
+
 		del self.queue[0]
 		self.queue_status = self.IDLE
 		self.queue_priv = None
 		self.queue_dispatch()
 
 	def queue_dispatch(self):
+		DBG(3, "queue_dispatch")
+
 		if not self.queue:
 			return False
 
@@ -825,7 +839,7 @@ class HealthService(object):
 
 		pending = self.in_flight()
 
-		if pending and pending.operation is self.__Echo:
+		if pending and pending.operation == self.__Echo:
 			# for Echo, we need the echo MDL up, too
 			if not self.mdl_echo:
 				self.queue_status = self.WAITING_MDL
@@ -838,6 +852,7 @@ class HealthService(object):
 		return False
 
 	def queue_execute(self):
+		DBG(3, "queue_execute")
 		self.queue_status = self.IN_FLIGHT
 		pending = self.in_flight()
 		if pending:
@@ -873,7 +888,7 @@ class HealthService(object):
 		self.enqueue(self.__DeleteChannel, channel, None, None)
 
 	def __DeleteChannel(self, channel, queueop):
-		app.DeleteMDL(channel.mdl)
+		self.app.DeleteMDL(channel.mdl)
 
 	def _ReconnectChannel(self, channel, reply_handler, error_handler):
 		self.enqueue(self.__ReconnectChannel, channel,
