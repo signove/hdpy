@@ -82,13 +82,19 @@ class HealthApplication(MCAPInstance):
 		Gets the SDP records for the discovered device
 		and transverses them to extract individual services
 		'''
+		new_services = []
 		print records
+
 		for record in records:
 			hdprec = hdp_record.parse_xml(record)
 			if not hdprec:
 				continue
 			for feature in hdprec["features"]:
-				self.device_created3(addr, hdprec, feature)
+				srv = self.device_created3(addr, hdprec, feature)
+				new_services.append(srv)
+
+		self.remove_old_services(addr, new_services)
+
 		
 	def device_created3(self, addr, hdprec, feature):
 		'''
@@ -98,13 +104,19 @@ class HealthApplication(MCAPInstance):
 		feat_sink = (feature['role'] == 'sink')
 		if feature['data_type'] != self.data_type or feat_sink == sink:
 			return
-		
-		# FIXME create services
-		# FIXME remove old, different services
-		# FIXME keep 'equal' services'
+
+		cpsm = hdprec['control_psm']
+		dpsm = hdprec['data_psm']
+		mdepid = feature['mdepid']
+
+		preexists = self.match_service(addr, cpsm, dpsm, mdepid)
+		if preexists:
+			return preexists
+
+		return self.create_service(addr, cpsm, dpsm, mdepid)
 
 	def device_removed(self, addr):
-		# FIXME remove services
+		self.remove_old_services(addr, [])
 		print "HDP: device removed", addr
 
 	def device_found(self, addr):
@@ -128,13 +140,13 @@ class HealthApplication(MCAPInstance):
 
 	def bluetooth_dead(self):
 		''' Can be extended by subclasses '''
-		# FIXME stop listening
 		print "Obs: bt dead"
+		self.suspend()
 
 	def bluetooth_alive(self):
 		''' Can be extended by subclasses '''
-		# FIXME re-listen
 		print "Obs: bt alive"
+		self.resume()
 
 	def adapter_added(self, name):
 		''' Can be extended by subclasses '''
@@ -236,18 +248,34 @@ class HealthApplication(MCAPInstance):
 			pass
 		self.sdp_handle = None
 
-	def stop(self):	
-		self.stopped = True
-		BlueZ().unregister_observer(self)
-
+	def suspend(self):
+		'''
+		Reversible 'stopping'
+		'''
 		while self.services:
 			self.remove_service(self.services[-1])
 
-		self.agent.Release()
-		self.agent = None
-
 		self.unpublish()
 		MCAPInstance.stop(self)
+
+	def resume(self):
+		'''
+		Resume operations
+		'''
+		MCAPInstance.start(self)
+		self.publish()
+
+	def stop(self):
+		'''
+		Irreversible stop
+		'''
+		self.suspend()
+
+		self.stopped = True
+		BlueZ().unregister_observer(self)
+
+		self.agent.Release()
+		self.agent = None
 
 	def channel_by_mdl(self, mdl):
 		channel = self.got_channel_by_mdl(mdl)
@@ -296,10 +324,31 @@ class HealthApplication(MCAPInstance):
 		self.add_service(service)
 		return service
 
-	def create_service(self, control_addr, data_addr, mdepid):
+	def create_service(self, bdaddr, cpsm, dpsm, mdepid):
+		if self.match_service(bdaddr, cpsm, dpsm, mdepid):
+			print "Warning: creating and adding HealthService" \
+				"with same characteristics as old one"
+
+		control_addr = (bdaddr, cpsm)
+		data_addr = (bdaddr, dpsm)
 		service = HealthService(self, control_addr, data_addr, mdepid)
 		self.add_service(service)
 		return service
+
+	def match_service(self, bdaddr, cpsm, dpsm, mdepid):
+		for service in self.services:
+			if service.bdaddr() == bdaddr and \
+					service.cpsm() == cpsm and \
+					service.dpsm() == dpsm and \
+					service.mdepid == mdepid:
+				return service
+		return None
+
+	def remove_old_services(self, bdaddr, new_services):
+		for service in self.services:
+			if service.bdaddr() == bdaddr and \
+					service not in new_services:
+				self.remove_service(service)
 
 	def add_service(self, service):
 		if service not in self.services:
@@ -571,6 +620,15 @@ class HealthService(object):
 		self.valid = True
 		self.mdl_echo = None
 
+	def bdaddr(self):
+		return self.addr_control[0]
+
+	def cpsm(self):
+		return self.addr_control[1]
+
+	def dpsm(self):
+		return self.addr_data[1]
+
 	def in_flight(self):
 		if self.queue_status == self.IDLE or not self.queue:
 			return None
@@ -741,7 +799,7 @@ class HealthService(object):
 			# we can't do nothing if MCL is not up
 			self.queue_status = self.WAITING_MCL
 			self.mcl = self.app.CreateMCL(self.addr_control,
-						self.addr_data[1])
+						self.dpsm())
 			return False
 
 		if not self.mcl.clear_to_send():
@@ -871,4 +929,3 @@ class HealthAgent(object):
 		pass
 
 # FIXME capture all "normal" InvalidOperation exceptions
-# FIXME test echo between two HDPys, and HDPy x instance
