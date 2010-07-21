@@ -10,7 +10,10 @@ watch_bitmap = glib.IO_IN | glib.IO_ERR | glib.IO_HUP | glib.IO_NVAL
 def data_received(sk, evt):
 	data = None
 	if evt & glib.IO_IN:
-		data = sk.recv(1024)
+		try:
+			data = sk.recv(1024)
+		except IOError:
+			data = ""
 		if data:
 			print "Data received"
 			response = parse_message_str(data)
