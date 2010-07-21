@@ -11,7 +11,7 @@
 ################################################################
 
 import sys
-from mcap.mcap_instance import MCAPInstance
+from mcap.mcap_instance import MCAPInstance, InvalidOperation
 from mcap.mcap_loop import watch_fd, IO_IN, schedule
 from mcap.misc import BlueZ, DBG
 from . import hdp_record
@@ -493,15 +493,21 @@ class HealthApplication(MCAPInstance):
 		service.mdl_connected(mdl, channel, reconn, err)
 
 	def MDLConnectedEcho(self, mdl):
-		watch_fd(mdl.sk, self.echo_watch, mdl)
+		ok = not not mdl.sk
+		if ok:
+			watch_fd(mdl.sk, self.echo_watch, mdl)
+
 		if not mdl.acceptor:
 			service = self.service_by_mcl(mdl.mcl)
-			service.mdlecho_connected(mdl)
+			service.mdlecho_connected(mdl, ok)
 
 	def echo_watch(self, sk, evt, mdl):
 		data = ""
 		if evt & IO_IN:
-			data = sk.recv(65535)
+			try:
+				data = sk.recv(65535)
+			except IOError:
+				data = ""
 
 		if not mdl.acceptor:
 			service = self.service_by_mcl(mdl.mcl)
@@ -511,7 +517,11 @@ class HealthApplication(MCAPInstance):
 				# send back the same data and close
 				mdl.write(data)
 
-		self.DeleteMDL(mdl)
+		try:
+			self.DeleteMDL(mdl)
+		except InvalidOperation:
+			pass
+
 		return False
 
 	def MDLDeleted(self, mdl):
@@ -695,12 +705,12 @@ class HealthService(object):
 		self.queue_event_process(self.MDL_CONNECTION, err,
 			{"channel": channel, "reconn": reconn})
 
-	def mdlecho_connected(self, mdl):
+	def mdlecho_connected(self, mdl, ok):
 		'''
 		Called back when an Echo MDL initiated by us has connected
 		'''
 		self.queue_event_process(self.MDL_ECHO_CONNECTION, 0,
-			{"mdl": mdl})
+			{"mdl": mdl, "ok": ok})
 
 	def mdlecho_pong(self, mdl, data):
 		'''
@@ -765,7 +775,8 @@ class HealthService(object):
 						details["reconn"])
 
 		elif event == self.MDL_ECHO_CONNECTION:
-			self.queue_mdl_echo_conn_up(details["mdl"])
+			self.queue_mdl_echo_conn_up(details["mdl"], \
+							details["ok"])
 
 	def queue_mcl_conn_up(self):
 		'''
@@ -803,7 +814,7 @@ class HealthService(object):
 			else:
 				DBG(1, "queue_mdl_conn_up reconn diff chan")
 
-	def queue_mdl_echo_conn_up(self, mdl):
+	def queue_mdl_echo_conn_up(self, mdl, ok):
 		DBG(3, "queue_mdl_echo_conn_up")
 
 		if self.queue_status == self.WAITING_MDL:
