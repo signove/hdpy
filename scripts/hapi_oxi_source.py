@@ -58,7 +58,11 @@ class MyAgent(HealthAgent):
 	def ServiceDiscovered(self, service):
 		print "Service %d discovered %s" % \
 			(id(service), service.addr_control)
-		glib.timeout_add(2000, self.echo, service)
+		if test_echo:
+			method = self.echo
+		else:
+			method = self.connect
+		glib.timeout_add(2000, method, service)
 
 	def echo(self, service):
 		self.service = service
@@ -77,6 +81,7 @@ class MyAgent(HealthAgent):
 
 	def connect(self, service):
 		print "Connecting..."
+		self.service = service
 		app.CreateChannel(service, "Reliable",
 				reply_handler=self.ChannelOk,
 				error_handler=self.ChannelNok)
@@ -109,6 +114,8 @@ class MyAgent(HealthAgent):
 	def ServiceRemoved(self, service):
 		print "Service %d removed" % id(service)
 
+
+test_echo = "-e" in sys.argv
 
 agent = MyAgent()
 
