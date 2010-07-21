@@ -15,6 +15,7 @@ from mcap.mcap_instance import MCAPInstance
 from mcap.mcap_loop import watch_fd, IO_IN, schedule
 from mcap.misc import BlueZ, DBG
 from . import hdp_record
+import random
 
 
 class HealthError(Exception):
@@ -71,7 +72,7 @@ class HealthApplication(MCAPInstance):
 
 		def closure_nok(*args):
 			# Ignore
-			print "SDP query failed"
+			DBG(1, "SDP query failed")
 			pass
 
 		BlueZ().get_records(addr, self.remote_uuid,
@@ -122,7 +123,7 @@ class HealthApplication(MCAPInstance):
 
 	def device_removed(self, addr):
 		self.remove_old_services(addr, [])
-		print "HDP: device removed", addr
+		DBG(2, "HDP: device removed %s" % addr)
 
 	def device_found(self, addr):
 		''' Can be extended by subclasses '''
@@ -137,20 +138,20 @@ class HealthApplication(MCAPInstance):
 		BlueZ().get_record(addr, self.remote_uuid,
 			closure_ok, closure_nok)
 
-		print "HDP: device found", addr
+		DBG(3, "HDP: device found %s" % addr)
 
 	def device_disappeared(self, addr):
 		''' Can be extended by subclasses '''
-		print "HDP: device disappeared", addr
+		DBG(3, "HDP: device disappeared %s" % addr)
 
 	def bluetooth_dead(self):
 		''' Can be extended by subclasses '''
-		print "Obs: bt dead"
+		DBG(1, "Obs: bt dead")
 		self.suspend()
 
 	def bluetooth_alive(self):
 		''' Can be extended by subclasses '''
-		print "Obs: bt alive"
+		DBG(1, "Obs: bt alive")
 		self.resume()
 
 	def adapter_added(self, name):
@@ -293,7 +294,7 @@ class HealthApplication(MCAPInstance):
 	def channel_by_mdl(self, mdl):
 		channel = self.got_channel_by_mdl(mdl)
 		if not channel:
-			print "WARNING: No channel for the given MDL"
+			DBG(1, "WARNING: No channel for the given MDL")
 		return channel
 
 	def got_channel_by_mdl(self, mdl):
@@ -318,7 +319,7 @@ class HealthApplication(MCAPInstance):
 		try:
 			self.channels.remove(channel)
 		except ValueError:
-			print "WARNING: Channel unknown, not removed"
+			DBG(0, "WARNING: Channel unknown, not removed")
 
 	def service_by_mcl(self, mcl):
 		service = None
@@ -339,15 +340,15 @@ class HealthApplication(MCAPInstance):
 
 	def create_service(self, bdaddr, cpsm, dpsm, mdepid):
 		if self.match_service(bdaddr, cpsm, dpsm, mdepid):
-			print "Warning: creating and adding HealthService" \
-				"with same characteristics as old one"
+			DBG(0, "Warning: creating and adding HealthService" \
+				"with same characteristics as old one")
 
 		control_addr = (bdaddr, cpsm)
 		data_addr = (bdaddr, dpsm)
 		service = HealthService(self, control_addr, data_addr, mdepid)
 		self.add_service(service)
-		print "Creating discovered srv %s %d %d" % \
-			(bdaddr, cpsm, mdepid)
+		DBG(3, "Creating discovered srv %s %d %d" % \
+			(bdaddr, cpsm, mdepid))
 		return service
 
 	def match_service(self, bdaddr, cpsm, dpsm, mdepid):
@@ -376,7 +377,7 @@ class HealthApplication(MCAPInstance):
 			self.services.remove(service)
 			self.agent.ServiceRemoved(service)
 		except ValueError:
-			print "Warning: service %s unkown, not removed"
+			DBG(0, "Warning: service %s unkown, not removed")
 
 	def MCLConnected(self, mcl, err):
 		if self.stopped:
@@ -420,17 +421,17 @@ class HealthApplication(MCAPInstance):
 		ok = mdepid == self.mdepid
 
 		if not ok:
-			print "requested MDEP ID %d not in our list" % mdepid
+			DBG(1, "requested MDEP ID %d not in our list" % mdepid)
 
 		our_config = self.channel_type
 		final_config = config or our_config
 
 		if not final_config:
-			print "Remove side should have chosen config, nak"
+			DBG(1, "Remote side should have chosen config, nak")
 			ok = False
 		elif our_config and (final_config != our_config):
-			print "MDEP reqs config %d, we want %d, nak" \
-				% (config, our_config)
+			DBG(1, "MDEP reqs config %d, we want %d, nak" \
+				% (config, our_config))
 			ok = False
 
 		reliable = (final_config == 0x01)
@@ -479,7 +480,7 @@ class HealthApplication(MCAPInstance):
 
 		if mdl.acceptor:
 			if mdl.mdepid != self.mdepid:
-				print "MDLConnected: bad MDEP ID received"
+				DBG(1, "MDLConnected: bad MDEP ID received")
 				mdl.close()
 				return
 
@@ -500,7 +501,7 @@ class HealthApplication(MCAPInstance):
 	def echo_watch(self, sk, evt, mdl):
 		data = ""
 		if evt & IO_IN:
-			data = sk.recv()
+			data = sk.recv(65535)
 
 		if not mdl.acceptor:
 			service = self.service_by_mcl(mdl.mcl)
@@ -612,10 +613,17 @@ class HealthService(object):
 	'''
 
 	# Current queue processing status
-	IDLE = 0
-	WAITING_MCL = 1
-	WAITING_MDL = 2 # used by _Echo() only
-	IN_FLIGHT = 3
+	# Note that LSB bit is 1 when something is mid-flight
+
+	IDLE = 0	# state only allowed when queue is empty
+	DISPATCH = 2	# ready for next command to be dispatched
+	WAITING_MCL = 3 # waiting for MCL connection
+	MCL_UP = 4	# waited MCL connection is up
+	WAITING_MDL = 5 # waiting for MDL; used by _Echo() only
+	MDL_UP = 6	# waited MDL connection is up
+	IN_FLIGHT = 7	# finally doing what it was meant to do
+
+	# Events
 
 	CONNECTION = 1
 	DISCONNECTION = 2
@@ -644,9 +652,14 @@ class HealthService(object):
 	def dpsm(self):
 		return self.addr_data[1]
 
-	def in_flight(self):
-		if self.queue_status == self.IDLE or not self.queue:
+	def pending(self):
+		if (self.queue_status == self.IDLE and self.queue) or \
+		    (self.queue_status != self.IDLE and not self.queue):
+			DBG(1, "Warning: Invalid queue state")
+
+		if not self.queue or not (self.queue_status % 2):
 			return None
+
 		return self.queue[0]
 
 	def mcl_connected(self, mcl, err, reconn):
@@ -693,16 +706,19 @@ class HealthService(object):
 		'''
 		Called back when an Echo MDL returned data
 		'''
-		pending = self.in_flight()
+		pending = self.pending()
 		if not pending:
-			return
+			return False
 
 		if pending.operation == self.__Echo:
+			self.mdl_echo = None
 			if data == pending.ident:
 				pending.ok()
 			else:
 				pending.nok(-99)
 			self.queue_flush()
+
+		return False
 
 	def stop(self):
 		'''
@@ -758,14 +774,14 @@ class HealthService(object):
 		DBG(3, "queue_mcl_conn_up")
 
 		if self.queue_status == self.WAITING_MCL:
-			self.queue_status = self.IDLE
+			self.queue_status = self.MCL_UP
 
 		self.queue_dispatch()
 
 	def queue_mdl_conn_up(self, channel, reconn):
 		DBG(3, "queue_mdl_conn_up %s %s" % (str(channel), str(reconn)))
 
-		pending = self.in_flight()
+		pending = self.pending()
 		if not pending:
 			return
 
@@ -778,28 +794,28 @@ class HealthService(object):
 				pending.ok(channel)
 				self.queue_flush()
 			else:
-				print "queue_mdl_conn_up bad ID %d" % mdlid
+				DBG(1, "queue_mdl_conn_up bad ID %d" % mdlid)
 
 		if reconn and (op == self.__ReconnectChannel):
 			if channel is pending.ident:
 				pending.ok()
 				self.queue_flush()
 			else:
-				print "queue_mdl_conn_up reconn diff chan"
+				DBG(1, "queue_mdl_conn_up reconn diff chan")
 
 	def queue_mdl_echo_conn_up(self, mdl):
 		DBG(3, "queue_mdl_echo_conn_up")
 
 		if self.queue_status == self.WAITING_MDL:
-			self.queue_status = self.IDLE
+			self.queue_status = self.MDL_UP
 
-		self.echo_mdl = mdl
+		self.mdl_echo = mdl
 		self.queue_dispatch()
 
 	def queue_fail(self, err):
 		DBG(3, "queue_fail")
 
-		pending = self.in_flight()
+		pending = self.pending()
 		if pending:
 			pending.nok(err)
 			self.queue_flush()
@@ -810,7 +826,7 @@ class HealthService(object):
 		DBG(3, "queue_flush")
 
 		del self.queue[0]
-		self.queue_status = self.IDLE
+		self.queue_status = self.DISPATCH
 		self.queue_priv = None
 		self.queue_dispatch()
 
@@ -818,9 +834,14 @@ class HealthService(object):
 		DBG(3, "queue_dispatch")
 
 		if not self.queue:
+			self.queue_status = self.IDLE
 			return False
 
-		if self.queue_status != self.IDLE:
+		if self.queue_status == self.IDLE:
+			# Fix queue status
+			self.queue_status = self.DISPATCH
+
+		if self.pending():
 			# waiting for something to happen
 			return False
 
@@ -837,26 +858,18 @@ class HealthService(object):
 			timeout_call(1000, self.queue_dispatch)
 			return False
 
-		pending = self.in_flight()
-
-		if pending and pending.operation == self.__Echo:
+		if self.queue[0].operation == self.__Echo and not self.mdl_echo:
 			# for Echo, we need the echo MDL up, too
-			if not self.mdl_echo:
-				self.queue_status = self.WAITING_MDL
-				mdlid = self.app.CreateMDLID(self.mcl)
-				self.app.CreateMDL(self.mcl, mdlid,
-							0, 1, True)
-				return False
+			self.queue_status = self.WAITING_MDL
+			mdlid = self.app.CreateMDLID(self.mcl)
+			self.app.CreateMDL(self.mcl, mdlid, 0, 1, True)
+			return False
 
-		self.queue_execute()
-		return False
-
-	def queue_execute(self):
-		DBG(3, "queue_execute")
+		DBG(3, "queue: executing")
 		self.queue_status = self.IN_FLIGHT
-		pending = self.in_flight()
-		if pending:
-			pending.start()
+		self.queue[0].start()
+
+		return False
 
 	def enqueue(self, op, arg, reply, error, ident=None):
 		qitem = QueueItem(op, arg, reply, error, ident)
@@ -871,7 +884,11 @@ class HealthService(object):
 		data = [ chr(random.randint(0, 255)) for x in range(0, length) ]
 		data = "".join(data)
 		queueop.ident = data
-		self.mdl_echo.send(data)
+
+		if not self.mdl_echo.write(data):
+			# if socket is invalid, would never return feedback
+			# so we schedule a clearly invalid "response"
+			schedule(0, self.mdlecho_pong, mdl, "")
 
 	def _CreateChannel(self, conf, reply_handler, error_handler):
 		reliable = (conf == 0x01)

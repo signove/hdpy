@@ -58,12 +58,25 @@ class MyAgent(HealthAgent):
 	def ServiceDiscovered(self, service):
 		print "Service %d discovered %s" % \
 			(id(service), service.addr_control)
-		# Give some time, otherwise connection fails
-		glib.timeout_add(10000, self.connect, service)
+		glib.timeout_add(2000, self.echo, service)
+
+	def echo(self, service):
+		self.service = service
+		app.Echo(service,
+			reply_handler=self.EchoOk,
+			error_handler=self.EchoNok)
+		return False
+
+	def EchoNok(self, *args):
+		print "Echo failed, retrying in 2 seconds"
+		glib.timeout_add(2000, self.echo, self.service)
+	
+	def EchoOk(self):
+		print "Echo Ok, connecting in 1 second..."
+		glib.timeout_add(1000, self.connect, self.service)
 
 	def connect(self, service):
 		print "Connecting..."
-		self.service = service
 		app.CreateChannel(service, "Reliable",
 				reply_handler=self.ChannelOk,
 				error_handler=self.ChannelNok)
