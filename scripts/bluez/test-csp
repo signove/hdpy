@@ -1,0 +1,75 @@
+#!/usr/bin/python
+
+import sys
+import dbus
+import time
+import gobject
+import dbus.mainloop.glib
+from mcap.misc import parse_srv_params
+
+mcap_iface = "org.bluez.mcap"
+
+def object_signal(*args, **kwargs):
+	print "Value", args
+	print "Details", kwargs
+	if 'member' in kwargs and kwargs['member'] == "Recv":
+		mdl, data = args
+		adapter.Send(mdl, data + " pong ")
+
+def adapter_signal(value, path, interface, member):
+	hci = str(value)
+	if hci.split("/")[-1] == ad.split("/")[-1]:
+		print "Adapter went out, quitting"
+		mainloop.quit()
+
+dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+bus = dbus.SystemBus()
+
+manager = dbus.Interface(bus.get_object("org.bluez", "/"), "org.bluez.Manager")
+
+ad = manager.FindAdapter(parse_srv_params(sys.argv, False))
+print "Bound to", ad
+
+print "Binding to adapter", ad
+
+adapter = dbus.Interface(bus.get_object("org.bluez", ad), mcap_iface)
+
+bus.add_signal_receiver(object_signal, bus_name="org.bluez",
+				member_keyword="member",
+				path_keyword="path",
+				interface_keyword="interface",
+				dbus_interface=mcap_iface,
+				byte_arrays=True)
+
+bus.add_signal_receiver(adapter_signal, bus_name="org.bluez",
+				signal_name = "AdapterAdded",
+				path_keyword="path",
+				member_keyword="member",
+				interface_keyword="interface")
+
+bus.add_signal_receiver(adapter_signal, bus_name="org.bluez",
+				signal_name = "AdapterRemoved",
+				path_keyword="path",
+				member_keyword="member",
+				interface_keyword="interface")
+
+handle = adapter.StartSession(0x1001, 0x1003)
+print adapter.SyncEnable(handle)
+
+try:
+	print "Handle: ", handle
+	adapter.StopSession(handle - 1000)
+	print "'Stopped' invalid handle %d (for testing purposes)" % (handle - 1000)
+	adapter.StopSession(0)
+	print "'Stopped' NULL handle (for testing purposes)"
+
+	mainloop = gobject.MainLoop()
+	mainloop.run()
+finally:
+	try:
+		adapter.StopSession(handle)
+		print
+		print "Stopped instance, thanks"
+		print
+	except:
+		pass

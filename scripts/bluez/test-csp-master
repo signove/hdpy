@@ -306,6 +306,7 @@ adapter = dbus.Interface(bus.get_object("org.bluez", ad), mcap_iface)
 loop = gobject.MainLoop()
 
 instance = adapter.StartSession(cpsm + 16, dpsm + 16)
+print adapter.SyncEnable(instance)
 
 try:
 	mcl = adapter.CreateMCL(instance, device, cpsm)
