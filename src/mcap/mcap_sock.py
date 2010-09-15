@@ -210,11 +210,8 @@ def hci_read_clock(sock, remote_addr):
 		which_clock = 1
 		acl = bz.hci_acl_conn_handle(sock.fileno(), remote_addr)
 		if acl < 0:
-			# probably a loopback connection, use native clock
-			which_clock = 0
-			acl = 0
 			print "ERROR in get_acl_conn (resorting to native clk)"
-			# return None
+			return None
 
 	return bz.hci_read_clock(sock.fileno(), acl, which_clock, 1000)
 

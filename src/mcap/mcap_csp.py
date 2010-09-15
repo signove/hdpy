@@ -46,6 +46,7 @@ class BluetoothClock:
 		latencies2 = []
 		for x in range(0, 20):
 			t1 = time.time()
+			# FIXME handle temporary failure
 			mcap_sock.hci_read_clock(self.raw_socket, None)
 			t2 = time.time()
 			latency = t2 - t1
@@ -75,6 +76,7 @@ class BluetoothClock:
 		return mcap_sock.hci_role(self.raw_socket, self.dev_id)
 
 	def read_native(self):
+		# FIXME handle temporary failure
 		return mcap_sock.hci_read_clock(self.raw_socket, None)
 	
 	def read(self, piconet):
@@ -94,6 +96,7 @@ class BluetoothClock:
 		addr = None
 		if piconet:
 			addr = self.addr
+		# FIXME handle temporary failure
 		return mcap_sock.hci_read_clock(self.raw_socket, addr)
 
 
@@ -116,6 +119,7 @@ class CSPStateMachine(object):
 		self._clock = None
 		self._latency = None
 		self._preemption_thresh = None
+		self._synclead = None
 
 		self.tmstampacc = CLOCK_ACCURACY_PPM
 		self.tmstampres = CLOCK_RESOLUTION_US
@@ -129,6 +133,11 @@ class CSPStateMachine(object):
 		if self._latency is None:
 			self._latency = self.clock().latency()
 		return self._latency
+
+	def synclead_ms(self):
+		if self._synclead is None:
+			self._synclead = self.clock().latency() * 50 // 1000
+		return self._synclead
 
 	def preemption_thresh(self):
 		# We assume that observed latencies bigger than
@@ -205,6 +214,9 @@ class CSPStateMachine(object):
 			self.request_in_flight = message.opcode
 			self.last_request = message
 
+		if message.opcode == MCAP_MD_SYNC_SET_REQ:
+			self.indication_expected = True
+
 		return self.mainsm.send_mcap_command(message)
 
 	def receive_message(self, opcode, message):
@@ -268,7 +280,7 @@ class CSPStateMachine(object):
 			self.remote_reqaccuracy = message.reqaccuracy
 
 			btclockres = clk[1]
-			synclead = self.latency() // 1000
+			synclead = self.synclead_ms()
 			tmstampres = self.tmstampres
 			tmstampacc = self.tmstampacc
 		
@@ -366,10 +378,15 @@ class CSPStateMachine(object):
 							ito)
 			else:
 				# send response only when tmstamp is set
-				timeout_call(to // 1000 + 1,
+				timeout_call(to // 1000 + self.synclead_ms(),
 					self.set_request_phase2,
 					message.update, message.btclock,
 					message.timestamp, ito)
+
+			if message.update:
+				# First indication is immediate
+				self.send_indication_cb(False)
+
 			return True
 
 		# Fail
@@ -435,6 +452,8 @@ class CSPStateMachine(object):
 		tmstampacc = self.latency() + self.tmstampacc
 
 		if update:
+			# First indication after set rsp is immediate
+			self.send_indication_cb(False)
 			self.start_indication_alarm(ito)
 
 		rspcode = MCAP_RSP_SUCCESS
@@ -444,6 +463,7 @@ class CSPStateMachine(object):
 
 	def set_response(self, message):
 		if not self.valid_btclock(message.btclock):
+			self.indication_expected = False
 			return
 
 		self.indication_expected = self.last_request.update
@@ -489,7 +509,8 @@ class CSPStateMachine(object):
 
 	def start_indication_alarm(self, ito):
 		self.stop_indication_alarm()
-		self.indication_alarm = timeout_call(ito // 1000 + 1,
+		self.indication_alarm = timeout_call(ito // 1000 +
+					self.synclead_ms(),
 					self.send_indication_cb, True)
 		timeout_call(0, self.send_indication_cb, False)
 

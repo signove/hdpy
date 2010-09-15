@@ -210,6 +210,7 @@ class MyInstance(MCAPInstance):
 		mcl.test_initial_ts = initial_tmstamp
 		mcl.test_initial_btclk = btclock
 		mcl.test_err_ma = None
+		mcl.first_indication = True
 
 		instance.SyncSet(mcl, True, btclock, initial_tmstamp)
 	
@@ -258,6 +259,11 @@ class MyInstance(MCAPInstance):
 	def SyncInfoIndication(self, mcl, btclock, tmstamp, accuracy):
 		print "CSP Indication btclk %d ts %d tsacc %d" % \
 			(btclock, tmstamp, accuracy)
+		if mcl.first_indication:
+			print "\tIgnoring"
+			mcl.first_indication = False
+			return
+
 		self.calc_drift(mcl, btclock, tmstamp)
 
 		mcl.test_indications += 1
