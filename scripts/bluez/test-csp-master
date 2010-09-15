@@ -120,6 +120,7 @@ class MCLInstance(object):
 
 		self.test_indications = -100000
 		self.test_err_ma = None
+		self.first_indication = True
 
 		if seq % 2:
 			update = True
@@ -208,6 +209,7 @@ class MCLInstance(object):
 		self.test_initial_ts = initial_tmstamp
 		self.test_initial_btclk = btclock
 		self.test_err_ma = None
+		self.first_indication = True
 
 		self.adapter.SyncSet(self.mcl, 1, btclock, initial_tmstamp,
 			reply_handler=self.SyncSetResponse,
@@ -256,6 +258,12 @@ class MCLInstance(object):
 	def SyncInfoIndication(self, btclock, tmstamp, accuracy):
 		print "CSP Indication btclk %d ts %d tsacc %d" % \
 			(btclock, tmstamp, accuracy)
+
+		if self.first_indication:
+			print "\tIgnoring"
+			self.first_indication = False
+			return
+
 		self.calc_drift(btclock, tmstamp)
 
 		self.test_indications += 1
