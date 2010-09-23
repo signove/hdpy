@@ -651,9 +651,13 @@ def parse_xml_record_inner(node, forgive_handle):
 		mdep_id = feature['mdep_id']
 
 		if role not in service['_roles']:
-			service['error'] = "Role '%s' in features but " \
-						"not in roles" % role
-			return service
+			# service['error'] = "Role '%s' in features but " \
+			# 			"not in roles" % role
+			# return service
+			#
+			# PTS presents a SDP record with this 'defect'.
+			# We can just ignore the features w/o respective roles
+			continue
 
 		if mdep_id in mdeps:
 			if mdeps[mdep_id] != role:

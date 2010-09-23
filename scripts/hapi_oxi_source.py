@@ -47,10 +47,17 @@ def send_sample(sk):
 	return False
 
 
+accept_channel = True
+
+
 class MyAgent(HealthAgent):
 	def ChannelConnected(self, channel):
-		print "We don't like to accept connections, dropping"
-		app.DeleteChannel(channel)
+		if accept_channel:
+			print "Accepted channel"
+			self.ChannelOk(channel)
+		else:
+			print "We don't like to accept connections, dropping"
+			app.DestroyChannel(channel)
 
 	def ChannelDeleted(self, channel):
 		print "Channel %d deleted" % id(channel)
@@ -58,13 +65,17 @@ class MyAgent(HealthAgent):
 	def ServiceDiscovered(self, service):
 		print "Service %d discovered %s" % \
 			(id(service), service.addr_control)
-		if test_echo:
-			method = self.echo
+		if not dont_initiate:
+			if test_echo:
+				method = self.echo
+			else:
+				method = self.connect
+			glib.timeout_add(2000, method, service)
 		else:
-			method = self.connect
-		glib.timeout_add(2000, method, service)
+			print "Not initiating a connection"
 
 	def echo(self, service):
+		print "Initiating echo"
 		self.service = service
 		app.Echo(service,
 			reply_handler=self.EchoOk,
@@ -72,12 +83,14 @@ class MyAgent(HealthAgent):
 		return False
 
 	def EchoNok(self, *args):
-		print "Echo failed, retrying in 2 seconds"
-		glib.timeout_add(2000, self.echo, self.service)
+		# print "Echo failed, retrying in 2 seconds"
+		# glib.timeout_add(2000, self.echo, self.service)
+		print "Echo failed"
 	
 	def EchoOk(self):
-		print "Echo Ok, connecting in 1 second..."
-		glib.timeout_add(1000, self.connect, self.service)
+		# print "Echo Ok, connecting in 1 second..."
+		# glib.timeout_add(1000, self.connect, self.service)
+		print "Echo Ok"
 
 	def connect(self, service):
 		print "Connecting..."
@@ -97,10 +110,17 @@ class MyAgent(HealthAgent):
 
 	def ChannelNok(self, err):
 		print "Could not establish channel with service (%d)" % err
-		print "Will retry in 10 seconds"
-		glib.timeout_add(10000, self.connect, self.service)
+		print "Will retry in 60 seconds"
+		glib.timeout_add(60000, self.connect, self.service)
 
 	def FdAcquired(self, fd):
+		if echo_after_fd:
+			glib.timeout_add(5000, self.echo, self.channel.service)
+
+		if fd < 0:
+			print "Invalid FD"
+			return
+
 		glib.io_add_watch(fd, watch_bitmap, data_received)
 		print "FD acquired, sending association"
 		try:
@@ -116,6 +136,8 @@ class MyAgent(HealthAgent):
 
 
 test_echo = "-e" in sys.argv
+dont_initiate = "-d" in sys.argv
+echo_after_fd = "-ea" in sys.argv # TC_SRC_DEP_BV_01_I
 
 agent = MyAgent()
 

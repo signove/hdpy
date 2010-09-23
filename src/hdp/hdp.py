@@ -13,6 +13,7 @@
 import sys
 from mcap.mcap_instance import MCAPInstance, InvalidOperation
 from mcap.mcap_loop import watch_fd, IO_IN, schedule
+from mcap.mcap_loop import timeout_call, timeout_cancel
 from mcap.misc import BlueZ, DBG
 from . import hdp_record
 import random
@@ -555,7 +556,7 @@ class HealthApplication(MCAPInstance):
 		Creates a data channel with the given service
 		"""
 		if not service.mdepid:
-			raise HealthError("This service is acceptor-only")
+			raise HealthError("This service is initiator-only")
 
 		try:
 			conf = {"Reliable": 1, "Streaming": 2, "Any": 0}[conf]
