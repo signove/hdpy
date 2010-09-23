@@ -117,10 +117,6 @@ class MyAgent(HealthAgent):
 		if echo_after_fd:
 			glib.timeout_add(5000, self.echo, self.channel.service)
 
-		if fd < 0:
-			print "Invalid FD"
-			return
-
 		glib.io_add_watch(fd, watch_bitmap, data_received)
 		print "FD acquired, sending association"
 		try:

@@ -42,9 +42,6 @@ class MyAgent(HealthAgent):
 			(id(channel), id(channel.GetProperties()['Service']))
 
 	def FdAcquired(self, fd):
-		if fd < 0:
-			print "Bad FD"
-			return
 		glib.io_add_watch(fd, watch_bitmap, data_received)
 		print "FD acquired"
 

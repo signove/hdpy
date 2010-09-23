@@ -1,0 +1,1 @@
+Class 0x4a0914 (hciconfig hci0 class 0x4a0914)
