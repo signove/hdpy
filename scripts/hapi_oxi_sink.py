@@ -42,8 +42,26 @@ class MyAgent(HealthAgent):
 			(id(channel), id(channel.GetProperties()['Service']))
 
 	def FdAcquired(self, fd):
-		glib.io_add_watch(fd, watch_bitmap, data_received)
 		print "FD acquired"
+		glib.io_add_watch(fd, watch_bitmap, data_received)
+
+		if exercise_reconn:
+			glib.timeout_add(3000, self.toogle_connection, fd)
+
+	def toogle_connection(self, fd):
+		print "Shutting channel down for reconnection test"
+		fd.close()
+		glib.timeout_add(3000, self.toogle_connection_2)
+		if mcl_reconn:
+			print "\tShutting MCL down too"
+			self.service.CloseMCL()
+		return False
+
+	def toogle_connection_2(self):
+		print "Reconnecting channel"
+		self.channel.Acquire(reply_handler=self.FdAcquired,
+				error_handler=self.FdNotAcquired)
+		return False
 
 	def FdNotAcquired(self, err):
 		print "FD not acquired"
@@ -59,6 +77,9 @@ class MyAgent(HealthAgent):
 		elif force_conn:
 			method = self.connect
 			glib.timeout_add(2000, method, service)
+			if streaming_channel:
+				# One more
+				glib.timeout_add(4000, method, service)
 
 	def echo(self, service):
 		print "Initiating echo"
@@ -113,6 +134,11 @@ app = manager.CreateApplication(agent, config)
 
 test_echo = "-e" in sys.argv
 force_conn = "-f" in sys.argv
+streaming_channel = "-s" in sys.argv # TC_SNK_CC_BV_08_C
+exercise_reconn = "-r" in sys.argv # TC_SNK_HCT_BV_03_I
+mcl_reconn = "-R" in sys.argv # TC_SNK_HCT_BV_05_C
+if mcl_reconn:
+	exercise_reconn = True
 
 try:
 	loop = glib.MainLoop()

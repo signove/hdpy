@@ -43,6 +43,16 @@ def get_options(sock):
 	return list(sock.get_l2cap_options())
 
 
+def get_mode(sock):
+	mode = 0x00
+	option = sock.get_l2cap_options()
+	if option[i_mode] == bz.L2CAP_MODE_ERTM:
+		mode = 0x01
+	elif option[i_mode] == bz.L2CAP_MODE_STREAMING:
+		mode = 0x02
+	return mode
+
+
 def set_options(sock, options):
 	return sock.set_l2cap_options(options)
 

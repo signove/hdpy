@@ -189,22 +189,6 @@ class HealthApplication(MCAPInstance):
 			if self.mdepid <= 0:
 				return "MDEP ID must be positive"
 
-		if self.sink:
-			if 'ChannelType' in config:
-				return "Sinks don't specify config"
-			self.channel_type = 0 # Any
-		else:
-			self.channel_type = 'Reliable'
-			if 'ChannelType' in config:
-				self.channel_type = config['ChannelType']
-			if self.channel_type == 'Reliable':
-				self.channel_type = 1
-			elif self.channel_type == 'Streaming':
-				self.channel_type = 2
-			else:
-				return "Source channel type must be " \
-					"Reliable or Streaming"
-
 		self.data_type = config["DataType"]
 
 		if self.data_type < 0 or self.data_type > 65535:
@@ -424,7 +408,11 @@ class HealthApplication(MCAPInstance):
 		if not ok:
 			DBG(1, "requested MDEP ID %d not in our list" % mdepid)
 
-		our_config = self.channel_type
+		print "#############", config # FIXME REMOVE
+
+		# TODO this is an ugly solution to please PTS streaming test.
+		#	Need to think in a better way to call agent.
+		our_config = self.agent.InquireConfig(mdepid, config, self.sink)
 		final_config = config or our_config
 
 		if not final_config:
@@ -928,6 +916,9 @@ class HealthService(object):
 		queueop.ident = channel
 		self.app.ReconnectMDL(mdl)
 
+	def CloseMCL(self):
+		self.app.CloseMCL(self.mcl)
+
 
 class HealthChannel(object):
 	def __init__(self, service, mdl, acceptor):
@@ -983,8 +974,13 @@ class HealthAgent(object):
 		print "HealthAgent.ChannelConnected not overridden"
 		pass
 
-	def ChannelDeleted(service, channel):
+	def ChannelDeleted(self, channel):
 		print "HealthAgent.ChannelDeleted not overridden"
 		pass
+
+	def InquireConfig(self, mdepid, config, sink):
+		if sink:
+			return 0x00
+		return 0x01 # Reliable by default
 
 # FIXME capture all "normal" InvalidOperation exceptions

@@ -65,14 +65,20 @@ class MyAgent(HealthAgent):
 	def ServiceDiscovered(self, service):
 		print "Service %d discovered %s" % \
 			(id(service), service.addr_control)
-		if not dont_initiate:
-			if test_echo:
-				method = self.echo
-			else:
-				method = self.connect
-			glib.timeout_add(2000, method, service)
-		else:
+
+		self.virgin = True
+		if dont_initiate:
 			print "Not initiating a connection"
+			return
+
+		if test_echo:
+			method = self.echo
+		else:
+			method = self.connect
+		glib.timeout_add(2000, method, service)
+		if not test_echo and streaming_channel:
+			# One more
+			glib.timeout_add(4000, method, service, "Streaming")
 
 	def echo(self, service):
 		print "Initiating echo"
@@ -92,10 +98,10 @@ class MyAgent(HealthAgent):
 		# glib.timeout_add(1000, self.connect, self.service)
 		print "Echo Ok"
 
-	def connect(self, service):
-		print "Connecting..."
+	def connect(self, service, config="Reliable"):
+		print "Connecting... (config=%s)" % config
 		self.service = service
-		app.CreateChannel(service, "Reliable",
+		app.CreateChannel(service, config,
 				reply_handler=self.ChannelOk,
 				error_handler=self.ChannelNok)
 		return False
@@ -117,6 +123,9 @@ class MyAgent(HealthAgent):
 		if echo_after_fd:
 			glib.timeout_add(5000, self.echo, self.channel.service)
 
+		if exercise_reconn:
+			glib.timeout_add(3000, self.toogle_connection, fd)
+
 		glib.io_add_watch(fd, watch_bitmap, data_received)
 		print "FD acquired, sending association"
 		try:
@@ -124,16 +133,50 @@ class MyAgent(HealthAgent):
 		except IOError:
 			pass
 
+	def toogle_connection(self, fd):
+		print "Shutting channel down for reconnection test"
+		fd.close()
+		glib.timeout_add(3000, self.toogle_connection_2)
+		if mcl_reconn:
+			print "\tShutting MCL down too"
+			self.service.CloseMCL()
+		return False
+
+	def toogle_connection_2(self):
+		print "Reconnecting channel"
+		self.channel.Acquire(reply_handler=self.FdAcquired,
+				error_handler=self.FdNotAcquired)
+		return False
+
 	def FdNotAcquired(self, err):
 		print "FD not acquired"
 
 	def ServiceRemoved(self, service):
 		print "Service %d removed" % id(service)
 
+	def InquireConfig(self, mdepid, config, is_sink):
+		# TODO Ugly trick to please PTS, needs to be improved!
+		if streaming_channel:
+			if self.virgin:
+				config = 0x01 # Reliable 1st time
+				self.virgin = False
+			else:
+				config = 0x02 # Streaming
+		else:
+			config = 0x01 # Reliable is default
+
+		print "InquireConfig: returning %d" % config
+		return config
+
 
 test_echo = "-e" in sys.argv
 dont_initiate = "-d" in sys.argv
 echo_after_fd = "-ea" in sys.argv # TC_SRC_DEP_BV_01_I
+streaming_channel = "-s" in sys.argv # TC_SRC_CC_BV_07_C
+exercise_reconn = "-r" in sys.argv # TC_SRC_HCT_BV_05_I
+mcl_reconn = "-R" in sys.argv # TC_SRC_HCT_BV_03_I
+if mcl_reconn:
+	exercise_reconn = True
 
 agent = MyAgent()
 

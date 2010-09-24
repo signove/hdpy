@@ -114,7 +114,7 @@ class MCAPInstance:
 		if mcl.state == MCAP_MCL_STATE_IDLE:
 			mcl.connect()
 		else:
-			schedule(self.mclconnected_mcl, mcl)
+			schedule(self.mclconnected_mcl, mcl, 0)
 
 		return mcl
 
