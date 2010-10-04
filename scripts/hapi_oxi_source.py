@@ -4,6 +4,7 @@ import sys
 import glib
 from hdp.dummy_ieee10404 import make_assoc_str, make_sample_str
 from hdp.hdp import *
+import time
 
 watch_bitmap = glib.IO_IN | glib.IO_ERR | glib.IO_HUP | glib.IO_NVAL
 
@@ -128,10 +129,12 @@ class MyAgent(HealthAgent):
 
 		glib.io_add_watch(fd, watch_bitmap, data_received)
 		print "FD acquired, sending association"
+		time.sleep(2)
 		try:
 			fd.send(make_assoc_str())
-		except IOError:
-			pass
+			print "Sent"
+		except IOError, e:
+			print "Send error", e
 
 	def toogle_connection(self, fd):
 		print "Shutting channel down for reconnection test"

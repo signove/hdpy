@@ -136,7 +136,7 @@ test_echo = "-e" in sys.argv
 force_conn = "-f" in sys.argv
 streaming_channel = "-s" in sys.argv # TC_SNK_CC_BV_08_C
 exercise_reconn = "-r" in sys.argv # TC_SNK_HCT_BV_03_I
-mcl_reconn = "-R" in sys.argv # TC_SNK_HCT_BV_05_C
+mcl_reconn = "-R" in sys.argv # TC_SNK_HCT_BV_05_C / 03_I
 if mcl_reconn:
 	exercise_reconn = True
 

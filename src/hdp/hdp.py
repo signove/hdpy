@@ -136,7 +136,7 @@ class HealthApplication(MCAPInstance):
 			# Ignore
 			pass
 
-		BlueZ().get_record(addr, self.remote_uuid,
+		BlueZ().get_records(addr, self.remote_uuid,
 			closure_ok, closure_nok)
 
 		DBG(3, "HDP: device found %s" % addr)
