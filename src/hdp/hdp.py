@@ -26,10 +26,11 @@ class HealthError(Exception):
 class HealthManager(object):
 	def __init__(self):
 		self.applications = []
+		self.signal_handler = None
 		pass
 
-	def CreateApplication(self, agent, config): # -> HealthApplication
-		application = HealthApplication(agent, config)
+	def CreateApplication(self, config): # -> HealthApplication
+		application = HealthApplication(self, config)
 		if not application:
 			return None
 		self.applications.append(application)
@@ -39,17 +40,29 @@ class HealthManager(object):
 		application.stop()
 		self.applications.remove(application)
 
-	def UpdateServices(self):
+	def UpdateDevices(self):
 		BlueZ().search()
+
+	def RegisterSignalHandler(self, signal_handler):
+		self.signal_handler = signal_handler
+
+	def signal(self, name, obj, interface, data):
+		if not self.signal_handler:
+			DBG(1, "Ignored signal due to lack of signal handler")
+			return
+
+		method = getattr(self.signal_handler, name, None)
+
+		if not method:
+			DBG(1, "Ignored signal: %s method not impl in handler" %
+				name)
+			return
+
+		method(obj, interface, data)
 
 
 class HealthApplication(MCAPInstance):
-	def __init__(self, agent, config):
-		if not isinstance(agent, HealthAgent):
-			raise HealthError("Bad agent superclass")
-
-		self.agent = agent
-
+	def __init__(self, manager, config):
 		err = self.process_config(config)
 		if err:
 			raise HealthError("Bad config: %s" % err)
@@ -58,7 +71,9 @@ class HealthApplication(MCAPInstance):
 
 		self.mdl_watch(False)
 
-		self.services = [] # relationship 1:(0,1) with MCL
+		self.manager = manager
+
+		self.devices = [] # relationship 1:(0,1) with MCL
 		self.channels = [] # relationship 1:1 with MDL
 		self.stopped = False
 		self.suspended = False
@@ -82,10 +97,10 @@ class HealthApplication(MCAPInstance):
 	def device_created2(self, addr, records):
 		'''
 		Gets the SDP records for the discovered device
-		and transverses them to extract individual services
+		and transverses them to extract individual devices
 		'''
 
-		new_services = []
+		new_devices = []
 
 		for handle in records:
 			hdprec = hdp_record.parse_xml(str(records[handle]))
@@ -95,15 +110,15 @@ class HealthApplication(MCAPInstance):
 				for feature in subrec["features"]:
 					srv = self.device_created3(addr,
 							subrec, feature)
-					new_services.append(srv)
+					new_devices.append(srv)
 
-		self.remove_old_services(addr, new_services)
+		self.remove_old_devices(addr, new_devices)
 
 		
 	def device_created3(self, addr, hdprec, feature):
 		'''
 		Gets a particular feature of an HDP record and
-		makes a HealthService out of it
+		makes a HealthDevice out of it
 		'''
 
 		feat_sink = (feature['role'] == 'sink')
@@ -116,14 +131,14 @@ class HealthApplication(MCAPInstance):
 		dpsm = hdprec['mcap_data_psm']
 		mdepid = feature['mdep_id']
 
-		preexists = self.match_service(addr, cpsm, dpsm, mdepid)
+		preexists = self.match_device(addr, cpsm, dpsm, mdepid)
 		if preexists:
 			return preexists
 
-		return self.create_service(addr, cpsm, dpsm, mdepid)
+		return self.create_device(addr, cpsm, dpsm, mdepid)
 
 	def device_removed(self, addr):
-		self.remove_old_services(addr, [])
+		self.remove_old_devices(addr, [])
 		DBG(2, "HDP: device removed %s" % addr)
 
 	def device_found(self, addr):
@@ -246,8 +261,8 @@ class HealthApplication(MCAPInstance):
 		if self.suspended:
 			return
 
-		while self.services:
-			self.remove_service(self.services[-1])
+		while self.devices:
+			self.remove_device(self.devices[-1])
 
 		self.unpublish()
 		MCAPInstance.stop(self)
@@ -273,9 +288,6 @@ class HealthApplication(MCAPInstance):
 		self.stopped = True
 		BlueZ().unregister_observer(self)
 
-		self.agent.Release()
-		self.agent = None
-
 	def channel_by_mdl(self, mdl):
 		channel = self.got_channel_by_mdl(mdl)
 		if not channel:
@@ -291,8 +303,8 @@ class HealthApplication(MCAPInstance):
 		return channel
 
 	def create_channel(self, mdl, acceptor):
-		service = self.service_by_mcl(mdl.mcl)
-		channel = HealthChannel(service, mdl, acceptor)
+		device = self.device_by_mcl(mdl.mcl)
+		channel = HealthChannel(device, mdl, acceptor)
 		self.add_channel(channel)
 		return channel
 
@@ -306,91 +318,93 @@ class HealthApplication(MCAPInstance):
 		except ValueError:
 			DBG(0, "WARNING: Channel unknown, not removed")
 
-	def service_by_mcl(self, mcl):
-		service = None
-		for candidate in self.services:
+	def device_by_mcl(self, mcl):
+		device = None
+		for candidate in self.devices:
 			if candidate.mcl is mcl:
-				service = candidate
+				device = candidate
 				break
-		if not service:
+		if not device:
 			# Case when we are acceptors of MCL
-			service = self.create_service_by_mcl(mcl)
-		return service
+			device = self.create_device_by_mcl(mcl)
+		return device
 
-	def create_service_by_mcl(self, mcl):
-		service = HealthService(self, mcl.remote_addr,
+	def create_device_by_mcl(self, mcl):
+		device = HealthDevice(self, mcl.remote_addr,
 					mcl.remote_addr_dc, 0)
-		self.add_service(service)
-		return service
+		self.add_device(device)
+		return device
 
-	def create_service(self, bdaddr, cpsm, dpsm, mdepid):
-		if self.match_service(bdaddr, cpsm, dpsm, mdepid):
-			DBG(0, "Warning: creating and adding HealthService" \
+	def create_device(self, bdaddr, cpsm, dpsm, mdepid):
+		if self.match_device(bdaddr, cpsm, dpsm, mdepid):
+			DBG(0, "Warning: creating and adding HealthDevice" \
 				"with same characteristics as old one")
 
 		control_addr = (bdaddr, cpsm)
 		data_addr = (bdaddr, dpsm)
-		service = HealthService(self, control_addr, data_addr, mdepid)
-		self.add_service(service)
+		device = HealthDevice(self, control_addr, data_addr, mdepid)
+		self.add_device(device)
 		DBG(3, "Creating discovered srv %s %d %d" % \
 			(bdaddr, cpsm, mdepid))
-		return service
+		return device
 
-	def match_service(self, bdaddr, cpsm, dpsm, mdepid):
-		for service in self.services:
-			if service.bdaddr() == bdaddr and \
-					service.cpsm() == cpsm and \
-					service.dpsm() == dpsm and \
-					service.mdepid == mdepid:
-				return service
+	def match_device(self, bdaddr, cpsm, dpsm, mdepid):
+		for device in self.devices:
+			if device.bdaddr() == bdaddr and \
+					device.cpsm() == cpsm and \
+					device.dpsm() == dpsm and \
+					device.mdepid == mdepid:
+				return device
 		return None
 
-	def remove_old_services(self, bdaddr, new_services):
-		for service in self.services:
-			if service.bdaddr() == bdaddr and \
-					service not in new_services:
-				self.remove_service(service)
+	def remove_old_devices(self, bdaddr, new_devices):
+		for device in self.devices:
+			if device.bdaddr() == bdaddr and \
+					device not in new_devices:
+				self.remove_device(device)
 
-	def add_service(self, service):
-		if service not in self.services:
-			self.services.append(service)
-			self.agent.ServiceDiscovered(service)
+	def add_device(self, device):
+		if device not in self.devices:
+			self.devices.append(device)
+			self.manager.signal("DeviceFound", self,
+						"org.bluez", device)
 
-	def remove_service(self, service):
+	def remove_device(self, device):
 		try:
-			service.kill()
-			self.services.remove(service)
-			self.agent.ServiceRemoved(service)
+			device.kill()
+			self.devices.remove(device)
+			self.manager.signal("DeviceDisappeared", self,
+				"org.bluez", device)
 		except ValueError:
-			DBG(0, "Warning: service %s unkown, not removed")
+			DBG(0, "Warning: device %s unkown, not removed")
 
 	def MCLConnected(self, mcl, err):
 		if self.stopped:
 			return
 
-		service = self.service_by_mcl(mcl)
-		service.mcl_connected(mcl, err, False)
+		device = self.device_by_mcl(mcl)
+		device.mcl_connected(mcl, err, False)
 
 	def MCLDisconnected(self, mcl):
 		if self.stopped:
 			return
 
-		service = self.service_by_mcl(mcl)
-		service.mcl_disconnected(mcl)
+		device = self.device_by_mcl(mcl)
+		device.mcl_disconnected(mcl)
 
 	def MCLReconnected(self, mcl, err):
 		if self.stopped:
 			return
 
-		service = self.service_by_mcl(mcl)
-		service.mcl_connected(mcl, err, True)
+		device = self.device_by_mcl(mcl)
+		device.mcl_connected(mcl, err, True)
 
 	def MCLUncached(self, mcl):
 		if self.stopped:
 			return
 
-		service = self.service_by_mcl(mcl)
-		service.mcl_deleted(mcl)
+		device = self.device_by_mcl(mcl)
+		device.mcl_deleted(mcl)
 
 	def MDLInquire(self, mdepid, config):
 		if self.stopped:
@@ -408,11 +422,10 @@ class HealthApplication(MCAPInstance):
 		if not ok:
 			DBG(1, "requested MDEP ID %d not in our list" % mdepid)
 
-		print "#############", config # FIXME REMOVE
-
 		# TODO this is an ugly solution to please PTS streaming test.
-		#	Need to think in a better way to call agent.
-		our_config = self.agent.InquireConfig(mdepid, config, self.sink)
+		#	Need to think in a better way to call upper levels.
+		our_config = self.manager.signal("InquireConfig", self, "tmp",
+				[mdepid, config, self.sink])
 		final_config = config or our_config
 
 		if not final_config:
@@ -432,8 +445,8 @@ class HealthApplication(MCAPInstance):
 			return
 
 		if err:
-			service = self.service_by_mcl(mcl)
-			service.mdl_ready(mdl, err)
+			device = self.device_by_mcl(mcl)
+			device.mdl_ready(mdl, err)
 			return
 
 		# Nothing to do except go ahead
@@ -456,12 +469,12 @@ class HealthApplication(MCAPInstance):
 		if self.stopped:
 			return
 
-		service = self.service_by_mcl(mdl.mcl)
+		device = self.device_by_mcl(mdl.mcl)
 		channel = self.got_channel_by_mdl(mdl)
 		reconn = channel is not None
 
 		if err:
-			service.mdl_connected(mdl, channel, reconn, err)
+			device.mdl_connected(mdl, channel, reconn, err)
 			return
 
 		if mdl.mdepid == 0:
@@ -477,9 +490,10 @@ class HealthApplication(MCAPInstance):
 			channel = self.create_channel(mdl, mdl.acceptor)
 
 		if mdl.acceptor:
-			self.agent.ChannelConnected(channel)
+			self.manager.signal("ChannelConnected", device,
+				"org.bluez.HealthDevice", channel)
 
-		service.mdl_connected(mdl, channel, reconn, err)
+		device.mdl_connected(mdl, channel, reconn, err)
 
 	def MDLConnectedEcho(self, mdl):
 		ok = not not mdl.sk
@@ -487,8 +501,8 @@ class HealthApplication(MCAPInstance):
 			watch_fd(mdl.sk, self.echo_watch, mdl)
 
 		if not mdl.acceptor:
-			service = self.service_by_mcl(mdl.mcl)
-			service.mdlecho_connected(mdl, ok)
+			device = self.device_by_mcl(mdl.mcl)
+			device.mdlecho_connected(mdl, ok)
 
 	def echo_watch(self, sk, evt, mdl):
 		data = ""
@@ -499,8 +513,8 @@ class HealthApplication(MCAPInstance):
 				data = ""
 
 		if not mdl.acceptor:
-			service = self.service_by_mcl(mdl.mcl)
-			service.mdlecho_pong(mdl, data)
+			device = self.device_by_mcl(mdl.mcl)
+			device.mdlecho_pong(mdl, data)
 		else:
 			if data:
 				# send back the same data and close
@@ -522,42 +536,16 @@ class HealthApplication(MCAPInstance):
 
 		channel = self.got_channel_by_mdl(mdl)
 		if channel:
-			service = self.service_by_mcl(mdl.mcl)
+			device = self.device_by_mcl(mdl.mcl)
 			self.remove_channel(channel)
-			self.agent.ChannelDeleted(channel)
+			self.manager.signal("ChannelDeleted", device,
+				"org.bluez.HealthDevice", channel)
 
 	def MDLClosed(self, mdl):
 		# Application discovers this via fd closure
 		pass
 
-	### Public HealthApplication API
-
-	def Echo(self, service, reply_handler, error_handler):
-		"""
-		Sends an echo petition to the remote service. Calls error
-		handler in case of error.
-		"""
-		service._Echo(reply_handler, error_handler)
-
-	def CreateChannel(self, service, conf, reply_handler, error_handler):
-		"""
-		Creates a data channel with the given service
-		"""
-		if not service.mdepid:
-			raise HealthError("This service is initiator-only")
-
-		try:
-			conf = {"Reliable": 1, "Streaming": 2, "Any": 0}[conf]
-		except KeyError:
-			raise HealthError("Invalid channel config")
-
-		service._CreateChannel(conf, reply_handler, error_handler)
-
-	def DestroyChannel(self, channel):
-		if channel.valid:
-			channel.valid = False
-			channel.service._DeleteChannel(channel)
-		return True
+	### No public HealthApplication API
 
 
 class QueueItem(object):
@@ -596,18 +584,17 @@ class QueueItem(object):
 			self.cb_nok = None
 
 
-class HealthService(object):
+class HealthDevice(object):
 	'''
-	The HealthService is a class with no public APIs that encapsulates
-	the MCL. Moreover, in this API, it represents a single (endpoint,
+	The HealthDevice represents a single (endpoint,
 	role, data_type) in the remote device.
 
-	Each service is bound to a given HealthApplication object, so
+	Each device is bound to a given HealthApplication object, so
 	data_type and role are implicitly defined (being the remote device's
 	role the opposite of our application's).
 
 	The MDEP ID is also known by this class, if the remote device
-	publishes a SDP record. If not, or if this service is created
+	publishes a SDP record. If not, or if this device is created
 	automatically when we are acceptors, MDEP ID is zero.
 	'''
 
@@ -919,10 +906,48 @@ class HealthService(object):
 	def CloseMCL(self):
 		self.app.CloseMCL(self.mcl)
 
+	# Public API
+
+	def Echo(self, reply_handler, error_handler):
+		"""
+		Sends an echo petition to the remote device. Calls error
+		handler in case of error.
+		"""
+		self._Echo(reply_handler, error_handler)
+
+	def CreateChannel(self, app, conf, reply_handler, error_handler):
+		"""
+		Creates a data channel with device 
+		"""
+
+		if app and (app is not self.app):
+			raise HealthError("Creating channel with a different" +
+					"application is not supported")
+
+		try:
+			conf = {"Reliable": 1, "Streaming": 2, "Any": 0}[conf]
+		except KeyError:
+			raise HealthError("Invalid channel config")
+
+		self._CreateChannel(conf, reply_handler, error_handler)
+
+	def DestroyChannel(self, channel):
+		"""
+		Destroys (deletes) a given data channel
+		"""
+		if channel.device is not self:
+			raise HealthError("Channel does not belong to this device")
+
+		if channel.valid:
+			channel.valid = False
+			self._DeleteChannel(channel)
+
+		return True
+
 
 class HealthChannel(object):
-	def __init__(self, service, mdl, acceptor):
-		self.service = service
+	def __init__(self, device, mdl, acceptor):
+		self.device = device
 		self.mdl = mdl
 		self.acceptor = acceptor
 		self.valid = True
@@ -931,7 +956,7 @@ class HealthChannel(object):
 		if not self.valid:
 			raise HealthError("Data channel deleted")
 		data_type = self.mdl.reliable and "Reliable" or "Streaming"
-		return {"Type": data_type, "Service": self.service}
+		return {"Type": data_type, "Device": self.device}
 
 	def Acquire(self, reply_handler, error_handler):
 		if not self.valid:
@@ -945,7 +970,7 @@ class HealthChannel(object):
 		def reconnected():
 			reply_handler(self.mdl.sk)
 
-		self.service._ReconnectChannel(self, reconnected,
+		self.device._ReconnectChannel(self, reconnected,
 							error_handler)
 
 	def Release(self):
@@ -954,33 +979,5 @@ class HealthChannel(object):
 	def stop(self):
 		self.Release()
 
-
-# This agent has two methods (ServiceDiscovered and ServiceRemoved)
-# that are actually signals in BlueZ Health API.
-
-class HealthAgent(object):
-	def Release(self):
-		pass
-
-	def ServiceDiscovered(self, service):
-		print "HealthAgent.ServiceDiscovered not overridden"
-		pass
-
-	def ServiceRemoved(self, service):
-		print "HealthAgent.ServiceRemoved not overridden"
-		pass
-
-	def ChannelConnected(self, channel):
-		print "HealthAgent.ChannelConnected not overridden"
-		pass
-
-	def ChannelDeleted(self, channel):
-		print "HealthAgent.ChannelDeleted not overridden"
-		pass
-
-	def InquireConfig(self, mdepid, config, sink):
-		if sink:
-			return 0x00
-		return 0x01 # Reliable by default
 
 # FIXME capture all "normal" InvalidOperation exceptions

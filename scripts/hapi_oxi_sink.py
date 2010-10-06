@@ -34,19 +34,84 @@ def data_received(sk, evt):
 	return more
 
 
-class MyAgent(HealthAgent):
-	def ChannelConnected(self, channel):
-		channel.Acquire(reply_handler=self.FdAcquired,
-				error_handler=self.FdNotAcquired)
+class SignalHandler(object):
+	def ChannelConnected(self, device, interface, channel):
+		channel.Acquire(reply_handler=self.fd_acquired,
+				error_handler=self.fd_not_acquired)
 		print "Channel %d from %d up" % \
-			(id(channel), id(channel.GetProperties()['Service']))
+			(id(channel), id(channel.GetProperties()['Device']))
 
-	def FdAcquired(self, fd):
+	def ChannelDeleted(self, device, interface, channel):
+		print "Channel %d deleted" % id(channel)
+
+	def DeviceFound(self, app, interface, device):
+		print "Device %d discovered %s" % \
+			(id(device), device.addr_control)
+		if test_echo:
+			glib.timeout_add(2000, self.echo, device)
+		elif force_conn:
+			method = self.connect
+			glib.timeout_add(2000, method, device)
+			if streaming_channel:
+				# One more
+				glib.timeout_add(4000, method, device)
+
+	def DeviceRemoved(self, app, interface, device):
+		print "Service %d removed" % id(device)
+
+	# TODO Ugly trick to please PTS, needs to be improved!
+	def InquireConfig(self, app, interface, data):
+		return 0x00
+
+	def echo(self, device):
+		print "Initiating echo"
+		self.device = device
+		app.Echo(device,
+			reply_handler=self.echo_ok,
+			error_handler=self.echo_nok)
+		return False
+
+	def echo_nok(self, *args):
+		# print "Echo failed, retrying in 2 seconds"
+		# glib.timeout_add(2000, self.echo, self.device)
+		print "Echo failed"
+	
+	def echo_ok(self):
+		# print "Echo Ok, connecting in 1 second..."
+		# glib.timeout_add(1000, self.connect, self.device)
+		print "Echo Ok"
+
+	def connect(self, device):
+		print "Connecting..."
+		self.device = device
+		# Sinks must not specify channel configuration, use 'Any'!
+		app.CreateChannel(device, "Any",
+				reply_handler=self.channel_ok,
+				error_handler=self.channel_nok)
+		return False
+
+	def channel_ok(self, channel):
+		global counter
+		counter = 0
+		self.channel = channel
+		print "Channel up"
+		channel.Acquire(reply_handler=self.fd_acquired,
+				error_handler=self.fd_not_acquired)
+
+	def channel_nok(self, err):
+		print "Could not establish channel with device (%d)" % err
+		# print "Will retry in 60 seconds"
+		# glib.timeout_add(60000, self.connect, self.device)
+
+	def fd_acquired(self, fd):
 		print "FD acquired"
 		glib.io_add_watch(fd, watch_bitmap, data_received)
 
 		if exercise_reconn:
 			glib.timeout_add(3000, self.toogle_connection, fd)
+
+	def fd_not_acquired(self, err):
+		print "FD not acquired"
 
 	def toogle_connection(self, fd):
 		print "Shutting channel down for reconnection test"
@@ -54,83 +119,23 @@ class MyAgent(HealthAgent):
 		glib.timeout_add(3000, self.toogle_connection_2)
 		if mcl_reconn:
 			print "\tShutting MCL down too"
-			self.service.CloseMCL()
+			self.device.CloseMCL()
 		return False
 
 	def toogle_connection_2(self):
 		print "Reconnecting channel"
-		self.channel.Acquire(reply_handler=self.FdAcquired,
-				error_handler=self.FdNotAcquired)
+		self.channel.Acquire(reply_handler=self.fd_acquired,
+				error_handler=self.fd_not_acquired)
 		return False
 
-	def FdNotAcquired(self, err):
-		print "FD not acquired"
 
-	def ChannelDeleted(self, channel):
-		print "Channel %d deleted" % id(channel)
-
-	def ServiceDiscovered(self, service):
-		print "Service %d discovered %s" % \
-			(id(service), service.addr_control)
-		if test_echo:
-			glib.timeout_add(2000, self.echo, service)
-		elif force_conn:
-			method = self.connect
-			glib.timeout_add(2000, method, service)
-			if streaming_channel:
-				# One more
-				glib.timeout_add(4000, method, service)
-
-	def echo(self, service):
-		print "Initiating echo"
-		self.service = service
-		app.Echo(service,
-			reply_handler=self.EchoOk,
-			error_handler=self.EchoNok)
-		return False
-
-	def EchoNok(self, *args):
-		# print "Echo failed, retrying in 2 seconds"
-		# glib.timeout_add(2000, self.echo, self.service)
-		print "Echo failed"
-	
-	def EchoOk(self):
-		# print "Echo Ok, connecting in 1 second..."
-		# glib.timeout_add(1000, self.connect, self.service)
-		print "Echo Ok"
-
-	def ServiceRemoved(self, service):
-		print "Service %d removed" % id(service)
-
-	def connect(self, service):
-		print "Connecting..."
-		self.service = service
-		# Sinks must not specify channel configuration, use 'Any'!
-		app.CreateChannel(service, "Any",
-				reply_handler=self.ChannelOk,
-				error_handler=self.ChannelNok)
-		return False
-
-	def ChannelOk(self, channel):
-		global counter
-		counter = 0
-		self.channel = channel
-		print "Channel up"
-		channel.Acquire(reply_handler=self.FdAcquired,
-				error_handler=self.FdNotAcquired)
-
-	def ChannelNok(self, err):
-		print "Could not establish channel with service (%d)" % err
-		# print "Will retry in 60 seconds"
-		# glib.timeout_add(60000, self.connect, self.service)
-
-
-agent = MyAgent()
+signal_handler = SignalHandler()
 
 config = {"Role": "Sink", "DataType": 0x1004, "Description": "Oximeter sink"}
 
 manager = HealthManager()
-app = manager.CreateApplication(agent, config)
+manager.RegisterSignalHandler(signal_handler)
+app = manager.CreateApplication(config)
 
 test_echo = "-e" in sys.argv
 force_conn = "-f" in sys.argv

@@ -25,7 +25,7 @@ def data_received(sk, evt):
 				# schedule next oximeter sample transmission
 				glib.timeout_add(2000, send_sample, sk)
 			else:
-				app.DestroyChannel(agent.channel)
+				app.DestroyChannel(signal_handler.channel)
 
 	more = (evt == glib.IO_IN and data)
 
@@ -51,21 +51,21 @@ def send_sample(sk):
 accept_channel = True
 
 
-class MyAgent(HealthAgent):
-	def ChannelConnected(self, channel):
+class SignalHandler(object):
+	def ChannelConnected(self, device, interface, channel):
 		if accept_channel:
 			print "Accepted channel"
-			self.ChannelOk(channel)
+			self.channel_ok(channel)
 		else:
 			print "We don't like to accept connections, dropping"
 			app.DestroyChannel(channel)
 
-	def ChannelDeleted(self, channel):
+	def ChannelDeleted(self, device, interface, channel):
 		print "Channel %d deleted" % id(channel)
 
-	def ServiceDiscovered(self, service):
-		print "Service %d discovered %s" % \
-			(id(service), service.addr_control)
+	def DeviceFound(self, app, interface, device):
+		print "Device %d discovered %s" % \
+			(id(device), device.addr_control)
 
 		self.virgin = True
 		if dont_initiate:
@@ -76,53 +76,70 @@ class MyAgent(HealthAgent):
 			method = self.echo
 		else:
 			method = self.connect
-		glib.timeout_add(2000, method, service)
+		glib.timeout_add(2000, method, device)
 		if not test_echo and streaming_channel:
 			# One more
-			glib.timeout_add(4000, method, service, "Streaming")
+			glib.timeout_add(4000, method, device, "Streaming")
 
-	def echo(self, service):
+	def DeviceRemoved(self, app, interface, device):
+		print "Device %d removed" % id(device)
+
+	# TODO Ugly trick to please PTS, needs to be improved!
+	def InquireConfig(self, app, interface, data):
+		mdepid, config, is_sink = data
+		if streaming_channel:
+			if self.virgin:
+				config = 0x01 # Reliable 1st time
+				self.virgin = False
+			else:
+				config = 0x02 # Streaming
+		else:
+			config = 0x01 # Reliable is default
+
+		print "InquireConfig: returning %d" % config
+		return config
+
+	def echo(self, device):
 		print "Initiating echo"
-		self.service = service
-		app.Echo(service,
-			reply_handler=self.EchoOk,
-			error_handler=self.EchoNok)
+		self.device = device
+		device.Echo(reply_handler=self.echo_ok,
+			    error_handler=self.echo_nok)
 		return False
 
-	def EchoNok(self, *args):
+	def echo_nok(self, *args):
 		# print "Echo failed, retrying in 2 seconds"
-		# glib.timeout_add(2000, self.echo, self.service)
+		# glib.timeout_add(2000, self.echo, self.device)
 		print "Echo failed"
 	
-	def EchoOk(self):
+	def echo_ok(self):
 		# print "Echo Ok, connecting in 1 second..."
-		# glib.timeout_add(1000, self.connect, self.service)
+		# glib.timeout_add(1000, self.connect, self.device)
 		print "Echo Ok"
 
-	def connect(self, service, config="Reliable"):
+	def connect(self, device, config="Reliable"):
 		print "Connecting... (config=%s)" % config
-		self.service = service
-		app.CreateChannel(service, config,
-				reply_handler=self.ChannelOk,
-				error_handler=self.ChannelNok)
+		self.device = device
+		device.CreateChannel(None, config,
+				reply_handler=self.channel_ok,
+				error_handler=self.channel_nok)
 		return False
 
-	def ChannelOk(self, channel):
+	def channel_ok(self, channel):
 		global counter
 		counter = 0
 		self.channel = channel
 		print "Channel up"
-		channel.Acquire(reply_handler=self.FdAcquired,
+		channel.Acquire(reply_handler=self.fd_acquired,
 				error_handler=self.FdNotAcquired)
 
-	def ChannelNok(self, err):
-		print "Could not establish channel with service (%d)" % err
+	def channel_nok(self, err):
+		print "Could not establish channel with device (%d)" % err
 		print "Will retry in 60 seconds"
-		glib.timeout_add(60000, self.connect, self.service)
+		glib.timeout_add(60000, self.connect, self.device)
 
-	def FdAcquired(self, fd):
+	def fd_acquired(self, fd):
 		if echo_after_fd:
-			glib.timeout_add(5000, self.echo, self.channel.service)
+			glib.timeout_add(5000, self.echo, self.channel.device)
 
 		if exercise_reconn:
 			glib.timeout_add(3000, self.toogle_connection, fd)
@@ -142,34 +159,17 @@ class MyAgent(HealthAgent):
 		glib.timeout_add(3000, self.toogle_connection_2)
 		if mcl_reconn:
 			print "\tShutting MCL down too"
-			self.service.CloseMCL()
+			self.device.CloseMCL()
 		return False
 
 	def toogle_connection_2(self):
 		print "Reconnecting channel"
-		self.channel.Acquire(reply_handler=self.FdAcquired,
+		self.channel.Acquire(reply_handler=self.fd_acquired,
 				error_handler=self.FdNotAcquired)
 		return False
 
 	def FdNotAcquired(self, err):
 		print "FD not acquired"
-
-	def ServiceRemoved(self, service):
-		print "Service %d removed" % id(service)
-
-	def InquireConfig(self, mdepid, config, is_sink):
-		# TODO Ugly trick to please PTS, needs to be improved!
-		if streaming_channel:
-			if self.virgin:
-				config = 0x01 # Reliable 1st time
-				self.virgin = False
-			else:
-				config = 0x02 # Streaming
-		else:
-			config = 0x01 # Reliable is default
-
-		print "InquireConfig: returning %d" % config
-		return config
 
 
 test_echo = "-e" in sys.argv
@@ -181,12 +181,13 @@ mcl_reconn = "-R" in sys.argv # TC_SRC_HCT_BV_03_I
 if mcl_reconn:
 	exercise_reconn = True
 
-agent = MyAgent()
+signal_handler = SignalHandler()
 
 config = {"Role": "Source", "DataType": 0x1004, "Description": "Oximeter source"}
 
 manager = HealthManager()
-app = manager.CreateApplication(agent, config)
+manager.RegisterSignalHandler(signal_handler)
+app = manager.CreateApplication(config)
 
 try:
 	loop = glib.MainLoop()
