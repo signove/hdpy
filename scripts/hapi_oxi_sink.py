@@ -66,8 +66,7 @@ class SignalHandler(object):
 	def echo(self, device):
 		print "Initiating echo"
 		self.device = device
-		app.Echo(device,
-			reply_handler=self.echo_ok,
+		device.Echo(reply_handler=self.echo_ok,
 			error_handler=self.echo_nok)
 		return False
 
@@ -85,7 +84,7 @@ class SignalHandler(object):
 		print "Connecting..."
 		self.device = device
 		# Sinks must not specify channel configuration, use 'Any'!
-		app.CreateChannel(device, "Any",
+		device.CreateChannel(None, "Any",
 				reply_handler=self.channel_ok,
 				error_handler=self.channel_nok)
 		return False

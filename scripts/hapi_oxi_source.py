@@ -10,7 +10,7 @@ watch_bitmap = glib.IO_IN | glib.IO_ERR | glib.IO_HUP | glib.IO_NVAL
 
 counter = 0
 
-def data_received(sk, evt):
+def data_received(sk, evt, device, channel):
 	global counter
 	data = None
 	if evt & glib.IO_IN:
@@ -25,7 +25,7 @@ def data_received(sk, evt):
 				# schedule next oximeter sample transmission
 				glib.timeout_add(2000, send_sample, sk)
 			else:
-				app.DestroyChannel(signal_handler.channel)
+				device.DestroyChannel(channel)
 
 	more = (evt == glib.IO_IN and data)
 
@@ -58,7 +58,7 @@ class SignalHandler(object):
 			self.channel_ok(channel)
 		else:
 			print "We don't like to accept connections, dropping"
-			app.DestroyChannel(channel)
+			device.DestroyChannel(channel)
 
 	def ChannelDeleted(self, device, interface, channel):
 		print "Channel %d deleted" % id(channel)
@@ -130,7 +130,7 @@ class SignalHandler(object):
 		self.channel = channel
 		print "Channel up"
 		channel.Acquire(reply_handler=self.fd_acquired,
-				error_handler=self.FdNotAcquired)
+				error_handler=self.fd_not_acquired)
 
 	def channel_nok(self, err):
 		print "Could not establish channel with device (%d)" % err
@@ -144,7 +144,8 @@ class SignalHandler(object):
 		if exercise_reconn:
 			glib.timeout_add(3000, self.toogle_connection, fd)
 
-		glib.io_add_watch(fd, watch_bitmap, data_received)
+		glib.io_add_watch(fd, watch_bitmap, data_received,
+					self.channel.device, self.channel)
 		print "FD acquired, sending association"
 		time.sleep(2)
 		try:
@@ -165,10 +166,10 @@ class SignalHandler(object):
 	def toogle_connection_2(self):
 		print "Reconnecting channel"
 		self.channel.Acquire(reply_handler=self.fd_acquired,
-				error_handler=self.FdNotAcquired)
+				error_handler=self.fd_not_acquired)
 		return False
 
-	def FdNotAcquired(self, err):
+	def fd_not_acquired(self, err):
 		print "FD not acquired"
 
 
