@@ -59,10 +59,6 @@ class SignalHandler(object):
 	def DeviceRemoved(self, app, interface, device):
 		print "Service %d removed" % id(device)
 
-	# TODO Ugly trick to please PTS, needs to be improved!
-	def InquireConfig(self, app, interface, data):
-		return 0x00
-
 	def echo(self, device):
 		print "Initiating echo"
 		self.device = device

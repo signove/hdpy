@@ -58,7 +58,7 @@ class HealthManager(object):
 				name)
 			return
 
-		method(obj, interface, data)
+		return method(obj, interface, data)
 
 
 class HealthApplication(MCAPInstance):
@@ -410,35 +410,38 @@ class HealthApplication(MCAPInstance):
 		if self.stopped:
 			return
 
+		ok = True
+
 		if mdepid == 0:
 			# echo channel
-			ok = True
-			final_config = config or 0x01
-			reliable = (final_config == 0x01)
-			return ok, reliable, final_config
+			config = config or 0x01
+			reliable = (config == 0x01)
+			return ok, reliable, config
 
-		ok = mdepid == self.mdepid
-
-		if not ok:
+		if mdepid != self.mdepid:
 			DBG(1, "requested MDEP ID %d not in our list" % mdepid)
-
-		# TODO this is an ugly solution to please PTS streaming test.
-		#	Need to think in a better way to call upper levels.
-		our_config = self.manager.signal("InquireConfig", self, "tmp",
-				[mdepid, config, self.sink])
-		final_config = config or our_config
-
-		if not final_config:
-			DBG(1, "Remote side should have chosen config, nak")
-			ok = False
-		elif our_config and (final_config != our_config):
-			DBG(1, "MDEP reqs config %d, we want %d, nak" \
-				% (config, our_config))
 			ok = False
 
-		reliable = (final_config == 0x01)
+		if self.sink:
+			if not config:
+				DBG(1, "Remote side should have chosen config, nak")
+				ok = False
+		else:
+			if config:
+				DBG(1, "other side is Sink, but chose config %d" % config)
+				ok = False
 
-		return ok, reliable, final_config
+			# TODO this is an ugly solution to please PTS streaming test.
+			#	Need to think in a better way to call upper levels.
+			config = self.manager.signal("InquireConfig", self,
+					"tmp", [mdepid, config, self.sink])
+			if not config:
+				DBG(1, "Application did not return config via InquireConfig")
+				ok = False
+
+		reliable = (config == 0x01)
+
+		return ok, reliable, config
 
 	def MDLReady(self, mcl, mdl, err):
 		if self.stopped:
