@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
 import sys
+import os
 import glib
 from hdp.dummy_ieee10404 import parse_message_str
 import dbus
+import socket
 import dbus.service
 import gobject
 from dbus.mainloop.glib import DBusGMainLoop
@@ -60,18 +62,18 @@ class SignalHandler(object):
 
 	def ChannelConnected(self, channel, interface, device):
 		print "Device %s channel %s up" % (device, channel)
-		# channel.Acquire(reply_handler=self.fd_acquired,
-		#		error_handler=self.fd_not_acquired)
-
-	def ChannelDeleted(self, channel, interface, device):
-		print "Device %s hannel %s deleted" % (device, channel)
-
-	def fd_acquired(self, fd):
+		channel = bus.get_object("org.bluez", channel)
+		channel = dbus.Interface(channel, "org.bluez.HealthChannel")
+		fd = channel.Acquire()
+		fd = fd[0] # FIXME
+		print "Got raw rd %d" % fd
+		# encapsulate in Python socket object
+		fd = socket.fromfd(fd, socket.AF_UNIX, socket.SOCK_STREAM)
 		print "FD acquired"
 		glib.io_add_watch(fd, watch_bitmap, data_received)
 
-	def fd_not_acquired(self, err):
-		print "FD not acquired"
+	def ChannelDeleted(self, channel, interface, device):
+		print "Device %s hannel %s deleted" % (device, channel)
 
 
 signal_handler = SignalHandler()
