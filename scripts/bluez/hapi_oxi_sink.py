@@ -65,7 +65,6 @@ class SignalHandler(object):
 		channel = bus.get_object("org.bluez", channel)
 		channel = dbus.Interface(channel, "org.bluez.HealthChannel")
 		fd = channel.Acquire()
-		fd = fd[0] # FIXME
 		print "Got raw rd %d" % fd
 		# encapsulate in Python socket object
 		fd = socket.fromfd(fd, socket.AF_UNIX, socket.SOCK_STREAM)
@@ -73,7 +72,7 @@ class SignalHandler(object):
 		glib.io_add_watch(fd, watch_bitmap, data_received)
 
 	def ChannelDeleted(self, channel, interface, device):
-		print "Device %s hannel %s deleted" % (device, channel)
+		print "Device %s channel %s deleted" % (device, channel)
 
 
 signal_handler = SignalHandler()
