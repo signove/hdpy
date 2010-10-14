@@ -1,0 +1,247 @@
+diff --git a/_dbus_bindings/containers.c b/_dbus_bindings/containers.c
+index 319ebe1..2b0b81c 100644
+--- a/_dbus_bindings/containers.c
++++ b/_dbus_bindings/containers.c
+@@ -390,6 +390,9 @@ Dict_tp_init(DBusPyDict *self, PyObject *args, PyObject *kwargs)
+ #ifdef WITH_DBUS_FLOAT32
+             case DBUS_TYPE_FLOAT:
+ #endif
++#ifdef DBUS_TYPE_UNIX_FD
++            case DBUS_TYPE_UNIX_FD:
++#endif
+             case DBUS_TYPE_STRING:
+             case DBUS_TYPE_OBJECT_PATH:
+             case DBUS_TYPE_SIGNATURE:
+diff --git a/_dbus_bindings/dbus_bindings-internal.h b/_dbus_bindings/dbus_bindings-internal.h
+index e2b7fbe..ff3f6ec 100644
+--- a/_dbus_bindings/dbus_bindings-internal.h
++++ b/_dbus_bindings/dbus_bindings-internal.h
+@@ -107,6 +107,8 @@ DEFINE_CHECK(DBusPyUInt16)
+ extern PyTypeObject DBusPyInt32_Type, DBusPyUInt32_Type;
+ DEFINE_CHECK(DBusPyInt32)
+ DEFINE_CHECK(DBusPyUInt32)
++extern PyTypeObject DBusPyUnixFd_Type;
++DEFINE_CHECK(DBusPyUnixFd)
+ extern PyTypeObject DBusPyInt64_Type, DBusPyUInt64_Type;
+ DEFINE_CHECK(DBusPyInt64)
+ DEFINE_CHECK(DBusPyUInt64)
+diff --git a/_dbus_bindings/int.c b/_dbus_bindings/int.c
+index b669d57..4996c3a 100644
+--- a/_dbus_bindings/int.c
++++ b/_dbus_bindings/int.c
+@@ -395,6 +395,94 @@ PyTypeObject DBusPyInt32_Type = {
+     Int32_tp_new,                           /* tp_new */
+ };
+ 
++/* UnixFd ============================================================ */
++
++PyDoc_STRVAR(UnixFd_tp_doc,
++"An Unix Fd, represented as a subtype of `int`.\n"
++"\n"
++"Constructor::\n"
++"\n"
++"    dbus.UnixFd(value: int[, variant_level: int]) -> UnixFd\n"
++"\n"
++"``value`` must be within the allowed range, or `OverflowError` will be\n"
++"raised.\n"
++"\n"
++"``variant_level`` must be non-negative; the default is 0.\n"
++"\n"
++":IVariables:\n"
++"  `variant_level` : int\n"
++"    Indicates how many nested Variant containers this object\n"
++"    is contained in: if a message's wire format has a variant containing a\n"
++"    variant containing an Unix Fd, this is represented in Python by an\n"
++"    Unix Fd with variant_level==2.\n"
++);
++
++dbus_int32_t
++dbus_py_unixfd_range_check(PyObject *obj)
++{
++    long i = PyInt_AsLong(obj);
++    if (i == -1 && PyErr_Occurred()) return -1;
++    if (i < INT32_MIN || i > INT32_MAX) {
++        PyErr_Format(PyExc_OverflowError, "Value %d out of range for Unix Fd",
++                     (int)i);
++        return -1;
++    }
++    return i;
++}
++
++static PyObject *
++UnixFd_tp_new(PyTypeObject *cls, PyObject *args, PyObject *kwargs)
++{
++    PyObject *self = (DBusPyIntBase_Type.tp_new)(cls, args, kwargs);
++    if (self && dbus_py_unixfd_range_check(self) == -1 && PyErr_Occurred()) {
++        Py_DECREF(self);
++        return NULL;
++    }
++    return self;
++}
++
++PyTypeObject DBusPyUnixFd_Type = {
++    PyObject_HEAD_INIT(DEFERRED_ADDRESS(&PyType_Type))
++    0,
++    "dbus.UnixFd",
++    0,
++    0,
++    0,                                      /* tp_dealloc */
++    0,                                      /* tp_print */
++    0,                                      /* tp_getattr */
++    0,                                      /* tp_setattr */
++    0,                                      /* tp_compare */
++    0,                                      /* tp_repr */
++    0,                                      /* tp_as_number */
++    0,                                      /* tp_as_sequence */
++    0,                                      /* tp_as_mapping */
++    0,                                      /* tp_hash */
++    0,                                      /* tp_call */
++    0,                                      /* tp_str */
++    0,                                      /* tp_getattro */
++    0,                                      /* tp_setattro */
++    0,                                      /* tp_as_buffer */
++    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
++    UnixFd_tp_doc,                           /* tp_doc */
++    0,                                      /* tp_traverse */
++    0,                                      /* tp_clear */
++    0,                                      /* tp_richcompare */
++    0,                                      /* tp_weaklistoffset */
++    0,                                      /* tp_iter */
++    0,                                      /* tp_iternext */
++    0,                                      /* tp_methods */
++    0,                                      /* tp_members */
++    0,                                      /* tp_getset */
++    DEFERRED_ADDRESS(&DBusPyIntBase_Type),   /* tp_base */
++    0,                                      /* tp_dict */
++    0,                                      /* tp_descr_get */
++    0,                                      /* tp_descr_set */
++    0,                                      /* tp_dictoffset */
++    0,                                      /* tp_init */
++    0,                                      /* tp_alloc */
++    UnixFd_tp_new,                          /* tp_new */
++};
++
+ /* UInt32 =========================================================== */
+ 
+ PyDoc_STRVAR(UInt32_tp_doc,
+@@ -732,6 +820,10 @@ dbus_py_init_int_types(void)
+     if (PyType_Ready(&DBusPyInt32_Type) < 0) return 0;
+     DBusPyInt32_Type.tp_print = NULL;
+ 
++    DBusPyUnixFd_Type.tp_base = &DBusPyIntBase_Type;
++    if (PyType_Ready(&DBusPyUnixFd_Type) < 0) return 0;
++    DBusPyUnixFd_Type.tp_print = NULL;
++
+     DBusPyUInt32_Type.tp_base = &DBusPyLongBase_Type;
+     if (PyType_Ready(&DBusPyUInt32_Type) < 0) return 0;
+     DBusPyUInt32_Type.tp_print = NULL;
+@@ -755,6 +847,7 @@ dbus_py_insert_int_types(PyObject *this_module)
+     Py_INCREF(&DBusPyUInt16_Type);
+     Py_INCREF(&DBusPyInt32_Type);
+     Py_INCREF(&DBusPyUInt32_Type);
++    Py_INCREF(&DBusPyUnixFd_Type);
+     Py_INCREF(&DBusPyInt64_Type);
+     Py_INCREF(&DBusPyUInt64_Type);
+     Py_INCREF(&DBusPyBoolean_Type);
+@@ -764,6 +857,8 @@ dbus_py_insert_int_types(PyObject *this_module)
+                            (PyObject *)&DBusPyUInt16_Type) < 0) return 0;
+     if (PyModule_AddObject(this_module, "Int32",
+                            (PyObject *)&DBusPyInt32_Type) < 0) return 0;
++    if (PyModule_AddObject(this_module, "UnixFd",
++                           (PyObject *)&DBusPyUnixFd_Type) < 0) return 0;
+     if (PyModule_AddObject(this_module, "UInt32",
+                            (PyObject *)&DBusPyUInt32_Type) < 0) return 0;
+     if (PyModule_AddObject(this_module, "Int64",
+diff --git a/_dbus_bindings/message-append.c b/_dbus_bindings/message-append.c
+index 93b76c7..aeec7f5 100644
+--- a/_dbus_bindings/message-append.c
++++ b/_dbus_bindings/message-append.c
+@@ -193,6 +193,8 @@ _signature_string_from_pyobject(PyObject *obj, long *variant_level_ptr)
+             return PyString_FromString(DBUS_TYPE_INT16_AS_STRING);
+         else if (DBusPyInt32_Check(obj))
+             return PyString_FromString(DBUS_TYPE_INT32_AS_STRING);
++        else if (DBusPyUnixFd_Check(obj))
++            return PyString_FromString(DBUS_TYPE_UNIX_FD_AS_STRING);
+         else if (DBusPyByte_Check(obj))
+             return PyString_FromString(DBUS_TYPE_BYTE_AS_STRING);
+         else if (DBusPyUInt16_Check(obj))
+@@ -948,6 +950,11 @@ _message_iter_append_pyobject(DBusMessageIter *appender,
+           ret = -1;
+           break;
+ #endif
++#if defined(DBUS_TYPE_UNIX_FD)
++      case DBUS_TYPE_UNIX_FD:
++          PROCESS_INTEGER(int32)
++          break;
++#endif
+ #undef PROCESS_INTEGER
+ 
+       /* Now the more complicated cases, which are delegated to helper
+diff --git a/_dbus_bindings/message-get-args.c b/_dbus_bindings/message-get-args.c
+index 7d55ffd..8616965 100644
+--- a/_dbus_bindings/message-get-args.c
++++ b/_dbus_bindings/message-get-args.c
+@@ -322,6 +322,16 @@ _message_iter_get_pyobject(DBusMessageIter *iter,
+             ret = PyObject_Call((PyObject *)&DBusPyUInt32_Type, args, kwargs);
+             break;
+ 
++#ifdef DBUS_TYPE_UNIX_FD
++        case DBUS_TYPE_UNIX_FD:
++            DBG("%s", "found an unix fd");
++            dbus_message_iter_get_basic(iter, &u.i32);
++            args = Py_BuildValue("(i)", u.i32);
++            if (!args) break;
++            ret = PyObject_Call((PyObject *)&DBusPyUnixFd_Type, args, kwargs);
++            break;
++#endif
++
+ #if defined(DBUS_HAVE_INT64) && defined(HAVE_LONG_LONG)
+         case DBUS_TYPE_INT64:
+             DBG("%s", "found an int64");
+diff --git a/_dbus_bindings/module.c b/_dbus_bindings/module.c
+index a4c2a66..1ee771c 100644
+--- a/_dbus_bindings/module.c
++++ b/_dbus_bindings/module.c
+@@ -351,6 +351,7 @@ init_dbus_bindings(void)
+     ADD_CONST_PREFIXED(TYPE_INT16)
+     ADD_CONST_PREFIXED(TYPE_UINT16)
+     ADD_CONST_PREFIXED(TYPE_INT32)
++    ADD_CONST_PREFIXED(TYPE_UNIX_FD)
+     ADD_CONST_PREFIXED(TYPE_UINT32)
+     ADD_CONST_PREFIXED(TYPE_INT64)
+     ADD_CONST_PREFIXED(TYPE_UINT64)
+diff --git a/_dbus_bindings/types-internal.h b/_dbus_bindings/types-internal.h
+index a5c8147..b389ea2 100644
+--- a/_dbus_bindings/types-internal.h
++++ b/_dbus_bindings/types-internal.h
+@@ -61,6 +61,7 @@ DEFINE_CHECK(DBusPyStrBase)
+ dbus_int16_t dbus_py_int16_range_check(PyObject *);
+ dbus_uint16_t dbus_py_uint16_range_check(PyObject *);
+ dbus_int32_t dbus_py_int32_range_check(PyObject *);
++dbus_int32_t dbus_py_unixfd_range_check(PyObject *);
+ dbus_uint32_t dbus_py_uint32_range_check(PyObject *);
+ 
+ #if defined(DBUS_HAVE_INT64) && defined(HAVE_LONG_LONG)
+diff --git a/dbus/connection.pyc b/dbus/connection.pyc
+index 573b45f..1352b04 100644
+Binary files a/dbus/connection.pyc and b/dbus/connection.pyc differ
+diff --git a/dbus/types.py b/dbus/types.py
+index cc4a678..d638a8e 100644
+--- a/dbus/types.py
++++ b/dbus/types.py
+@@ -1,9 +1,10 @@
+ __all__ = ('ObjectPath', 'ByteArray', 'Signature', 'Byte', 'Boolean',
+            'Int16', 'UInt16', 'Int32', 'UInt32', 'Int64', 'UInt64',
+            'Double', 'String', 'Array', 'Struct', 'Dictionary',
+-           'UTF8String')
++           'UTF8String', 'UnixFd')
+ 
+ from _dbus_bindings import ObjectPath, ByteArray, Signature, Byte,\
+                            Int16, UInt16, Int32, UInt32,\
+                            Int64, UInt64, Dictionary, Array, \
+-                           String, Boolean, Double, Struct, UTF8String
++                           String, Boolean, Double, Struct, UTF8String, \
++                           UnixFd
+diff --git a/dbus/types.pyc b/dbus/types.pyc
+index 0726cd4..02b290c 100644
+Binary files a/dbus/types.pyc and b/dbus/types.pyc differ
