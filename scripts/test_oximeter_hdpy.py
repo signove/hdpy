@@ -32,6 +32,7 @@ class MyInstance(MCAPInstance):
 
 	def MDLRequested(self, mcl, mdl, mdepid, config):
 		print "MDL requested MDEP", mdepid, "config", config
+		return True # reliable
 
 	def MDLConnected(self, mdl, err):
 		print "MDL connected", id(mdl)

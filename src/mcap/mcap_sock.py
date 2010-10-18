@@ -106,6 +106,7 @@ def set_reliable(s, reliable):
 		set_ertm(s)
 	else:
 		set_streaming(s)
+	print s, get_options(s)
 
 
 def defer_setup(s):
@@ -170,7 +171,7 @@ def create_control_listening_socket(btaddr):
 def create_data_listening_socket(btaddr):
 	psm = get_available_psm(btaddr)
 	# print "Data socket: PSM %d" % psm
-	s = create_data_socket(DC_MTU)
+	s = create_data_socket(True)
 
 	dev_id = bz.hci_devid(btaddr)
 	if dev_id < 0 and btaddr and btaddr != "00:00:00:00:00:00":
@@ -181,6 +182,7 @@ def create_data_listening_socket(btaddr):
 	s.bind((btaddr, psm))
 	s.listen(5)
 	defer_setup(s)
+
 	return (s, psm)
 
 

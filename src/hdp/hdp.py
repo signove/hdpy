@@ -456,8 +456,8 @@ class HealthApplication(MCAPInstance):
 		self.ConnectMDL(mdl)
 
 	def MDLRequested(self, mcl, mdl, mdep_id, conf):
-		# already dealt with in MDLInquire
-		pass
+		DBG(1, "HDP: MDLRequested: conf %d" % conf)
+		return (conf == 0x01)
 
 	def MDLReconnected(self, mdl):
 		# we are only interested in MDLConnected

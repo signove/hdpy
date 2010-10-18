@@ -27,6 +27,9 @@ class ControlChannelListener(object):
 		watch_fd(self.sk, self.activity)
 
 	def activity(self, sk, event):
+		if not self.observer:
+			return False
+
 		if io_err(event):
 			self.sk = None
 			self.psm = 0
@@ -41,6 +44,7 @@ class ControlChannelListener(object):
 		if self.sk:
 			self.sk.close()
 			self.sk = None
+		self.observer = None
 
 
 class DataChannelListener(object):
@@ -51,7 +55,13 @@ class DataChannelListener(object):
 		self.psm = psm
 		watch_fd(self.sk, self.activity)
 
+	def set_reliable(self, reliable):
+		set_reliable(self.sk, reliable)
+
 	def activity(self, sk, event):
+		if not self.observer:
+			return False
+
 		if io_err(event):
 			self.sk = None
 			self.psm = 0
@@ -66,6 +76,7 @@ class DataChannelListener(object):
 		if self.sk:
 			self.sk.close()
 			self.sk = None
+		self.observer = None
 
 
 class MDL(object):

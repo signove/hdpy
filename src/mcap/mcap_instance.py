@@ -23,7 +23,8 @@ class MCAPInstance:
 		self.dpsm = 0
 		self.csp_enabled = True
 		self.reconn_enabled = True
-		self.ccl = self.dcl = None
+		self.ccl = None
+		self.dcl = None
 		self.mcls = []
 		self.peers = {}
 		self.watch_mdl = True
@@ -241,7 +242,8 @@ class MCAPInstance:
 
 	def MDLRequested(self, mcl, mdl, mdep_id, conf):
 		''' Followed by MDLAborted or MDLConnected '''
-		print "MDLRequested not overridden"
+		print "MDLRequested not overridden, must return reliability"
+		return True
 
 	def MDLAborted(self, mcl, mdl):
 		print "MDLAborted not overridden"
@@ -341,7 +343,8 @@ class MCAPInstance:
 		self.MDLReady(mcl, mdl, err)
 
 	def mdlrequested_mcl(self, mcl, mdl, mdepid, config):
-		self.MDLRequested(mcl, mdl, mdepid, config)
+		reliable = self.MDLRequested(mcl, mdl, mdepid, config)
+		self.dcl.set_reliable(reliable)
 
 	def mdlreconn_mcl(self, mcl, mdl):
 		self.MDLReconnected(mdl)
@@ -357,6 +360,11 @@ class MCAPInstance:
 		self.MDLClosed(mdl)
 
 	def new_dc(self, listener, sk, addr):
+		# TODO this is not a perfect sieve in case two MCLs request data
+		# channels of different modes at the same time. The right thing to
+		# to is delay response on all MCLs until the first has completed
+		# the MDL connection. Also, we need to test whether the expected
+		# mode (ERTM or Streaming) was actually honored!
 		if not self.peer_connected(addr):
 			# unknown peer
 			try:

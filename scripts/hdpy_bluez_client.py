@@ -136,6 +136,7 @@ class MyInstance(MCAPInstance):
     def MDLRequested(self, mcl, mdl, mdep_id, conf):
         ''' Followed by MDLAborted or MDLConnected '''
         print "MDLRequested not overridden"
+	return True
 
     def MDLAborted(self, mcl, mdl):
         print "MDLAborted not overridden"
