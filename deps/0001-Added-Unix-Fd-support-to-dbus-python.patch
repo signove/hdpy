@@ -1,0 +1,612 @@
+From 4bb42dc45e1e5f57fd15ce30054ad6762a4d0d16 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Elvis=20Pf=C3=BCtzenreuter?= <epx@signove.com>
+Date: Thu, 14 Oct 2010 14:53:29 -0300
+Subject: [PATCH 1/2] Added Unix Fd support to dbus-python
+
+---
+ _dbus_bindings/Makefile.am              |    1 +
+ _dbus_bindings/containers.c             |    3 +
+ _dbus_bindings/dbus_bindings-internal.h |    6 +
+ _dbus_bindings/message-append.c         |   33 +++++
+ _dbus_bindings/message-get-args.c       |   11 ++
+ _dbus_bindings/module.c                 |    3 +
+ _dbus_bindings/types-internal.h         |    1 +
+ _dbus_bindings/unixfd.c                 |  225 +++++++++++++++++++++++++++++++
+ dbus/types.py                           |    5 +-
+ examples/unix-fd-client.py              |   69 ++++++++++
+ examples/unix-fd-service.py             |   70 ++++++++++
+ 11 files changed, 425 insertions(+), 2 deletions(-)
+ create mode 100644 _dbus_bindings/unixfd.c
+ create mode 100755 examples/unix-fd-client.py
+ create mode 100755 examples/unix-fd-service.py
+
+diff --git a/_dbus_bindings/Makefile.am b/_dbus_bindings/Makefile.am
+index c6cd1ee..891b35d 100644
+--- a/_dbus_bindings/Makefile.am
++++ b/_dbus_bindings/Makefile.am
+@@ -17,6 +17,7 @@ _dbus_bindings_la_SOURCES = \
+ 			    float.c \
+ 			    generic.c \
+ 			    int.c \
++			    unixfd.c \
+ 			    libdbusconn.c \
+ 			    mainloop.c \
+ 			    message-append.c \
+diff --git a/_dbus_bindings/containers.c b/_dbus_bindings/containers.c
+index 319ebe1..2b0b81c 100644
+--- a/_dbus_bindings/containers.c
++++ b/_dbus_bindings/containers.c
+@@ -390,6 +390,9 @@ Dict_tp_init(DBusPyDict *self, PyObject *args, PyObject *kwargs)
+ #ifdef WITH_DBUS_FLOAT32
+             case DBUS_TYPE_FLOAT:
+ #endif
++#ifdef DBUS_TYPE_UNIX_FD
++            case DBUS_TYPE_UNIX_FD:
++#endif
+             case DBUS_TYPE_STRING:
+             case DBUS_TYPE_OBJECT_PATH:
+             case DBUS_TYPE_SIGNATURE:
+diff --git a/_dbus_bindings/dbus_bindings-internal.h b/_dbus_bindings/dbus_bindings-internal.h
+index e2b7fbe..3b15706 100644
+--- a/_dbus_bindings/dbus_bindings-internal.h
++++ b/_dbus_bindings/dbus_bindings-internal.h
+@@ -107,12 +107,15 @@ DEFINE_CHECK(DBusPyUInt16)
+ extern PyTypeObject DBusPyInt32_Type, DBusPyUInt32_Type;
+ DEFINE_CHECK(DBusPyInt32)
+ DEFINE_CHECK(DBusPyUInt32)
++extern PyTypeObject DBusPyUnixFd_Type;
++DEFINE_CHECK(DBusPyUnixFd)
+ extern PyTypeObject DBusPyInt64_Type, DBusPyUInt64_Type;
+ DEFINE_CHECK(DBusPyInt64)
+ DEFINE_CHECK(DBusPyUInt64)
+ extern dbus_bool_t dbus_py_init_abstract(void);
+ extern dbus_bool_t dbus_py_init_signature(void);
+ extern dbus_bool_t dbus_py_init_int_types(void);
++extern dbus_bool_t dbus_py_init_unixfd_type(void);
+ extern dbus_bool_t dbus_py_init_string_types(void);
+ extern dbus_bool_t dbus_py_init_float_types(void);
+ extern dbus_bool_t dbus_py_init_container_types(void);
+@@ -120,11 +123,14 @@ extern dbus_bool_t dbus_py_init_byte_types(void);
+ extern dbus_bool_t dbus_py_insert_abstract_types(PyObject *this_module);
+ extern dbus_bool_t dbus_py_insert_signature(PyObject *this_module);
+ extern dbus_bool_t dbus_py_insert_int_types(PyObject *this_module);
++extern dbus_bool_t dbus_py_insert_unixfd_type(PyObject *this_module);
+ extern dbus_bool_t dbus_py_insert_string_types(PyObject *this_module);
+ extern dbus_bool_t dbus_py_insert_float_types(PyObject *this_module);
+ extern dbus_bool_t dbus_py_insert_container_types(PyObject *this_module);
+ extern dbus_bool_t dbus_py_insert_byte_types(PyObject *this_module);
+ 
++int dbus_py_unix_fd_get_fd(PyObject *self);
++
+ /* generic */
+ extern void dbus_py_take_gil_and_xdecref(PyObject *);
+ extern int dbus_py_immutable_setattro(PyObject *, PyObject *, PyObject *);
+diff --git a/_dbus_bindings/message-append.c b/_dbus_bindings/message-append.c
+index 93b76c7..9c8b7b9 100644
+--- a/_dbus_bindings/message-append.c
++++ b/_dbus_bindings/message-append.c
+@@ -214,6 +214,10 @@ _signature_string_from_pyobject(PyObject *obj, long *variant_level_ptr)
+     }
+     else if (PyUnicode_Check(obj))
+         return PyString_FromString(DBUS_TYPE_STRING_AS_STRING);
++#if defined(DBUS_TYPE_UNIX_FD)
++    else if (DBusPyUnixFd_Check(obj))
++        return PyString_FromString(DBUS_TYPE_UNIX_FD_AS_STRING);
++#endif
+     else if (PyFloat_Check(obj)) {
+ #ifdef WITH_DBUS_FLOAT32
+         if (DBusPyDouble_Check(obj))
+@@ -517,6 +521,29 @@ _message_iter_append_byte(DBusMessageIter *appender, PyObject *obj)
+     return 0;
+ }
+ 
++#if defined(DBUS_TYPE_UNIX_FD)
++static int
++_message_iter_append_unixfd(DBusMessageIter *appender, PyObject *obj)
++{
++    int fd;
++
++    if (PyInt_Check(obj)) {
++        fd = PyInt_AsLong(obj);
++    } else if (PyObject_IsInstance(obj, (PyObject*) &DBusPyUnixFd_Type)) {
++	fd = dbus_py_unix_fd_get_fd(obj);
++    } else {
++        return -1;
++    }
++
++    DBG("Performing actual append: fd %d", fd);
++    if (!dbus_message_iter_append_basic(appender, DBUS_TYPE_UNIX_FD, &fd)) {
++        PyErr_NoMemory();
++        return -1;
++    }
++    return 0;
++}
++#endif
++
+ static int
+ _message_iter_append_dictentry(DBusMessageIter *appender,
+                                DBusSignatureIter *sig_iter,
+@@ -995,6 +1022,12 @@ _message_iter_append_pyobject(DBusMessageIter *appender,
+           ret = -1;
+           break;
+ 
++#if defined(DBUS_TYPE_UNIX_FD)
++      case DBUS_TYPE_UNIX_FD:
++          ret = _message_iter_append_unixfd(appender, obj);
++          break;
++#endif
++
+       default:
+           PyErr_Format(PyExc_TypeError, "Unknown type '\\x%x' in D-Bus "
+                        "signature", sig_type);
+diff --git a/_dbus_bindings/message-get-args.c b/_dbus_bindings/message-get-args.c
+index 7d55ffd..2e1d6dc 100644
+--- a/_dbus_bindings/message-get-args.c
++++ b/_dbus_bindings/message-get-args.c
+@@ -201,6 +201,7 @@ _message_iter_get_pyobject(DBusMessageIter *iter,
+         dbus_uint64_t u64;
+         dbus_int64_t i64;
+ #endif
++	int fd;
+     } u;
+     int type = dbus_message_iter_get_arg_type(iter);
+     PyObject *args = NULL;
+@@ -322,6 +323,16 @@ _message_iter_get_pyobject(DBusMessageIter *iter,
+             ret = PyObject_Call((PyObject *)&DBusPyUInt32_Type, args, kwargs);
+             break;
+ 
++#ifdef DBUS_TYPE_UNIX_FD
++        case DBUS_TYPE_UNIX_FD:
++            DBG("%s", "found an unix fd");
++            dbus_message_iter_get_basic(iter, &u.fd);
++            args = Py_BuildValue("(i)", u.fd);
++            if (!args) break;
++            ret = PyObject_Call((PyObject *)&DBusPyUnixFd_Type, args, kwargs);
++            break;
++#endif
++
+ #if defined(DBUS_HAVE_INT64) && defined(HAVE_LONG_LONG)
+         case DBUS_TYPE_INT64:
+             DBG("%s", "found an int64");
+diff --git a/_dbus_bindings/module.c b/_dbus_bindings/module.c
+index a4c2a66..1c09ee2 100644
+--- a/_dbus_bindings/module.c
++++ b/_dbus_bindings/module.c
+@@ -260,6 +260,7 @@ init_dbus_bindings(void)
+     if (!dbus_py_init_abstract()) return;
+     if (!dbus_py_init_signature()) return;
+     if (!dbus_py_init_int_types()) return;
++    if (!dbus_py_init_unixfd_type()) return;
+     if (!dbus_py_init_string_types()) return;
+     if (!dbus_py_init_float_types()) return;
+     if (!dbus_py_init_container_types()) return;
+@@ -277,6 +278,7 @@ init_dbus_bindings(void)
+     if (!dbus_py_insert_abstract_types(this_module)) return;
+     if (!dbus_py_insert_signature(this_module)) return;
+     if (!dbus_py_insert_int_types(this_module)) return;
++    if (!dbus_py_insert_unixfd_type(this_module)) return;
+     if (!dbus_py_insert_string_types(this_module)) return;
+     if (!dbus_py_insert_float_types(this_module)) return;
+     if (!dbus_py_insert_container_types(this_module)) return;
+@@ -351,6 +353,7 @@ init_dbus_bindings(void)
+     ADD_CONST_PREFIXED(TYPE_INT16)
+     ADD_CONST_PREFIXED(TYPE_UINT16)
+     ADD_CONST_PREFIXED(TYPE_INT32)
++    ADD_CONST_PREFIXED(TYPE_UNIX_FD)
+     ADD_CONST_PREFIXED(TYPE_UINT32)
+     ADD_CONST_PREFIXED(TYPE_INT64)
+     ADD_CONST_PREFIXED(TYPE_UINT64)
+diff --git a/_dbus_bindings/types-internal.h b/_dbus_bindings/types-internal.h
+index a5c8147..b389ea2 100644
+--- a/_dbus_bindings/types-internal.h
++++ b/_dbus_bindings/types-internal.h
+@@ -61,6 +61,7 @@ DEFINE_CHECK(DBusPyStrBase)
+ dbus_int16_t dbus_py_int16_range_check(PyObject *);
+ dbus_uint16_t dbus_py_uint16_range_check(PyObject *);
+ dbus_int32_t dbus_py_int32_range_check(PyObject *);
++dbus_int32_t dbus_py_unixfd_range_check(PyObject *);
+ dbus_uint32_t dbus_py_uint32_range_check(PyObject *);
+ 
+ #if defined(DBUS_HAVE_INT64) && defined(HAVE_LONG_LONG)
+diff --git a/_dbus_bindings/unixfd.c b/_dbus_bindings/unixfd.c
+new file mode 100644
+index 0000000..af53a10
+--- /dev/null
++++ b/_dbus_bindings/unixfd.c
+@@ -0,0 +1,225 @@
++/* Simple D-Bus types: Unix FD type.
++ *
++ * Copyright (C) 2006 Collabora Ltd. <http://www.collabora.co.uk/>
++ * Copyright (C) 2010 Signove  <http://www.signove.com>
++ *
++ * Permission is hereby granted, free of charge, to any person
++ * obtaining a copy of this software and associated documentation
++ * files (the "Software"), to deal in the Software without
++ * restriction, including without limitation the rights to use, copy,
++ * modify, merge, publish, distribute, sublicense, and/or sell copies
++ * of the Software, and to permit persons to whom the Software is
++ * furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be
++ * included in all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
++ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
++ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
++ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
++ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++ * DEALINGS IN THE SOFTWARE.
++ */
++
++#include "types-internal.h"
++
++PyDoc_STRVAR(UnixFd_tp_doc,
++"An Unix Fd.\n"
++"\n"
++"Constructor::\n"
++"\n"
++"    dbus.UnixFd(value: int or file object, variant_level: int]) -> UnixFd\n"
++"``value`` must be an integer related to a file descriptor, or an object that\n"
++"implements the fileno() method. Otherwise, `ValueError` will be\n"
++"raised.\n"
++"\n"
++"UnixFd keeps a dup() (duplicate) of the supplied file descriptor. If an integer\n"
++"value is supplied, UnixFd takes the ownership, and the original file descriptor\n"
++"\nis closed. If a file or socket object is supplied, the original fd is not closed\n"
++"and file descriptor ownership is shared between both.\n"
++"``variant_level`` must be non-negative; the default is 0.\n"
++"\n"
++":IVariables:\n"
++"  `variant_level` : int\n"
++"    Indicates how many nested Variant containers this object\n"
++"    is contained in: if a message's wire format has a variant containing a\n"
++"    variant containing an Unix Fd, this is represented in Python by an\n"
++"    Unix Fd with variant_level==2.\n"
++"\n"
++"\n"
++"take():\n"
++"\n"
++"This method returns the file descriptor owned by UnixFd object.\n"
++"Note that, once this method is called, file descriptor management is\n"
++"application's responsability.\n"
++"\n"
++"This method may be called at most once; UnixFd 'forgets' the file descriptor\n"
++"after yielding it.\n"
++"\n"
++);
++
++typedef struct {
++    PyObject_HEAD
++    int fd;
++} UnixFdObject;
++
++static PyObject *
++UnixFd_tp_new(PyTypeObject *cls, PyObject *args, PyObject *kwargs UNUSED)
++{
++    UnixFdObject* self = NULL;
++    PyObject* arg;
++    PyObject* fdnumber;
++    int fd_original, fd;
++
++    if (! PyArg_ParseTuple(args, "O", &arg, NULL)) {
++        return NULL;
++    }
++
++    if (PyInt_Check(arg)) {
++        fd_original = PyInt_AsLong(arg);
++        fd = dup(fd_original);
++        if (fd < 0) {
++            PyErr_Format(PyExc_ValueError, "Invalid file descriptor");
++            return NULL;
++	}
++	/* takes ownership of original fd */
++	close(fd_original);
++
++    } else if (PyObject_HasAttrString(arg, "fileno")) {
++        fdnumber = PyObject_CallMethod(arg, "fileno", NULL);
++        if (! fdnumber) {
++            PyErr_Format(PyExc_ValueError, "Argument's fileno() method "
++                                            "is not callable");
++            return NULL;
++        }
++        if (! PyInt_Check(fdnumber)) {
++            PyErr_Format(PyExc_ValueError, "Argument's fileno() method "
++                                            "returned a non-int value");
++            return NULL;
++        }
++        fd_original = PyInt_AsLong(fdnumber);
++        Py_DECREF(fdnumber);
++        fd = dup(fd_original);
++        if (fd < 0) {
++            PyErr_Format(PyExc_ValueError, "Invalid file descriptor from fileno()");
++            return NULL;
++	}
++	/* does not close fd_original because we keep sharing ownership */
++
++    } else {
++        PyErr_Format(PyExc_ValueError, "Argument is not int and does not "
++                                       "implement fileno() method");
++        return NULL;
++    }
++
++    self = (UnixFdObject*) cls->tp_alloc(cls, 0);
++    if (!self)
++        return NULL;
++
++    self->fd = fd;
++
++    return (PyObject*) self;
++}
++
++static void
++UnixFd_dealloc(UnixFdObject* self)
++{
++    if (self->fd >= 0) {
++        close(self->fd);
++        self->fd = -1;
++    }
++}
++
++static PyObject *
++UnixFd_takefd(UnixFdObject* self)
++{
++    PyObject* fdnumber;
++
++    if (self->fd < 0) {
++        PyErr_SetString(PyExc_ValueError, "File descriptor already taken");
++        return NULL;
++    }
++
++    fdnumber = Py_BuildValue("i", self->fd);
++    self->fd = -1;
++
++    return fdnumber;
++}
++
++int
++dbus_py_unix_fd_get_fd(PyObject *self)
++{
++    return ((UnixFdObject*) self)->fd;
++}
++
++static PyMethodDef UnixFd_methods[] = {
++    {"take", (PyCFunction) UnixFd_takefd, METH_NOARGS,
++     "Returns the file descriptor number and yields ownership.\n"
++     "User becomes responsible by closing the file descriptor."
++    },
++    {NULL}
++};
++
++PyTypeObject DBusPyUnixFd_Type = {
++    PyObject_HEAD_INIT(NULL)
++    0,
++    "dbus.UnixFd",
++    sizeof(UnixFdObject),
++    0,
++    (destructor) UnixFd_dealloc,            /* tp_dealloc */
++    0,                                      /* tp_print */
++    0,                                      /* tp_getattr */
++    0,                                      /* tp_setattr */
++    0,                                      /* tp_compare */
++    0,                                      /* tp_repr */
++    0,                                      /* tp_as_number */
++    0,                                      /* tp_as_sequence */
++    0,                                      /* tp_as_mapping */
++    0,                                      /* tp_hash */
++    0,                                      /* tp_call */
++    0,                                      /* tp_str */
++    0,                                      /* tp_getattro */
++    0,                                      /* tp_setattro */
++    0,                                      /* tp_as_buffer */
++    Py_TPFLAGS_DEFAULT,                     /* tp_flags */
++    UnixFd_tp_doc,                          /* tp_doc */
++    0,                                      /* tp_traverse */
++    0,                                      /* tp_clear */
++    0,                                      /* tp_richcompare */
++    0,                                      /* tp_weaklistoffset */
++    0,                                      /* tp_iter */
++    0,                                      /* tp_iternext */
++    UnixFd_methods,                         /* tp_methods */
++    0,                                      /* tp_members */
++    0,                                      /* tp_getset */
++    0,                                      /* tp_base */
++    0,                                      /* tp_dict */
++    0,                                      /* tp_descr_get */
++    0,                                      /* tp_descr_set */
++    0,                                      /* tp_dictoffset */
++    0,                                      /* tp_init */
++    0,                                      /* tp_alloc */
++    UnixFd_tp_new,                          /* tp_new */
++};
++
++dbus_bool_t
++dbus_py_init_unixfd_type(void)
++{
++    if (PyType_Ready(&DBusPyUnixFd_Type) < 0) return 0;
++
++    return 1;
++}
++
++dbus_bool_t
++dbus_py_insert_unixfd_type(PyObject *this_module)
++{
++    Py_INCREF(&DBusPyUnixFd_Type);
++    if (PyModule_AddObject(this_module, "UnixFd",
++                           (PyObject *)&DBusPyUnixFd_Type) < 0) return 0;
++    return 1;
++}
++
++/* vim:set ft=c cino< sw=4 sts=4 et: */
+diff --git a/dbus/types.py b/dbus/types.py
+index cc4a678..d638a8e 100644
+--- a/dbus/types.py
++++ b/dbus/types.py
+@@ -1,9 +1,10 @@
+ __all__ = ('ObjectPath', 'ByteArray', 'Signature', 'Byte', 'Boolean',
+            'Int16', 'UInt16', 'Int32', 'UInt32', 'Int64', 'UInt64',
+            'Double', 'String', 'Array', 'Struct', 'Dictionary',
+-           'UTF8String')
++           'UTF8String', 'UnixFd')
+ 
+ from _dbus_bindings import ObjectPath, ByteArray, Signature, Byte,\
+                            Int16, UInt16, Int32, UInt32,\
+                            Int64, UInt64, Dictionary, Array, \
+-                           String, Boolean, Double, Struct, UTF8String
++                           String, Boolean, Double, Struct, UTF8String, \
++                           UnixFd
+diff --git a/examples/unix-fd-client.py b/examples/unix-fd-client.py
+new file mode 100755
+index 0000000..89f7fd7
+--- /dev/null
++++ b/examples/unix-fd-client.py
+@@ -0,0 +1,69 @@
++#!/usr/bin/env python
++
++import time
++
++usage = """Usage:
++python unix-fd-service.py <file name> &
++python unix-fd-client.py
++"""
++
++# Copyright (C) 2004-2006 Red Hat Inc. <http://www.redhat.com/>
++# Copyright (C) 2005-2007 Collabora Ltd. <http://www.collabora.co.uk/>
++# Copyright (C) 2010 Signove <http://www.signove.com>
++#
++# Permission is hereby granted, free of charge, to any person
++# obtaining a copy of this software and associated documentation
++# files (the "Software"), to deal in the Software without
++# restriction, including without limitation the rights to use, copy,
++# modify, merge, publish, distribute, sublicense, and/or sell copies
++# of the Software, and to permit persons to whom the Software is
++# furnished to do so, subject to the following conditions:
++#
++# The above copyright notice and this permission notice shall be
++# included in all copies or substantial portions of the Software.
++#
++# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
++# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
++# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
++# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
++# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++# DEALINGS IN THE SOFTWARE.
++
++import sys
++from traceback import print_exc
++import os
++
++import dbus
++
++def main():
++    bus = dbus.SessionBus()
++
++    try:
++        remote_object = bus.get_object("com.example.SampleService",
++                                       "/SomeObject")
++
++    except dbus.DBusException:
++        print_exc()
++        print usage
++        sys.exit(1)
++
++    iface = dbus.Interface(remote_object, "com.example.SampleInterface")
++
++    # UnixFd is an opaque object that takes care of received fd
++    fd_object = iface.GetFd()
++    print fd_object
++
++    # Once we take the fd number, we are in charge of closing it!
++    fd = fd_object.take()
++    print fd
++
++    # We want to encapsulate the integer fd into a Python file or socket object
++    f = os.fdopen(fd, "r")
++
++    f.seek(0)
++    print f.read()
++
++if __name__ == '__main__':
++    main()
+diff --git a/examples/unix-fd-service.py b/examples/unix-fd-service.py
+new file mode 100755
+index 0000000..2347dcd
+--- /dev/null
++++ b/examples/unix-fd-service.py
+@@ -0,0 +1,70 @@
++#!/usr/bin/env python
++
++usage = """Usage:
++python unix-fd-service.py <file name> &
++python unix-fd-client.py
++"""
++
++# Copyright (C) 2004-2006 Red Hat Inc. <http://www.redhat.com/>
++# Copyright (C) 2005-2007 Collabora Ltd. <http://www.collabora.co.uk/>
++# Copyright (C) 2010 Signove <http://www.signove.com>
++#
++# Permission is hereby granted, free of charge, to any person
++# obtaining a copy of this software and associated documentation
++# files (the "Software"), to deal in the Software without
++# restriction, including without limitation the rights to use, copy,
++# modify, merge, publish, distribute, sublicense, and/or sell copies
++# of the Software, and to permit persons to whom the Software is
++# furnished to do so, subject to the following conditions:
++#
++# The above copyright notice and this permission notice shall be
++# included in all copies or substantial portions of the Software.
++#
++# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
++# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
++# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
++# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
++# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++# DEALINGS IN THE SOFTWARE.
++
++import gobject
++
++import dbus
++import dbus.service
++import dbus.mainloop.glib
++import sys
++import random
++
++class SomeObject(dbus.service.Object):
++
++    @dbus.service.method("com.example.SampleInterface",
++                         in_signature='', out_signature='h')
++    def GetFd(self):
++        # both forms are acceptable while sending fd
++	if random.random() > 0.5:
++            return dbus.types.UnixFd(f)
++        else:
++            return f.fileno()
++	# The only unacceptable form to send fd would be
++        # UnixFd(f.fileno()) because UnixFd takes fd
++        # ownership when receives an integer.
++
++if len(sys.argv) < 2:
++    print usage
++    sys.exit(1)
++
++f = file(sys.argv[1], "r")
++
++if __name__ == '__main__':
++    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
++
++    session_bus = dbus.SessionBus()
++    name = dbus.service.BusName("com.example.SampleService", session_bus)
++    object = SomeObject(session_bus, '/SomeObject')
++
++    mainloop = gobject.MainLoop()
++    print "Running fd service."
++    print usage
++    mainloop.run()
+-- 
+1.7.0.4
+
