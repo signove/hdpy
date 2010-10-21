@@ -6,12 +6,17 @@ import dbus.service
 import gobject
 from dbus.mainloop.glib import DBusGMainLoop
 import sys
+import glib
+import os
+import socket
 
 DBusGMainLoop(set_as_default=True)
 loop = gobject.MainLoop()
 
 bus = dbus.SystemBus()
 
+
+accept_channel = True
 def sig_received(*args, **kwargs):
 	if "member" not in kwargs:
 		return
@@ -19,6 +24,7 @@ def sig_received(*args, **kwargs):
 		return;
 	sig_name = kwargs["member"]
 	path = kwargs["path"]
+	print "---------------"
 	print sig_name
 	print path
 	if sig_name == "PropertyChanged":
@@ -28,6 +34,7 @@ def sig_received(*args, **kwargs):
 	else:
 		ob = args[0]
 		print ob
+	print "---------------"
 
 
 def enter_mainloop():
@@ -203,13 +210,58 @@ if echo:
 		print "Echo war wrong, exiting"
 		sys.exit()
 
+def toggle_dc(device, channel):
+	# Disconnects MDL and reconnects later
+	channel = dbus.Interface(bus.get_object("org.bluez", channel),
+					"org.bluez.HealthChannel")
+	channel.Release()
+	glib.timeout_add(3000, toggle_dc_2, device, channel)
+	return False
+
+def toggle_dc_2(device, channel):
+	retries = 3
+	while retries > 0:
+		try:
+			fd = channel.Acquire()
+		except:
+			print "Acquire() failed, retrying"
+		retries -= 1
+	glib.timeout_add(3000, toggle_dc_3, device, channel, fd)
+	return False
+
+def toggle_dc_3(device, channel, fd):
+	os.close(fd.take())
+	try:
+		channel.Release()
+	except:
+		print "Release failed (probably channel is gone)"
+
 print "Connecting to device %s" % (select)
 
 try:
 	if role == "Source":
 		chan = device.CreateChannel(app_path, "Reliable")
+
+		# TC_SRC_CC_BV_07_C
+		if "-s" in sys.argv:
+			print "Creating 2nd, streaming connection"
+			chan2 = device.CreateChannel(app_path, "Streaming")
 	else:
 		chan = device.CreateChannel(app_path, "Any")
+
+		# TC_SNK_CC_BV_08_C
+		if "-s" in sys.argv:
+			print "Creating 2nd, streaming connection"
+			chan2 = device.CreateChannel(app_path, "Any")
+
+	# TC_SRC_HCT_BV_03_I
+	# TC_SRC_HCT_BV_05_C
+	# TC_SNK_HCT_BV_03_I
+	# TC_SNK_HCT_BV_05_I
+	if "-r" in sys.argv:
+		print "Scheduling disconnection, reconnection"
+		glib.timeout_add(3000, toggle_dc, device, chan)	
+
 	print chan
 except Exception, e:
 	if not echo:
