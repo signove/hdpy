@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 MAX_APPS = 4
-MAX_CHANNELS = 1 # in both directions, per device
+MAX_CHANNELS = 2 # in both directions, per device
 DISTINGUISH_APP = False
 RENEW_APP = True
 SINK_INITIATOR = False
@@ -87,11 +87,13 @@ class MasterControl(object):
 		uuid = props['UUIDs']
 		is_src = u'00001401-0000-1000-8000-00805f9b34fb' in uuid
 		is_snk = u'00001402-0000-1000-8000-00805f9b34fb' in uuid
-		
-		if is_src:
+
+		# TODO problem in service classes (BlueZ?)
+		# Only one of them will appear
+		if is_src or is_snk:
 			self.sources.append(path)
 			self.Msg("Found source %s" % path)
-		if is_snk:
+		if is_snk or is_src:
 			self.sinks.append(path)
 			self.Msg("Found sink %s" % path)
 		if is_src or is_snk:
@@ -267,30 +269,37 @@ class MasterControl(object):
 		channel = dbus.Interface(channel, "org.bluez.HealthChannel")
 
 		self.channels[channel_path] = channel
-		self.accepted.append(channel_path)
+		if channel_path not in self.accepted:
+			self.accepted.append(channel_path)
 
 		if device_path not in self.chan_dev:
 			self.chan_dev[device_path] = []
-		self.chan_dev[device_path].append(channel_path)
+		if channel_path not in self.chan_dev[device_path]:
+			self.chan_dev[device_path].append(channel_path)
 
 		self.EngageChannel(channel_path)
 	
 	def InitiateSomeConnection(self):
 		# Initiates a connection with some given device
+		self.Dot("@")
+
 		seq = random.randint(0, MAX_APPS - 1)
 		is_source = seq % 2 == 0
-		if is_source:
+		if not is_source:
 			if not self.sources:
+				self.Dot("s")
 				return
 			device_path = random.choice(self.sources)
 		else:
 			if not self.sinks:
+				self.Dot("k")
 				return
 			device_path = random.choice(self.sinks)
 		device = self.devices[device_path]
 
 		if device_path in self.chan_dev:
 			if len(self.chan_dev[device_path]) >= MAX_CHANNELS:
+				self.Dot("q")
 				return
 
 		self.Msg('Initiating connection with %s' % device_path)
@@ -314,11 +323,13 @@ class MasterControl(object):
 		channel = dbus.Interface(channel, "org.bluez.HealthChannel")
 
 		self.channels[channel_path] = channel
-		self.initiated.append(channel_path)
+		if channel_path not in self.initiated:
+			self.initiated.append(channel_path)
 
 		if device_path not in self.chan_dev:
 			self.chan_dev[device_path] = []
-		self.chan_dev[device_path].append(channel_path)
+		if channel_path not in self.chan_dev[device_path]:
+			self.chan_dev[device_path].append(channel_path)
 
 		self.EngageChannel(channel_path)
 
@@ -365,8 +376,6 @@ class MasterControl(object):
 		if self.apps:
 			raise Exception("Applications already created")
 
-		self.disposable_app = random.randint(0, MAX_APPS - 1)
-
 		for x in range(0, MAX_APPS):
 			self.apps.append(None)
 			self.CreateApplication(x)
@@ -400,8 +409,9 @@ class MasterControl(object):
 		self.Msg('Application %s destroyed' % path)
 
 	def RenewApplication(self):
-		self.DestroyApplication(self.disposable_app)
-		self.CreateApplication(self.disposable_app)
+		victim = random.randint(0, MAX_APPS - 1)
+		self.DestroyApplication(victim)
+		self.CreateApplication(victim)
 		self.Msg('Renewing application')
 
 
