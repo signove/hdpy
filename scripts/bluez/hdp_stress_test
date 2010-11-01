@@ -203,7 +203,7 @@ class MasterControl(object):
 
 		if channel_path not in self.sockets:
 			# not connected at the moment
-			if not self.EngageChannel(channel_path, channel):
+			if not self.EngageChannel(channel_path):
 				# failed to connect
 				return
 
@@ -235,7 +235,7 @@ class MasterControl(object):
 
 
 	def ChannelConnected(self, channel_path, interface, device_path):
-		self.Dot('+')
+		self.Msg('ChannelConnected %s' % channel_path)
 		channel = bus.get_object("org.bluez", channel_path)
 		channel = dbus.Interface(channel, "org.bluez.HealthChannel")
 
@@ -250,7 +250,6 @@ class MasterControl(object):
 	
 	def InitiateConnection(self):
 		# Initiates a connection with some given device
-		self.Dot('*')
 		seq = random.randint(0, MAX_APPS - 1)
 		is_source = seq % 2 == 0
 		if is_source:
@@ -266,6 +265,8 @@ class MasterControl(object):
 		if device_path in self.chan_dev:
 			if len(self.chan_dev[device_path]) >= MAX_CHANNELS:
 				return
+
+		self.Msg('Initiating connection with %s' % device_path)
 
 		# Sinks can not choose
 		config = "Any"
@@ -308,7 +309,8 @@ class MasterControl(object):
 		except ValueError: 
 			pass
 
-		del self.channels[channel]
+		if channel in self.channels:
+			del self.channels[channel]
 
 		if self.chan_dev[device]:
 			self.chan_dev[device].remove(channel)
@@ -317,7 +319,7 @@ class MasterControl(object):
 			self.sockets[channel].close()
 			del self.sockets[channel]
 
-		self.Dot('-')
+		self.Msg("%s forgotten" % channel)
 
 	def Decode(self, n):
 		data_type = 0x2000 + n // 2
@@ -359,17 +361,18 @@ class MasterControl(object):
 		# app = dbus.Interface(app, "org.bluez.HealthApplication")
 		self.apps[seq] = app_path
 
-		self.Dot('^')
+		self.Msg('Application %s created' % app_path)
 
 	def DestroyApplication(self, seq):
-		self.hmanager.DestroyApplication(self.apps[seq])
+		path = self.apps[seq]
+		self.hmanager.DestroyApplication(path)
 		self.apps[seq] = None
-		self.Dot('v')
+		self.Msg('Application %s destroyed' % path)
 
 	def RenewApplication(self):
 		self.DestroyApplication(self.disposable_app)
 		self.CreateApplication(self.disposable_app)
-		self.Dot('$')
+		self.Msg('Renewing application')
 
 
 mcp = MasterControl()
