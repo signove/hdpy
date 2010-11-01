@@ -61,8 +61,8 @@ class MasterControl(object):
 		if "-s" not in sys.argv:
 			self.find_devices()
 
-		self.CallPeriodically(1, 10000, self.InitiateConnection)
-		self.CallPeriodically(1, 5000, self.SendSomeData)
+		self.CallPeriodically(1000, 50000, self.InitiateSomeConnection)
+		self.CallPeriodically(1, 500, self.SendSomeData)
 
 	def find_devices(self):
 		adapter = self.manager.DefaultAdapter()
@@ -96,6 +96,12 @@ class MasterControl(object):
 			self.Msg("Found sink %s" % path)
 		if is_src or is_snk:
 			self.devices[path] = hdevice
+
+	def find_channels_device(self, channel_path):
+		for device_path, chanlist in self.chan_dev.items():
+			if channel_path in chanlist:
+				return device_path
+		return None
 
 	def CallSometime(self, lo, hi, cb, *args):
 		to = lo + random.randint(lo, hi)
@@ -186,31 +192,45 @@ class MasterControl(object):
 
 		self.Dot('!')
 
-		if random.randint(0, 3) == 0:
-			# 25% chance of destroying upon closure
+		if random.randint(0, 10) == 0:
+			self.Msg("Destroying channel %s" % channel_path)
+
 			del self.sockets[channel_path]
-			channel = self.channels[channel_path]
-			props = channel.GetProperties()
-			device_path = props['Device']
-			device = self.devices[device_path]
-			device.DestroyChannel(channel_path)
+			
+			device_path = self.find_channels_device(channel_path)
+
+			if device_path:
+				device = self.devices[device_path]
+				try:
+					device.DestroyChannel(channel_path)
+				except Exception:
+					self.Msg("Error in DestroyChannel")
+			else:
+				self.Msg("Channel's device not found")
+
 			self.ForgetChannel(channel_path, device_path)
 
 	def SendSomeData(self):
 		if not self.channels:
+			self.InitiateSomeConnection()
+
+		if not self.channels:
 			return
+
 		channel_path, channel = random.choice(self.channels.items())
 
 		if channel_path not in self.sockets:
 			# not connected at the moment
+			self.Msg("%s not connected, trying to reconnect" % channel_path)
 			if not self.EngageChannel(channel_path):
 				# failed to connect
+				self.Msg("	...failed")
 				return
 
 		sk = self.sockets[channel_path]
 
-		if random.randint(0, 10) == 0:
-			# 10% chance of closing channel
+		if random.randint(0, 100) == 0:
+			# 1% chance of closing channel
 			try:
 				sk.shutdown(2)
 			except IOError:
@@ -219,8 +239,8 @@ class MasterControl(object):
 			del self.sockets[channel_path]
 			channel.Release()
 
-			if random.randint(0, 2) == 0:
-			# 33% chance of destroying upon closure
+			if random.randint(0, 10) == 0:
+				# 10% chance of destroying upon closure
 				channel = self.channels[channel_path]
 				props = channel.GetProperties()
 				device_path = props['Device']
@@ -230,8 +250,15 @@ class MasterControl(object):
 
 		else:
 			# just send data
-			sk.send("abcde") # TODO which data?
-			self.Dot("<")
+			try:
+				sk.send("abcde") # TODO which data?
+				self.Dot("<")
+			except IOError:
+				self.Msg("Error while sending data %s" % channel_path)
+				sk.close()
+				del self.sockets[channel_path]
+				channel.Release()
+				pass
 
 
 	def ChannelConnected(self, channel_path, interface, device_path):
@@ -248,7 +275,7 @@ class MasterControl(object):
 
 		self.EngageChannel(channel_path)
 	
-	def InitiateConnection(self):
+	def InitiateSomeConnection(self):
 		# Initiates a connection with some given device
 		seq = random.randint(0, MAX_APPS - 1)
 		is_source = seq % 2 == 0
@@ -299,6 +326,9 @@ class MasterControl(object):
 		self.ForgetChannel(channel, device_path)
 
 	def ForgetChannel(self, channel, device):
+		if channel not in self.channels:
+			return
+
 		try:
 			self.accepted.remove(channel)
 		except ValueError: 
@@ -309,15 +339,15 @@ class MasterControl(object):
 		except ValueError: 
 			pass
 
-		if channel in self.channels:
-			del self.channels[channel]
-
 		if self.chan_dev[device]:
-			self.chan_dev[device].remove(channel)
+			if channel in self.chan_dev[device]:
+				self.chan_dev[device].remove(channel)
 
 		if channel in self.sockets:
 			self.sockets[channel].close()
 			del self.sockets[channel]
+
+		del self.channels[channel]
 
 		self.Msg("%s forgotten" % channel)
 
