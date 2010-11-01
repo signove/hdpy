@@ -1,0 +1,382 @@
+#!/usr/bin/env python
+
+MAX_APPS = 4
+MAX_CHANNELS = 1 # in both directions, per device
+DISTINGUISH_APP = False
+RENEW_APP = True
+SINK_INITIATOR = False
+
+
+import sys
+import os
+import glib
+import dbus
+import socket
+import dbus.service
+import gobject
+import random
+from dbus.mainloop.glib import DBusGMainLoop
+
+
+DBusGMainLoop(set_as_default=True)
+loop = gobject.MainLoop()
+bus = dbus.SystemBus()
+
+
+class MasterControl(object):
+	def __init__(self):
+		self.apps = []
+		self.dot_count = 0
+		self.sources = []
+		self.sinks = []
+		self.devices = {}
+
+		self.channels = {}
+		self.chan_dev = {}
+		self.accepted = []
+		self.initiated = []
+		self.sockets = {}
+
+		obj = bus.get_object("org.bluez", "/org/bluez")
+		self.hmanager = dbus.Interface(obj, "org.bluez.HealthManager")
+		obj = bus.get_object("org.bluez", "/")
+		self.manager = dbus.Interface(obj, "org.bluez.Manager") 
+
+		bus.add_signal_receiver(self.ChannelConnected,
+			signal_name="ChannelConnected",
+			bus_name="org.bluez",
+			path_keyword="device",
+			interface_keyword="interface",
+			dbus_interface="org.bluez.HealthDevice")
+
+		bus.add_signal_receiver(self.ChannelDeleted,
+			signal_name="ChannelDeleted",
+			bus_name="org.bluez",
+			path_keyword="device",
+			interface_keyword="interface",
+			dbus_interface="org.bluez.HealthDevice")
+
+		self.CreateApplications()
+
+		if "-s" not in sys.argv:
+			self.find_devices()
+
+		self.CallPeriodically(1, 10000, self.InitiateConnection)
+		self.CallPeriodically(1, 5000, self.SendSomeData)
+
+	def find_devices(self):
+		adapter = self.manager.DefaultAdapter()
+		adapter = bus.get_object("org.bluez", adapter)
+		adapter = dbus.Interface(adapter, "org.bluez.Adapter")
+
+		devices = adapter.ListDevices()
+		for device_path in devices:
+			device = bus.get_object("org.bluez", device_path)
+			odevice = dbus.Interface(device, "org.bluez.Device")
+			try:
+				hdevice = dbus.Interface(device,
+                                        "org.bluez.HealthDevice")
+			except Exception:
+				# device does not have health service class
+				continue
+			self.add_device(device_path, odevice, hdevice)
+
+	def add_device(self, path, odevice, hdevice):
+		props = odevice.GetProperties()
+		addr = str(props['Address'])
+		uuid = props['UUIDs']
+		is_src = u'00001401-0000-1000-8000-00805f9b34fb' in uuid
+		is_snk = u'00001402-0000-1000-8000-00805f9b34fb' in uuid
+		
+		if is_src:
+			self.sources.append(path)
+			self.Msg("Found source %s" % path)
+		if is_snk:
+			self.sinks.append(path)
+			self.Msg("Found sink %s" % path)
+		if is_src or is_snk:
+			self.devices[path] = hdevice
+
+	def CallSometime(self, lo, hi, cb, *args):
+		to = lo + random.randint(lo, hi)
+		self.CallLater(to, cb, *args)
+
+	def CallLater(self, to, cb, *args):
+		def closure(*args):
+			cb(*args)
+			return False
+		glib.timeout_add(to, closure, *args)
+
+	def CallPeriodically(self, lo, hi, cb, *args):
+		def closure(*args):
+			cb(*args)
+			self.CallPeriodically(lo, hi, cb, *args)
+			return False
+		to = lo + random.randint(lo, hi)
+		glib.timeout_add(to, closure, *args)
+
+	def Dot(self, character="."):
+		self.dot_count += len(character) + 1 
+		print character, 
+		sys.stdout.flush()
+		if self.dot_count >= 80:
+			self.dot_count = 0
+			print
+
+	def Msg(self, msg):
+		if self.dot_count:
+			print
+			self.dot_count = 0
+		print msg
+
+	def Recv(sk, evt, *args):
+		data = None
+		if evt & glib.IO_IN:
+			try:
+				data = sk.recv(65535)
+			except IOError:
+				data = ""
+			if data:
+				self.Received(sk, data, *args)
+
+		more = (evt == glib.IO_IN and data)
+
+		if not more:
+			try:
+				sk.shutdown(2)
+			except IOError:
+				pass
+			sk.close()
+			self.Closed(sk, *args)
+
+		return more
+
+	######################################################################
+
+	def EngageChannel(self, channel_path):
+		try:
+			fd = self.channels[channel_path].Acquire()
+		except Exception:
+			self.Msg("Could not Acquire %s" % channel_path)
+			return False
+
+		# take fd ownership
+		fd = fd.take()
+		# encapsulate numericfd in Python socket object
+		sk = socket.fromfd(fd, socket.AF_UNIX, socket.SOCK_STREAM)
+		# fromfd() does dup() so we need to close the original
+		os.close(fd)
+		watch_bitmap = glib.IO_IN | glib.IO_ERR | glib.IO_HUP | glib.IO_NVAL
+		glib.io_add_watch(sk, watch_bitmap, self.Recv, channel_path)
+
+		if self.sockets[channel_path]:
+			self.sockets[channel_path].close()
+
+		self.sockets[channel_path] = sk
+
+		return True
+		
+	def Received(self, sk, data, channel_path):
+		self.Dot('>')
+
+	def Closed(self, sk, channel_path):
+		if channel_path not in self.sockets[channel_path]:
+			# we took the initiative of closing channel
+			return
+
+		self.Dot('!')
+
+		if random.randint(0, 3) == 0:
+			# 25% chance of destroying upon closure
+			del self.sockets[channel_path]
+			channel = self.channels[channel_path]
+			props = channel.GetProperties()
+			device_path = props['Device']
+			device = self.devices[device_path]
+			device.DestroyChannel(channel_path)
+			self.ForgetChannel(channel_path, device_path)
+
+	def SendSomeData(self):
+		if not self.channels:
+			return
+		channel_path, channel = random.choice[self.channels.items()]
+
+		if not self.sockets[channel_path]:
+			# not connected at the moment
+			if not self.EngageChannel(channel_path, channel):
+				# failed to connect
+				return
+
+		sk = self.sockets[channel_path]
+
+		if random.randint(0, 10) == 0:
+			# 10% chance of closing channel
+			try:
+				sk.shutdown(2)
+			except IOError:
+				pass
+			sk.close()
+			del self.sockets[channel_path]
+			channel.Release()
+
+			if random.randint(0, 2) == 0:
+			# 33% chance of destroying upon closure
+				channel = self.channels[channel_path]
+				props = channel.GetProperties()
+				device_path = props['Device']
+				device = self.devices[device_path]
+				device.DestroyChannel(channel_path)
+				self.ForgetChannel(channel_path, device_path)
+
+		else:
+			# just send data
+			sk.send("abcde") # TODO which data?
+			self.Dot("<")
+
+
+	def ChannelConnected(self, channel_path, interface, device):
+		self.Dot('+')
+		channel = bus.get_object("org.bluez", channel_path)
+		channel = dbus.Interface(channel, "org.bluez.HealthChannel")
+
+		self.channels[channel_path] = channel
+		self.accepted.append(channel_path)
+
+		if device_path not in self.chan_dev:
+			self.chan_dev[device_path] = []
+		self.chan_dev[device].append(channel_path)
+
+		self.EngageChannel(channel_path)
+	
+	def InitiateConnection(self):
+		# Initiates a connection with some given device
+		self.Dot('*')
+		seq = random.randint(0, MAX_APPS - 1)
+		is_source = seq % 2 == 0
+		if is_source:
+			if not self.sources:
+				return
+			device_path = random.choice(self.sources)
+		else:
+			if not self.sinks:
+				return
+			device_path = random.choice(self.sinks)
+		device = self.devices[device_path]
+
+		if device_path in self.chan_dev:
+			if len(self.chan_dev[device_path]) >= MAX_CHANNELS:
+				return
+
+		# Sinks can not choose
+		config = "Any"
+		if is_source:
+			if device_path in self.channels:
+				config = random.choice(["Reliable", "Streaming"])
+			else:
+				# First must be reliable
+				config = "Reliable"
+
+		try:
+			channel_path = device.CreateChannel(self.apps[seq], config)
+		except Exception:
+			self.Msg("Dev %s not available" % device_path)
+			return
+
+		channel = bus.get_object("org.bluez", channel_path)
+		channel = dbus.Interface(channel, "org.bluez.HealthChannel")
+
+		self.channels[channel_path] = channel
+		self.initiated.append(channel_path)
+
+		if device_path not in self.chan_dev:
+			self.chan_dev[device_path] = []
+		self.chan_dev[device_path].append(channel_path)
+
+		self.EngageChannel(channel_path)
+
+	def ChannelDeleted(self, channel, interface, device):
+		self.ForgetChannel(channel, device)
+
+	def ForgetChannel(self, channel, device):
+		try:
+			self.accepted.remove(channel)
+		except ValueError: 
+			pass
+
+		try:
+			self.initiated.remove(channel)
+		except ValueError: 
+			pass
+
+		del self.channels[channel]
+
+		if self.chan_dev[device]:
+			self.chan_dev[device].remove(channel)
+
+		if self.sockets[channel]:
+			self.sockets[channel].close()
+			del self.sockets[channel]
+
+		self.Dot('-')
+
+	def Decode(self, n):
+		data_type = 0x2000 + n // 2
+		role = ["Source", "Sink"][n % 2]
+		channel_type = None
+		if n >= 2 and role == "Source":
+			channel_type = ["Reliable", "Streaming"][(n // 2) % 2]
+		print "Application %d: type %d role %s ct %s" % \
+						(n, data_type, role, channel_type)
+		return data_type, role, channel_type
+
+	def CreateApplications(self):
+		if self.apps:
+			raise Exception("Applications already created")
+
+		self.disposable_app = random.randint(0, MAX_APPS - 1)
+
+		for x in range(0, MAX_APPS):
+			self.apps.append(None)
+			self.CreateApplication(x)
+		
+		if RENEW_APP:
+			self.CallPeriodically(10000, 10*60000,
+						self.RenewApplication)
+
+	def CreateApplication(self, seq):
+		data_type, role, channel_type = self.Decode(seq)
+
+		config = {"Role": role,
+			"DataType": dbus.types.UInt16(data_type),
+			"Description": "Type %d role %s" % (data_type, role),
+			}
+
+		if channel_type:
+			config['ChannelType'] = channel_type
+
+		app_path = self.hmanager.CreateApplication(config)
+		# app = bus.get_object("org.bluez", app_path)
+		# app = dbus.Interface(app, "org.bluez.HealthApplication")
+		self.apps[seq] = app_path
+
+		self.Dot('^')
+
+	def DestroyApplication(self, seq):
+		self.hmanager.DestroyApplication(self.apps[seq])
+		self.apps[seq] = None
+		self.Dot('v')
+
+	def RenewApplication(self):
+		self.DestroyApplication(self.disposable_app)
+		self.CreateApplication(self.disposable_app)
+		self.Dot('$')
+
+
+mcp = MasterControl()
+
+loop = glib.MainLoop()
+loop.run()
+
+# -s
+#	Silent. Do not search devices and do not try to connect.
+#	Useful in pairing phase, when devices learn each other's service class
