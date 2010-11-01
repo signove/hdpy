@@ -45,14 +45,14 @@ class MasterControl(object):
 		bus.add_signal_receiver(self.ChannelConnected,
 			signal_name="ChannelConnected",
 			bus_name="org.bluez",
-			path_keyword="device",
+			path_keyword="device_path",
 			interface_keyword="interface",
 			dbus_interface="org.bluez.HealthDevice")
 
 		bus.add_signal_receiver(self.ChannelDeleted,
 			signal_name="ChannelDeleted",
 			bus_name="org.bluez",
-			path_keyword="device",
+			path_keyword="device_path",
 			interface_keyword="interface",
 			dbus_interface="org.bluez.HealthDevice")
 
@@ -129,7 +129,7 @@ class MasterControl(object):
 			self.dot_count = 0
 		print msg
 
-	def Recv(sk, evt, *args):
+	def Recv(self, sk, evt, *args):
 		data = None
 		if evt & glib.IO_IN:
 			try:
@@ -244,7 +244,7 @@ class MasterControl(object):
 
 		if device_path not in self.chan_dev:
 			self.chan_dev[device_path] = []
-		self.chan_dev[device].append(channel_path)
+		self.chan_dev[device_path].append(channel_path)
 
 		self.EngageChannel(channel_path)
 	
@@ -294,8 +294,8 @@ class MasterControl(object):
 
 		self.EngageChannel(channel_path)
 
-	def ChannelDeleted(self, channel, interface, device):
-		self.ForgetChannel(channel, device)
+	def ChannelDeleted(self, channel, interface, device_path):
+		self.ForgetChannel(channel, device_path)
 
 	def ForgetChannel(self, channel, device):
 		try:
