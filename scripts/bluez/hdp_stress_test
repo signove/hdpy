@@ -169,7 +169,7 @@ class MasterControl(object):
 		watch_bitmap = glib.IO_IN | glib.IO_ERR | glib.IO_HUP | glib.IO_NVAL
 		glib.io_add_watch(sk, watch_bitmap, self.Recv, channel_path)
 
-		if self.sockets[channel_path]:
+		if channel_path in self.sockets:
 			self.sockets[channel_path].close()
 
 		self.sockets[channel_path] = sk
@@ -180,7 +180,7 @@ class MasterControl(object):
 		self.Dot('>')
 
 	def Closed(self, sk, channel_path):
-		if channel_path not in self.sockets[channel_path]:
+		if channel_path not in self.sockets:
 			# we took the initiative of closing channel
 			return
 
@@ -199,9 +199,9 @@ class MasterControl(object):
 	def SendSomeData(self):
 		if not self.channels:
 			return
-		channel_path, channel = random.choice[self.channels.items()]
+		channel_path, channel = random.choice(self.channels.items())
 
-		if not self.sockets[channel_path]:
+		if channel_path not in self.sockets:
 			# not connected at the moment
 			if not self.EngageChannel(channel_path, channel):
 				# failed to connect
@@ -234,7 +234,7 @@ class MasterControl(object):
 			self.Dot("<")
 
 
-	def ChannelConnected(self, channel_path, interface, device):
+	def ChannelConnected(self, channel_path, interface, device_path):
 		self.Dot('+')
 		channel = bus.get_object("org.bluez", channel_path)
 		channel = dbus.Interface(channel, "org.bluez.HealthChannel")
@@ -313,7 +313,7 @@ class MasterControl(object):
 		if self.chan_dev[device]:
 			self.chan_dev[device].remove(channel)
 
-		if self.sockets[channel]:
+		if channel in self.sockets:
 			self.sockets[channel].close()
 			del self.sockets[channel]
 
