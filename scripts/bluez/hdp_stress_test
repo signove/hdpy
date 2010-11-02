@@ -12,6 +12,8 @@ SINK_INITIATOR = False
 # TODO device.GetProperties
 # TODO device.PropertyChanged
 # TODO device.MainChannel
+# TODO data protocol with meaningful challenge/response and app distinguish
+# TODO source and sink UUID (both should appear, only Sink appears)
 
 import sys
 import os
@@ -204,20 +206,24 @@ class MasterControl(object):
 
 		self.Dot('!')
 
+		del self.sockets[channel_path]
+
 		if random.randint(0, 10) == 0:
-			self.Msg("Destroying channel %s" % channel_path)
+			self.DestroyChannel(channel_path)
 
-			del self.sockets[channel_path]
-			
-			device_path = self.find_channels_device(channel_path)
 
-			device = self.devices[device_path]
+	def DestroyChannel(self, channel_path):
+		self.Msg("Destroying channel %s" % channel_path)
 
-			self.ForgetChannel(channel_path, device_path)
+		device_path = self.find_channels_device(channel_path)
 
-			device.DestroyChannel(channel_path,
-					reply_handler=self.DestroyChannel_rsp,
-					error_handler=self.DestroyChannel_err)
+		device = self.devices[device_path]
+
+		self.ForgetChannel(channel_path, device_path)
+
+		device.DestroyChannel(channel_path,
+				reply_handler=self.DestroyChannel_rsp,
+				error_handler=self.DestroyChannel_err)
 
 	def DestroyChannel_rsp(self):
 		self.Msg("Channel destroyed")
@@ -245,31 +251,29 @@ class MasterControl(object):
 			if not self.EngageChannel(channel_path):
 				# failed to connect
 				self.Msg("	...failed")
+				if random.randint(0, 2) == 0:
+					self.Msg("	Destroying bad channel")
+					self.DestroyChannel(channel_path)
 				return
 
 		sk = self.sockets[channel_path]
 
-		if random.randint(0, 49) == 0:
-			# 2% chance of closing channel
+		if random.randint(0, 99) == 0:
+			# 1% chance of closing channel
 			try:
 				sk.shutdown(2)
 			except IOError:
 				pass
+
+			self.Dot("X")
 			sk.close()
 			del self.sockets[channel_path]
 			channel.Release()
 
 			if random.randint(0, 2) == 0:
 				# 33% chance of destroying upon closure
-				channel = self.channels[channel_path]
-				try:
-					props = channel.GetProperties()
-					device_path = props['Device']
-					device = self.devices[device_path]
-					device.DestroyChannel(channel_path)
-				except Exception:
-					pass
-				self.ForgetChannel(channel_path, device_path)
+				self.Msg("Destroying channel after send closure")
+				self.DestroyChannel(channel_path)
 
 		else:
 			# just send data
@@ -281,7 +285,11 @@ class MasterControl(object):
 				sk.close()
 				del self.sockets[channel_path]
 				channel.Release()
-				pass
+
+				if random.randint(0, 2) == 0:
+					# 33% chance of destroying upon closure
+					self.Msg("Destroying channel after send failed")
+					self.DestroyChannel(channel_path)
 
 
 	def ChannelConnected(self, channel_path, interface, device_path):
@@ -298,7 +306,9 @@ class MasterControl(object):
 		if channel_path not in self.chan_dev[device_path]:
 			self.chan_dev[device_path].append(channel_path)
 
-		self.EngageChannel(channel_path)
+		if not self.EngageChannel(channel_path):
+			# if failed right after signal, destroy right now
+			self.DestroyChannel(channel_path)
 	
 	def Echo(self):
 		self.Dot("E")
@@ -386,6 +396,7 @@ class MasterControl(object):
 			self.chan_dev[device_path].append(channel_path)
 
 		self.EngageChannel(channel_path)
+		# do not destroy it if it fails the first time.
 
 	def ChannelDeleted(self, channel, interface, device_path):
 		self.ForgetChannel(channel, device_path)
