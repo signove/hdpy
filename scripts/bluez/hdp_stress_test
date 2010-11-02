@@ -96,10 +96,10 @@ class MasterControl(object):
 			try:
 				hdevice = dbus.Interface(device,
                                         "org.bluez.HealthDevice")
+				hdevice.GetProperties()['MainChannel']
 			except Exception:
 				# device does not have health service class
 				continue
-			hdevice.GetProperties()['MainChannel']
 			self.add_device(device_path, odevice, hdevice)
 
 	def add_device(self, path, odevice, hdevice):
@@ -239,11 +239,11 @@ class MasterControl(object):
 
 
 	def DestroyChannel(self, channel_path):
-		self.ChannelDot(channel_path, "iDC:%s")
+		self.ChannelDot(channel_path, "<xC:%s")
 
 		if channel_path not in self.channels:
 			# already destroyed
-			self.Dot("2")
+			self.Dot("dup")
 			return
 
 		device_path = self.find_channels_device(channel_path)
@@ -256,10 +256,10 @@ class MasterControl(object):
 			error_handler=self.DestroyChannel_err)
 
 	def DestroyChannel_rsp(self):
-		self.Dot("iDCok")
+		self.Dot("<xC")
 
 	def DestroyChannel_err(self, *args):
-		self.Dot("iDCe")
+		self.Dot("<xCe")
 
 	def SendSomeData(self):
 		if not self.channels:
@@ -299,7 +299,7 @@ class MasterControl(object):
 
 			if random.randint(0, 2) == 0:
 				# 33% chance of destroying upon closure
-				self.ChannelDot(channel_path, "SSD:%s")
+				self.ChannelDot(channel_path, "SSx:%s")
 				self.DestroyChannel(channel_path)
 
 		else:
@@ -308,18 +308,18 @@ class MasterControl(object):
 				sk.send(self.RandomData())
 				self.Dot("<%d" % sk.fileno())
 			except IOError:
-				self.ChannelDot(channel_path, "SSE:%s")
+				self.ChannelDot(channel_path, "SSe:%s")
 				self.CloseSocket(sk, channel_path)
 				channel.Release()
 
 				if random.randint(0, 2) == 0:
 					# 33% chance of destroying upon closure
-					self.Dot("SSED")
+					self.Dot("SSex")
 					self.DestroyChannel(channel_path)
 
 
 	def ChannelConnected(self, channel_path, interface, device_path):
-		self.ChannelDot(channel_path, "aCC:%s")
+		self.ChannelDot(channel_path, ">C:%s")
 		channel = bus.get_object("org.bluez", channel_path)
 		channel = dbus.Interface(channel, "org.bluez.HealthChannel")
 
@@ -398,18 +398,18 @@ class MasterControl(object):
 		return True
 
 	def CreateChannel_err(self, *args):
-		self.Dot('iCCe')
+		self.Dot('<Ce')
 
 	def CreateChannel_rsp(self, channel_path):
 		channel = bus.get_object("org.bluez", channel_path)
 		channel = dbus.Interface(channel, "org.bluez.HealthChannel")
 
-		self.ChannelDot(channel_path, "iCC:%s")
+		self.ChannelDot(channel_path, "<C:%s")
 
 		try:
 			props = channel.GetProperties()
 		except Exception:
-			self.ChannelDot(channel_path, "iCCpe")
+			self.ChannelDot(channel_path, "<Cpe")
 			return
 
 		device_path = props['Device']
@@ -432,10 +432,10 @@ class MasterControl(object):
 		# do not destroy it if it fails the first time.
 
 	def ChannelDeleted(self, channel, interface, device_path):
-		self.ChannelDot(channel, "aCD:%s")
+		self.ChannelDot(channel, ">xC:%s")
 		if channel not in self.channels:
 			# already destroyed by us
-			self.Dot("2")
+			self.Dot("dup")
 			return
 
 		self.ForgetChannel(channel, device_path)
