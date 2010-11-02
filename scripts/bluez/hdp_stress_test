@@ -6,12 +6,10 @@ DISTINGUISH_APP = False
 RENEW_APP = True
 SINK_INITIATOR = False
 
-# TODO device.GetProperties
-# TODO device.PropertyChanged
-# TODO device.MainChannel
 # TODO data protocol with meaningful challenge/response and app distinguish
 # TODO source and sink UUID (both should appear, only Sink appears)
 # TODO balance channels between apps, make MAX_CHANNELS per app, not per device
+# TODO do something different with Streaming channels
 
 import sys
 import os
@@ -66,6 +64,13 @@ class MasterControl(object):
 			interface_keyword="interface",
 			dbus_interface="org.bluez.HealthDevice")
 
+		bus.add_signal_receiver(self.DevicePropertyChanged,
+			signal_name="PropertyChanged",
+			bus_name="org.bluez",
+			path_keyword="device_path",
+			interface_keyword="interface",
+			dbus_interface="org.bluez.HealthDevice")
+
 		self.CreateApplications()
 
 		if "-s" not in sys.argv:
@@ -94,6 +99,7 @@ class MasterControl(object):
 			except Exception:
 				# device does not have health service class
 				continue
+			hdevice.GetProperties()['MainChannel']
 			self.add_device(device_path, odevice, hdevice)
 
 	def add_device(self, path, odevice, hdevice):
@@ -103,8 +109,7 @@ class MasterControl(object):
 		is_src = u'00001401-0000-1000-8000-00805f9b34fb' in uuid
 		is_snk = u'00001402-0000-1000-8000-00805f9b34fb' in uuid
 
-		# TODO problem in service classes (BlueZ?)
-		# Only one of them will appear
+		# TODO filter (after fixing BlueZ problem)
 		if is_src or is_snk:
 			self.sources.append(path)
 			self.Msg("Found source %s" % path)
@@ -300,7 +305,7 @@ class MasterControl(object):
 		else:
 			# just send data
 			try:
-				sk.send(self.RandomData()) # TODO which data?
+				sk.send(self.RandomData())
 				self.Dot("<%d" % sk.fileno())
 			except IOError:
 				self.ChannelDot(channel_path, "SSE:%s")
@@ -434,6 +439,10 @@ class MasterControl(object):
 			return
 
 		self.ForgetChannel(channel, device_path)
+
+	def DevicePropertyChanged(self, prop, value, interface, device_path):
+		if prop == "MainChannel":
+			self.ChannelDot(value, "main:%s")
 
 	def ForgetChannel(self, channel, device):
 		try:
