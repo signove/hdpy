@@ -15,6 +15,7 @@ import socket
 import dbus.service
 import gobject
 import random
+import time
 from dbus.mainloop.glib import DBusGMainLoop
 
 
@@ -36,6 +37,8 @@ class MasterControl(object):
 		self.accepted = []
 		self.initiated = []
 		self.sockets = {}
+
+		self.retry_to = 0
 
 		obj = bus.get_object("org.bluez", "/org/bluez")
 		self.hmanager = dbus.Interface(obj, "org.bluez.HealthManager")
@@ -63,6 +66,7 @@ class MasterControl(object):
 
 		self.CallPeriodically(1000, 50000, self.InitiateSomeConnection)
 		self.CallPeriodically(1, 500, self.SendSomeData)
+		self.CallPeriodically(1, 5000, self.Echo)
 
 	def find_devices(self):
 		adapter = self.manager.DefaultAdapter()
@@ -214,7 +218,11 @@ class MasterControl(object):
 
 	def SendSomeData(self):
 		if not self.channels:
-			self.InitiateSomeConnection()
+			if self.retry_to > time.time():
+				self.retry_to = time.time() + 10
+				self.InitiateSomeConnection()
+			else:
+				return
 
 		if not self.channels:
 			return
@@ -279,6 +287,18 @@ class MasterControl(object):
 
 		self.EngageChannel(channel_path)
 	
+	def Echo(self):
+		self.Dot("E")
+		device_path, device = random.choice(self.devices.items())
+		device.Echo(reply_handler=self.Echo_2,
+				error_handler=self.Echo_err)
+
+	def Echo_2(self, res):
+		self.Dot(res and "e" or "f")
+
+	def Echo_err(self, *args):
+		self.Dot("F")
+
 	def InitiateSomeConnection(self):
 		# Initiates a connection with some given device
 		self.Dot("@")
