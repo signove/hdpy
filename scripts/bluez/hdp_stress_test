@@ -2,7 +2,7 @@
 
 MAX_APPS = 4
 MAX_CHANNELS = 2 # in both directions, per device
-DISTINGUISH_APP = False
+DISTINGUISH_APP = True
 RENEW_APP = True
 SINK_INITIATOR = False
 
@@ -256,10 +256,13 @@ class MasterControl(object):
 			if random.randint(0, 2) == 0:
 				# 33% chance of destroying upon closure
 				channel = self.channels[channel_path]
-				props = channel.GetProperties()
-				device_path = props['Device']
-				device = self.devices[device_path]
-				device.DestroyChannel(channel_path)
+				try:
+					props = channel.GetProperties()
+					device_path = props['Device']
+					device = self.devices[device_path]
+					device.DestroyChannel(channel_path)
+				except Exception:
+					pass
 				self.ForgetChannel(channel_path, device_path)
 
 		else:
@@ -310,13 +313,19 @@ class MasterControl(object):
 		seq = random.randint(0, MAX_APPS - 1)
 		is_source = seq % 2 == 0
 		if not is_source:
+			# sink
+			if not SINK_INITIATOR:
+				return
+			# find a maching source device
 			if not self.sources:
 				return
 			device_path = random.choice(self.sources)
 		else:
+			# source, find a matching sink device
 			if not self.sinks:
 				return
 			device_path = random.choice(self.sinks)
+
 		device = self.devices[device_path]
 
 		if device_path in self.chan_dev:
@@ -348,7 +357,13 @@ class MasterControl(object):
 		channel = dbus.Interface(channel, "org.bluez.HealthChannel")
 
 		try:
-			device_path = channel.GetProperties()['Device']
+			props = channel.GetProperties()
+			device_path = props['Device']
+			if DISTINGUISH_APP:
+				# TODO use this
+				application = props['Application']
+			else:
+				application = ""
 		except Exception:
 			self.Msg("	error in channel.GetProperties")
 			return
@@ -412,7 +427,7 @@ class MasterControl(object):
 			self.CreateApplication(x)
 		
 		if RENEW_APP:
-			self.CallPeriodically(10000, 10*60000,
+			self.CallPeriodically(10000, 90000,
 						self.RenewApplication)
 
 	def CreateApplication(self, seq):
