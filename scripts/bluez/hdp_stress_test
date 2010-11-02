@@ -75,7 +75,7 @@ class MasterControl(object):
 		self.CallPeriodically(1, 200, self.SendSomeData)
 		self.CallPeriodically(1, 50000, self.Echo)
 		if RENEW_APP:
-			self.CallPeriodically(10000, 600000,
+			self.CallPeriodically(10000, 300000,
 					self.RenewApplication)
 
 	def find_devices(self):
@@ -168,13 +168,19 @@ class MasterControl(object):
 
 		return more
 
+	def ChannelDot(self, path, msg):
+		path = path.split("/")[-1]
+		msg = msg % path
+		self.Dot(msg)
+
 	######################################################################
 
 	def EngageChannel(self, channel_path):
+		self.ChannelDot(channel_path, "A:%s")
 		try:
 			fd = self.channels[channel_path].Acquire()
 		except Exception:
-			self.Msg("Could not Acquire %s" % channel_path)
+			self.ChannelDot(channel_path, "AE:%s")
 			return False
 
 		# take fd ownership
@@ -222,23 +228,27 @@ class MasterControl(object):
 
 
 	def DestroyChannel(self, channel_path):
-		self.Msg("Destroying channel %s" % channel_path)
+		self.ChannelDot(channel_path, "iDC:%s")
+
+		if channel_path not in self.channels:
+			# already destroyed
+			self.Dot("2")
+			return
 
 		device_path = self.find_channels_device(channel_path)
-
 		device = self.devices[device_path]
 
 		self.ForgetChannel(channel_path, device_path)
 
 		device.DestroyChannel(channel_path,
-				reply_handler=self.DestroyChannel_rsp,
-				error_handler=self.DestroyChannel_err)
+			reply_handler=self.DestroyChannel_rsp,
+			error_handler=self.DestroyChannel_err)
 
 	def DestroyChannel_rsp(self):
-		self.Dot("DC")
+		self.Dot("iDC ok")
 
 	def DestroyChannel_err(self, *args):
-		self.Dot("DE")
+		self.Dot("iDC err")
 
 	def SendSomeData(self):
 		if not self.channels:
@@ -255,12 +265,12 @@ class MasterControl(object):
 
 		if channel_path not in self.sockets:
 			# not connected at the moment
-			self.Msg("%s not connected, trying to reconnect" % channel_path)
+			self.ChannelDot(channel_path, "Re:%s")
 			if not self.EngageChannel(channel_path):
 				# failed to connect
-				self.Msg("	...failed")
+				self.Dot("ReF")
 				if random.randint(0, 2) == 0:
-					self.Msg("	Destroying bad channel")
+					self.Dot("ReDC")
 					self.DestroyChannel(channel_path)
 				return
 
@@ -278,7 +288,7 @@ class MasterControl(object):
 
 			if random.randint(0, 2) == 0:
 				# 33% chance of destroying upon closure
-				self.Msg("Destroying channel after send closure")
+				self.ChannelDot(channel_path, "SSD:%s")
 				self.DestroyChannel(channel_path)
 
 		else:
@@ -287,18 +297,18 @@ class MasterControl(object):
 				sk.send("abcde") # TODO which data?
 				self.Dot("<%d" % sk.fileno())
 			except IOError:
-				self.Msg("Error while sending data %s" % channel_path)
+				self.ChannelDot(channel_path, "SSE:%s")
 				self.CloseSocket(sk, channel_path)
 				channel.Release()
 
 				if random.randint(0, 2) == 0:
 					# 33% chance of destroying upon closure
-					self.Msg("Destroying channel after send failed")
+					self.Dot("SSED")
 					self.DestroyChannel(channel_path)
 
 
 	def ChannelConnected(self, channel_path, interface, device_path):
-		self.Msg('ChannelConnected %s' % channel_path)
+		self.ChannelDot(channel_path, "aCC:%s")
 		channel = bus.get_object("org.bluez", channel_path)
 		channel = dbus.Interface(channel, "org.bluez.HealthChannel")
 
@@ -358,8 +368,6 @@ class MasterControl(object):
 				self.Dot("q")
 				return True
 
-		self.Msg('Initiating connection with %s' % device_path)
-
 		# Sinks can not choose
 		config = "Any"
 		if is_source:
@@ -369,7 +377,7 @@ class MasterControl(object):
 				# First must be reliable
 				config = "Reliable"
 
-		self.Msg("Trying to create channel with %s" % device_path)
+		self.ChannelDot(device_path, "@%s")
 		device.CreateChannel(self.apps[seq], config,
 					reply_handler=self.CreateChannel_rsp,
 					error_handler=self.CreateChannel_err)
@@ -377,16 +385,18 @@ class MasterControl(object):
 		return True
 
 	def CreateChannel_err(self, *args):
-		self.Dot('CE')
+		self.Dot('iCCe')
 
 	def CreateChannel_rsp(self, channel_path):
 		channel = bus.get_object("org.bluez", channel_path)
 		channel = dbus.Interface(channel, "org.bluez.HealthChannel")
 
+		self.ChannelDot(channel_path, "iCC:%s")
+
 		try:
 			props = channel.GetProperties()
 		except Exception:
-			self.Msg("	error in channel.GetProperties")
+			self.ChannelDot(channel_path, "iCCpe")
 			return
 
 		device_path = props['Device']
@@ -409,12 +419,15 @@ class MasterControl(object):
 		# do not destroy it if it fails the first time.
 
 	def ChannelDeleted(self, channel, interface, device_path):
+		self.ChannelDot(channel, "aCD:%s")
+		if channel not in self.channels:
+			# already destroyed by us
+			self.Dot("2")
+			return
+
 		self.ForgetChannel(channel, device_path)
 
 	def ForgetChannel(self, channel, device):
-		if channel not in self.channels:
-			return
-
 		try:
 			self.accepted.remove(channel)
 		except ValueError: 
@@ -425,7 +438,7 @@ class MasterControl(object):
 		except ValueError: 
 			pass
 
-		if self.chan_dev[device]:
+		if device in self.chan_dev:
 			if channel in self.chan_dev[device]:
 				self.chan_dev[device].remove(channel)
 
@@ -433,8 +446,6 @@ class MasterControl(object):
 			self.CloseSocket(sk, channel)
 
 		del self.channels[channel]
-
-		self.Msg("%s forgotten" % channel)
 
 	def Decode(self, n):
 		data_type = 0x2000 + n // 2
