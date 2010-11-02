@@ -6,9 +6,6 @@ DISTINGUISH_APP = False
 RENEW_APP = True
 SINK_INITIATOR = False
 
-# TODO throttle echo
-# TODO throttle/delete channel upon Acquire failures
-# TODO throttle device upon multiple failures
 # TODO device.GetProperties
 # TODO device.PropertyChanged
 # TODO device.MainChannel
@@ -47,6 +44,7 @@ class MasterControl(object):
 		self.sockets = {}
 
 		self.retry_to = 0
+		self.echo_pending = False
 
 		obj = bus.get_object("org.bluez", "/org/bluez")
 		self.hmanager = dbus.Interface(obj, "org.bluez.HealthManager")
@@ -72,9 +70,13 @@ class MasterControl(object):
 		if "-s" not in sys.argv:
 			self.find_devices()
 
-		self.CallPeriodically(1000, 30000, self.InitiateSomeConnection)
-		self.CallPeriodically(1, 500, self.SendSomeData)
+		# TODO move these magic values to top
+		self.CallPeriodically(1000, 10000, self.InitiateSomeConnection)
+		self.CallPeriodically(1, 200, self.SendSomeData)
 		self.CallPeriodically(1, 50000, self.Echo)
+		if RENEW_APP:
+			self.CallPeriodically(10000, 600000,
+					self.RenewApplication)
 
 	def find_devices(self):
 		adapter = self.manager.DefaultAdapter()
@@ -314,16 +316,21 @@ class MasterControl(object):
 			self.DestroyChannel(channel_path)
 	
 	def Echo(self):
-		self.Dot("E")
+		if self.echo_pending:
+			return
+		self.echo_pending = True
+		self.Dot("H")
 		device_path, device = random.choice(self.devices.items())
 		device.Echo(reply_handler=self.Echo_2,
 				error_handler=self.Echo_err)
 
 	def Echo_2(self, res):
-		self.Dot(res and "e" or "f")
+		self.echo_pending = False
+		self.Dot(res and "h" or "hn")
 
 	def Echo_err(self, *args):
-		self.Dot("EF")
+		self.echo_pending = False
+		self.Dot("HF")
 
 	def InitiateSomeConnection(self):
 		# Initiates a connection with some given device
@@ -446,10 +453,6 @@ class MasterControl(object):
 		for x in range(0, MAX_APPS):
 			self.apps.append(None)
 			self.CreateApplication(x)
-		
-		if RENEW_APP:
-			self.CallPeriodically(10000, 600000,
-						self.RenewApplication)
 
 	def CreateApplication(self, seq):
 		data_type, role, channel_type = self.Decode(seq)
