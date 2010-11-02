@@ -11,6 +11,7 @@ SINK_INITIATOR = False
 # TODO device.MainChannel
 # TODO data protocol with meaningful challenge/response and app distinguish
 # TODO source and sink UUID (both should appear, only Sink appears)
+# TODO balance channels between apps, make MAX_CHANNELS per app, not per device
 
 import sys
 import os
@@ -173,6 +174,11 @@ class MasterControl(object):
 		msg = msg % path
 		self.Dot(msg)
 
+	def RandomData(self):
+		s = [chr(random.randint(0, 255)) \
+			for x in range(0, random.randint(2, 500))]
+		return "".join(s)
+
 	######################################################################
 
 	def EngageChannel(self, channel_path):
@@ -245,10 +251,10 @@ class MasterControl(object):
 			error_handler=self.DestroyChannel_err)
 
 	def DestroyChannel_rsp(self):
-		self.Dot("iDC ok")
+		self.Dot("iDCok")
 
 	def DestroyChannel_err(self, *args):
-		self.Dot("iDC err")
+		self.Dot("iDCe")
 
 	def SendSomeData(self):
 		if not self.channels:
@@ -294,7 +300,7 @@ class MasterControl(object):
 		else:
 			# just send data
 			try:
-				sk.send("abcde") # TODO which data?
+				sk.send(self.RandomData()) # TODO which data?
 				self.Dot("<%d" % sk.fileno())
 			except IOError:
 				self.ChannelDot(channel_path, "SSE:%s")
@@ -376,6 +382,8 @@ class MasterControl(object):
 			else:
 				# First must be reliable
 				config = "Reliable"
+
+		# TODO audit app x data type etc.
 
 		self.ChannelDot(device_path, "@%s")
 		device.CreateChannel(self.apps[seq], config,
