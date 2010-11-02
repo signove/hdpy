@@ -162,12 +162,7 @@ class MasterControl(object):
 		more = (evt == glib.IO_IN and data)
 
 		if not more:
-			try:
-				sk.shutdown(2)
-			except IOError:
-				pass
-			sk.close()
-			self.Closed(sk, *args)
+			self.EOF(sk, *args)
 
 		return more
 
@@ -194,22 +189,34 @@ class MasterControl(object):
 
 		self.sockets[channel_path] = sk
 
+		self.Dot("+%d" % sk.fileno())
+
 		return True
 		
 	def Received(self, sk, data, channel_path):
 		self.Dot('>%d' % sk.fileno())
 
-	def Closed(self, sk, channel_path):
+	def EOF(self, sk, channel_path):
+		self.CloseSocket(sk, channel_path)
+
+		if random.randint(0, 10) == 0:
+			# 10% chance of destroying channel
+			self.DestroyChannel(channel_path)
+
+	def CloseSocket(self, sk, channel_path):
+		if sk.fileno() >= 0:
+			self.Dot("-%d" % sk.fileno())
+			try:
+				sk.shutdown(2)
+			except IOError:
+				pass
+			sk.close()
+
 		if channel_path not in self.sockets:
 			# we took the initiative of closing channel
 			return
 
-		self.Dot('!')
-
 		del self.sockets[channel_path]
-
-		if random.randint(0, 10) == 0:
-			self.DestroyChannel(channel_path)
 
 
 	def DestroyChannel(self, channel_path):
@@ -226,11 +233,10 @@ class MasterControl(object):
 				error_handler=self.DestroyChannel_err)
 
 	def DestroyChannel_rsp(self):
-		self.Msg("Channel destroyed")
+		self.Dot("DC")
 
 	def DestroyChannel_err(self, *args):
-		self.Msg("Error in DestroyChannel")
-
+		self.Dot("DE")
 
 	def SendSomeData(self):
 		if not self.channels:
@@ -265,9 +271,7 @@ class MasterControl(object):
 			except IOError:
 				pass
 
-			self.Dot("X")
-			sk.close()
-			del self.sockets[channel_path]
+			self.CloseSocket(sk, channel_path)
 			channel.Release()
 
 			if random.randint(0, 2) == 0:
@@ -282,8 +286,7 @@ class MasterControl(object):
 				self.Dot("<%d" % sk.fileno())
 			except IOError:
 				self.Msg("Error while sending data %s" % channel_path)
-				sk.close()
-				del self.sockets[channel_path]
+				self.CloseSocket(sk, channel_path)
 				channel.Release()
 
 				if random.randint(0, 2) == 0:
@@ -320,7 +323,7 @@ class MasterControl(object):
 		self.Dot(res and "e" or "f")
 
 	def Echo_err(self, *args):
-		self.Dot("F")
+		self.Dot("EF")
 
 	def InitiateSomeConnection(self):
 		# Initiates a connection with some given device
@@ -367,7 +370,7 @@ class MasterControl(object):
 		return True
 
 	def CreateChannel_err(self, *args):
-		self.Msg("Could not create channel")
+		self.Dot('CE')
 
 	def CreateChannel_rsp(self, channel_path):
 		channel = bus.get_object("org.bluez", channel_path)
@@ -420,8 +423,7 @@ class MasterControl(object):
 				self.chan_dev[device].remove(channel)
 
 		if channel in self.sockets:
-			self.sockets[channel].close()
-			del self.sockets[channel]
+			self.CloseSocket(sk, channel)
 
 		del self.channels[channel]
 
