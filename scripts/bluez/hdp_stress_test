@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 
-MAX_APPS = 4
-MAX_CHANNELS = 2 # in both directions, per device
-DISTINGUISH_APP = True
+MAX_APPS = 6
+MAX_CHANNELS = 6 # in both directions, per device
+DISTINGUISH_APP = False
 RENEW_APP = True
 SINK_INITIATOR = False
 
+# TODO throttle echo
+# TODO throttle/delete channel upon Acquire failures
+# TODO device.GetProperties
+# TODO device.PropertyChanged
+# TODO device.MainChannel
 
 import sys
 import os
@@ -66,7 +71,7 @@ class MasterControl(object):
 
 		self.CallPeriodically(1000, 50000, self.InitiateSomeConnection)
 		self.CallPeriodically(1, 500, self.SendSomeData)
-		self.CallPeriodically(1, 5000, self.Echo)
+		self.CallPeriodically(1, 15000, self.Echo)
 
 	def find_devices(self):
 		adapter = self.manager.DefaultAdapter()
@@ -223,8 +228,8 @@ class MasterControl(object):
 	def SendSomeData(self):
 		if not self.channels:
 			if self.retry_to > time.time():
-				self.retry_to = time.time() + 10
-				self.InitiateSomeConnection()
+				if not self.InitiateSomeConnection():
+					self.retry_to = time.time() + 10
 			else:
 				return
 
@@ -308,22 +313,21 @@ class MasterControl(object):
 
 	def InitiateSomeConnection(self):
 		# Initiates a connection with some given device
-		self.Dot("@")
 
 		seq = random.randint(0, MAX_APPS - 1)
 		is_source = seq % 2 == 0
 		if not is_source:
 			# sink
 			if not SINK_INITIATOR:
-				return
+				return False
 			# find a maching source device
 			if not self.sources:
-				return
+				return False
 			device_path = random.choice(self.sources)
 		else:
 			# source, find a matching sink device
 			if not self.sinks:
-				return
+				return False
 			device_path = random.choice(self.sinks)
 
 		device = self.devices[device_path]
@@ -331,7 +335,7 @@ class MasterControl(object):
 		if device_path in self.chan_dev:
 			if len(self.chan_dev[device_path]) >= MAX_CHANNELS:
 				self.Dot("q")
-				return
+				return True
 
 		self.Msg('Initiating connection with %s' % device_path)
 
@@ -349,6 +353,8 @@ class MasterControl(object):
 					reply_handler=self.CreateChannel_rsp,
 					error_handler=self.CreateChannel_err)
 
+		return True
+
 	def CreateChannel_err(self, *args):
 		self.Msg("Could not create channel")
 
@@ -358,15 +364,16 @@ class MasterControl(object):
 
 		try:
 			props = channel.GetProperties()
-			device_path = props['Device']
-			if DISTINGUISH_APP:
-				# TODO use this
-				application = props['Application']
-			else:
-				application = ""
 		except Exception:
 			self.Msg("	error in channel.GetProperties")
 			return
+
+		device_path = props['Device']
+		if DISTINGUISH_APP:
+			# TODO use this
+			application = props['Application']
+		else:
+			application = ""
 
 		self.channels[channel_path] = channel
 		if channel_path not in self.initiated:
