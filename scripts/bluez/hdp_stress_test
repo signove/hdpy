@@ -8,6 +8,7 @@ SINK_INITIATOR = False
 
 # TODO throttle echo
 # TODO throttle/delete channel upon Acquire failures
+# TODO throttle device upon multiple failures
 # TODO device.GetProperties
 # TODO device.PropertyChanged
 # TODO device.MainChannel
@@ -69,9 +70,9 @@ class MasterControl(object):
 		if "-s" not in sys.argv:
 			self.find_devices()
 
-		self.CallPeriodically(1000, 50000, self.InitiateSomeConnection)
+		self.CallPeriodically(1000, 30000, self.InitiateSomeConnection)
 		self.CallPeriodically(1, 500, self.SendSomeData)
-		self.CallPeriodically(1, 15000, self.Echo)
+		self.CallPeriodically(1, 50000, self.Echo)
 
 	def find_devices(self):
 		adapter = self.manager.DefaultAdapter()
@@ -434,7 +435,7 @@ class MasterControl(object):
 			self.CreateApplication(x)
 		
 		if RENEW_APP:
-			self.CallPeriodically(10000, 90000,
+			self.CallPeriodically(10000, 600000,
 						self.RenewApplication)
 
 	def CreateApplication(self, seq):
