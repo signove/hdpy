@@ -187,17 +187,15 @@ class MasterControl(object):
 			self.Msg("%s %s %s" % (expected, data, channel_path))
 		return ok
 
-	def max_channels(self, device_path, seq):
+	def free_channel(self, device_path, seq):
 		if not DISTINGUISH_APP:
 			seq = 0
 
 		if device_path not in self.chan_dev_app:
 			self.chan_dev_app[device_path] = {}
-			return False
 
 		if seq not in self.chan_dev_app[device_path]:
 			self.chan_dev_app[device_path][seq] = []
-			return False
 
 		return len(self.chan_dev_app[device_path][seq]) < MAX_CHANNELS
 
@@ -423,17 +421,18 @@ class MasterControl(object):
 	def ChooseDeviceApp(self):
 		# Choose target device and application more or less randomly
 
-		is_source = random.randint(0, 1)
-
-		if not is_source:
-			if not SINK_INITIATOR:
-				is_source = 1
-		if is_source:
-			devs = self.sources
+		if not SINK_INITIATOR:
+			is_source = 1
 		else:
+			is_source = random.randint(0, 1)
+
+		if is_source:
 			devs = self.sinks
+		else:
+			devs = self.sources
 
 		if not devs:
+			self.Dot("n")
 			return False, False, None, None, None
 
 		is_sink = 1 - is_source
@@ -445,9 +444,10 @@ class MasterControl(object):
 			for y in range(dev0, dev0 + len(devs)):
 				device_path = devs[y % len(devs)]
 				seq = (x % (MAX_APPS // 2)) * 2 + is_sink
-				if not self.max_channels(device_path, seq):
+				if self.free_channel(device_path, seq):
 					return True, True, is_source, device_path, seq
 
+		self.Dot("u")
 		return False, True, None, None, None
 
 	def AuditChannelCount(self):
@@ -472,6 +472,12 @@ class MasterControl(object):
 		if not ok:
 			# all devices/apps fully connected
 			return res
+
+		if "-a" in sys.argv:
+			print
+			print "Creating channel for app %d" % seq
+			print "Channels: %d" % len(self.chan_dev_app[device_path][seq])
+			print
 
 		device = self.devices[device_path]
 
