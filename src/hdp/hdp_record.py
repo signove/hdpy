@@ -1,14 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8
 
-################################################################
+#######################################################################
+# Copyright 2010 Signove Corporation - All rights reserved.
+# Contact: Signove Corporation (contact@signove.com)
 #
-# Copyright (c) 2010 Signove. All rights reserved.
-# See the COPYING file for licensing details.
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
 #
-# Autors: Elvis Pfützenreuter < epx at signove dot com >
-#         Raul Herbster < raul dot herbster at signove dot com >
-################################################################
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the
+# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+# Boston, MA 02111-1307  USA
+#
+# If you have questions regarding the use of this file, please contact
+# Signove at contact@signove.com.
+#######################################################################
 
 # This module is a prototype implementation of HDP profile
 # conversion from a simple dictionary to/from the XML format
@@ -147,33 +160,33 @@ def gen_xml(service):
 	roles_sequence = [('uuid', k) for k in roles.keys()]
 	add_attr(doc, record, 0x0001, roles_sequence)
 
-	add_attr(doc, record, 0x0004,	# protocol descriptor list
+	add_attr(doc, record, 0x0004, 	# protocol descriptor list
 		[
 			[
 				('uuid', 0x0100), # L2CAP
 				('uint16', cpsm), # control channel
 			], [
-				('uuid', 0x001e),   # MCAP control channel
+				('uuid', 0x001e), # MCAP control channel
 				('uint16', 0x0100), # version
 			],
 		])
 
 	add_attr(doc, record, 0x0006, # language/encoding
 		[
-			('uint16', 0x656e),  # 'en' (ISO 639 lang. code)
-			('uint16', 0x006a),  # UTF-8 (IANA MIBE code)
-			('uint16', 0x0100),  # Natural language ID
+			('uint16', 0x656e), # 'en' (ISO 639 lang. code)
+			('uint16', 0x006a), # UTF-8 (IANA MIBE code)
+			('uint16', 0x0100), # Natural language ID
 		])
 
 	add_attr(doc, record, 0x0009,
 		[
 			[
-				('uuid', 0x1400),   # HDP
+				('uuid', 0x1400), # HDP
 				('uint16', 0x0100), # HDP version
 			],
 		])
 
-	add_attr(doc, record, 0x000d,  # additional protocols
+	add_attr(doc, record, 0x000d, # additional protocols
 		[
 			[
 				[
@@ -742,7 +755,7 @@ def test():
 	assert('reconnect_init' not in record1['mcap_procedures'])
 	assert(record1['features'][0]['data_type'] == 0x1004)
 	assert(record1['features'][0]['role'] == ('source'))
-	
+
 	feature1 = {'mdep_id': 0x01, 'role': 'source',
 			'data_type': 0x1004, 'description': "Fake oximeter"}
 	feature2 = {'mdep_id': 0x01, 'role': 'source', 'data_type': 0x4005}
@@ -762,7 +775,7 @@ def test():
 	hdp['mcap_procedures'] = ('reconnect_init', 'reconnect_accept', \
 					'csp', 'csp_master')
 	hdp2 = parse_xml(gen_xml(hdp), True)[0]
-	
+
 	assert(hdp['features'] == hdp2['features'])
 	assert(hdp == hdp2)
 	print "Ok"

@@ -1,14 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8
 
-################################################################
+#######################################################################
+# Copyright 2010 Signove Corporation - All rights reserved.
+# Contact: Signove Corporation (contact@signove.com)
 #
-# Copyright (c) 2010 Signove. All rights reserved.
-# See the COPYING file for licensing details.
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
 #
-# Autors: Elvis Pfützenreuter < epx at signove dot com >
-#         Raul Herbster < raul dot herbster at signove dot com >
-################################################################
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the
+# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+# Boston, MA 02111-1307  USA
+#
+# If you have questions regarding the use of this file, please contact
+# Signove at contact@signove.com.
+#######################################################################
 
 import dbus
 from sys import exit
@@ -42,7 +55,7 @@ class ObserverProxy():
 		self.Alive = getattr(obj, "bluetooth_alive", self.noop)
 		self.AdapterAdded = getattr(obj, "adapter_added", self.noop)
 		self.AdapterRemoved = getattr(obj, "adapter_removed", self.noop)
-		
+
 	def noop(self, *args):
 		DBG(3, "noop " + str(args))
 		pass
@@ -119,7 +132,7 @@ class BlauZ(object):
 		self.bus.add_signal_receiver(
 			self.signal_switchboard,
 			bus_name="org.bluez",
-			signal_name = "AdapterAdded",
+			signal_name="AdapterAdded",
 			path_keyword="path",
 			member_keyword="member",
 			interface_keyword="interface"
@@ -128,7 +141,7 @@ class BlauZ(object):
 		self.bus.add_signal_receiver(
 			self.signal_switchboard,
 			bus_name="org.bluez",
-			signal_name = "AdapterRemoved",
+			signal_name="AdapterRemoved",
 			path_keyword="path",
 			member_keyword="member",
 			interface_keyword="interface"
@@ -137,7 +150,7 @@ class BlauZ(object):
 		self.bus.add_signal_receiver(
 			self.signal_switchboard,
 			bus_name="org.bluez",
-			signal_name = "DefaultAdapterChanged",
+			signal_name="DefaultAdapterChanged",
 			path_keyword="path",
 			member_keyword="member",
 			interface_keyword="interface"
@@ -191,7 +204,7 @@ class BlauZ(object):
 				self.start_manager(False)
 
 		return self._manager
-				
+
 
 	def signal_switchboard(self, value, path, interface, member):
 		if not self.alive():
@@ -487,7 +500,7 @@ class BlauZ(object):
 		uuid = uuid128(uuid)
 		try:
 			devif = self._device_iface(path)
-			
+
 			devif.DiscoverServices(uuid,
 				reply_handler=cb_ok,
 				error_handler=cb_nok)
@@ -539,7 +552,7 @@ BlauZ.signal_handlers = {
 	"AdapterRemoved": BlauZ.signal_adapter_removed,
 	"DefaultAdapterChanged": BlauZ.signal_default_adapter_changed,
 	}
-		
+
 _BlueZ = None
 
 def BlueZ():
@@ -559,7 +572,7 @@ def parse_srv_params(args, wildcard=True):
 			adapter = wildcard and "any" or "default"
 		else:
 			adapter = args[2]
-		
+
 		if wildcard:
 			adapter = BlueZ().adapter_addr_w(adapter)
 		else:
@@ -573,7 +586,7 @@ def parse_srv_params(args, wildcard=True):
 	except ValueError:
 		print "Usage: %s [-a <adapter>]" % args[0]
 		exit(1)
-		
+
 
 def parse_params(args, wildcard=True):
 	if not BlueZ().alive():
@@ -590,7 +603,7 @@ def parse_params(args, wildcard=True):
 			del args[1]
 		else:
 			adapter = wildcard and "any" or "default"
-		
+
 		if wildcard:
 			adapter = BlueZ().adapter_addr_w(adapter)
 		else:

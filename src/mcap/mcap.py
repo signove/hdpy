@@ -1,15 +1,26 @@
 # -*- coding: utf-8
 
-################################################################
+#######################################################################
+# Copyright 2010 Signove Corporation - All rights reserved.
+# Contact: Signove Corporation (contact@signove.com)
 #
-# Copyright (c) 2010 Signove. All rights reserved.
-# See the COPYING file for licensing details.
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
 #
-# Autors: Elvis Pfützenreuter < epx at signove dot com >
-#         Raul Herbster < raul dot herbster at signove dot com >
-################################################################
-
-#!/usr/bin/env ptyhon
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the
+# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+# Boston, MA 02111-1307  USA
+#
+# If you have questions regarding the use of this file, please contact
+# Signove at contact@signove.com.
+#######################################################################
 
 from mcap_defs import *
 from mcap_sock import *
@@ -354,7 +365,7 @@ class MCL(object):
 	def delete_mdl_if_no_reconn(self, mdl):
 		if not self.observer.reconn_enabled:
 			self.delete_mdl(mdl.mdlid)
-	
+
 	def close_all_mdls(self):
 		for mdlid, mdl in self.mdl_list.items():
 			mdl.close()
@@ -452,7 +463,7 @@ class MCLStateMachine:
 		self.request_in_flight = opcode
 		self.last_request = request
 		return self.send_mcap_command(request)
-	
+
 	def send_response(self, response):
 		success = self.send_mcap_command(response)
 		return success
@@ -460,7 +471,7 @@ class MCLStateMachine:
 	def send_mcap_command(self, message):
 		self.last_sent = message
 		return self.mcl.write(message.encode())
-			
+
 ## RECEIVE METHODS
 
 	def receive_message(self, message):
@@ -472,7 +483,7 @@ class MCLStateMachine:
 			if self.csp.is_mine(opcode):
 				# shunt processing to CSP machine
 				return self.csp.receive_message(opcode, message)
-				
+
 			if (opcode % 2):
 				return self.receive_request(opcode, message)
 			else:
@@ -483,7 +494,7 @@ class MCLStateMachine:
 			# receive_request/response methods
 			errorResponse = ErrorMDLResponse()
 			return self.send_response(errorResponse)
-	
+
 	def receive_request(self, opcode, request):
 		# if a request is received when a response is expected, only process if 
 		# it is received by the Acceptor; otherwise, just ignore
@@ -558,7 +569,7 @@ class MCLStateMachine:
 					schedule(self.mcl.observer.mdlgranted_mcl,
 						self.mcl, None, -3)
 					return
-				
+
 				self.mcl.delete_mdl(response.mdlid)
 
 				mdl = MDL(self.mcl, mdlid,
@@ -583,13 +594,13 @@ class MCLStateMachine:
 			# notify application about the error
 			schedule(self.mcl.observer.mdlgranted_mcl, self.mcl,
 				None, response.rspcode)
-			
-		return True			
-	
+
+		return True
+
 	def process_reconnect_response(self, response):
 		return self.process_create_response(response, True)
 
-	def process_delete_response(self, response):		
+	def process_delete_response(self, response):
 		if response.rspcode == MCAP_RSP_SUCCESS:
 
 			self.mcl.delete_mdl(response.mdlid)
@@ -603,8 +614,8 @@ class MCLStateMachine:
 			self.print_error_message(response.rspcode)
 
 		return True
-			
-	def process_abort_response(self, response):	
+
+	def process_abort_response(self, response):
 		if response.rspcode == MCAP_RSP_SUCCESS:
 			if not self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_CONNECTED
@@ -616,7 +627,7 @@ class MCLStateMachine:
 				schedule(self.mcl.observer.mdlaborted_mcl, self.mcl, mdl)
 				self.mcl.delete_mdl_if_no_reconn(mdl)
 		else:
-			self.print_error_message( response.rspcode )
+			self.print_error_message(response.rspcode)
 
 		return True
 
@@ -629,7 +640,7 @@ class MCLStateMachine:
 
 	def incoming_mdl_socket(self, sk):
 		# Called by DPSM listener
-	
+
 		ok = self.mcl.state == MCAP_MCL_STATE_PENDING \
 			and self.pending_passive_mdl \
 			and not self.mdl_crossing()
@@ -747,10 +758,10 @@ class MCLStateMachine:
 								request.config)
 					if not ok:
 						rspcode = MCAP_RSP_CONFIGURATION_REJECTED
-		
+
 		if rspcode != MCAP_RSP_SUCCESS:
 			self.print_error_message(rspcode)
-		
+
 		if reconn:
 			response = ReconnectMDLResponse(rspcode, mdlid)
 		else:
@@ -780,7 +791,7 @@ class MCLStateMachine:
 			else:
 				schedule(self.mcl.observer.mdlrequested_mcl,
 					self.mcl, mdl, request.mdepid, config)
-		
+
 		return success
 
 	def process_reconnect_request(self, request):
@@ -809,18 +820,18 @@ class MCLStateMachine:
 			self.mcl.delete_mdl(mdlid)
 
 			if not self.mcl.has_mdls():
-				self.mcl.state = MCAP_MCL_STATE_CONNECTED	
+				self.mcl.state = MCAP_MCL_STATE_CONNECTED
 
 	def process_abort_request(self, request):
 		rspcode = MCAP_RSP_SUCCESS
 
 		if not self.is_valid_mdlid(request.mdlid, False):
 			rspcode = MCAP_RSP_INVALID_MDL
-		
+
 		abortResponse = AbortMDLResponse(rspcode, request.mdlid)
 		success = self.send_response(abortResponse)
 
-		if success and ( rspcode == MCAP_RSP_SUCCESS ):
+		if success and (rspcode == MCAP_RSP_SUCCESS):
 			self.pending_passive_mdl = None
 			if self.mcl.has_mdls():
 				self.mcl.state = MCAP_MCL_STATE_ACTIVE
@@ -841,8 +852,8 @@ class MCLStateMachine:
 	def is_valid_mdlid(self, mdlid, accept_all):
 		# has 16 bits
 		if (mdlid & 0x0000) != 0:
-			return False					
-	
+			return False
+
 		if (mdlid == MCAP_MDL_ID_ALL) and accept_all:
 			return True
 

@@ -1,13 +1,26 @@
 # -*- coding: utf-8
 
-################################################################
+#######################################################################
+# Copyright 2010 Signove Corporation - All rights reserved.
+# Contact: Signove Corporation (contact@signove.com)
 #
-# Copyright (c) 2010 Signove. All rights reserved.
-# See the COPYING file for licensing details.
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
 #
-# Autors: Elvis Pfützenreuter < epx at signove dot com >
-#         Raul Herbster < raul dot herbster at signove dot com >
-################################################################
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the
+# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+# Boston, MA 02111-1307  USA
+#
+# If you have questions regarding the use of this file, please contact
+# Signove at contact@signove.com.
+#######################################################################
 
 #From IEEE Standard 11073-10404 page 62
 
@@ -65,21 +78,21 @@ def parse_message(msg):
 			0x0d, 0x1d, #event-type = MDC_NOTI_SCAN_REPORT_FIXED
 			0x00, 0x00, #event-reply-info.length = 0
 		)
-		
-		weight = (16*16*int(msg[42]) + int(msg[43]))/10.0
-		bmi = (16*16*int(msg[74]) + int(msg[75]))/10.0
-		body_fat = (16*16*int(msg[90]) + int(msg[91]))/10.0
-		meta = 16*16*int(msg[106]) + int(msg[107])
-		body_age = 16*16*int(msg[134]) + int(msg[135])
+
+		weight = (16 * 16 * int(msg[42]) + int(msg[43])) / 10.0
+		bmi = (16 * 16 * int(msg[74]) + int(msg[75])) / 10.0
+		body_fat = (16 * 16 * int(msg[90]) + int(msg[91])) / 10.0
+		meta = 16 * 16 * int(msg[106]) + int(msg[107])
+		body_age = 16 * 16 * int(msg[134]) + int(msg[135])
 		age = int(msg[59])
-		vis_fat = int(msg[121])/10.0
+		vis_fat = int(msg[121]) / 10.0
 		skeletal_muscle = None
 
 		print '\nDate: %x%x, %x-%x' % (msg[60], msg[61], msg[62], msg[63])
 		print 'Time: %x:%x:%x%x' % (msg[64], msg[65], msg[66], msg[67])
 		print 'Body age: %d, real age %d,' % (body_age, age)
 		print 'Weight: %g, BMI: %g, Body Fat: %g,' % (weight, bmi, body_fat)
-		print 'Resting Metabolism: %d, Visceral Fat: %g\n' %  (meta, vis_fat)
+		print 'Resting Metabolism: %d, Visceral Fat: %g\n' % (meta, vis_fat)
 
 	elif int(msg[0]) == 0xe4:
 		print 'Association release request\n'

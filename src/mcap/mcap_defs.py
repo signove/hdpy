@@ -1,89 +1,101 @@
 #!/usr/bin/env python
 # -*- coding: utf-8
 
-################################################################
+#######################################################################
+# Copyright 2010 Signove Corporation - All rights reserved.
+# Contact: Signove Corporation (contact@signove.com)
 #
-# Copyright (c) 2010 Signove. All rights reserved.
-# See the COPYING file for licensing details.
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
 #
-# Autors: Elvis Pfützenreuter < epx at signove dot com >
-#         Raul Herbster < raul dot herbster at signove dot com >
-################################################################
-
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the
+# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+# Boston, MA 02111-1307  USA
+#
+# If you have questions regarding the use of this file, please contact
+# Signove at contact@signove.com.
+#######################################################################
 
 import struct
 
 # Op Codes
-MCAP_ERROR_RSP				= 0x00
-MCAP_MD_CREATE_MDL_REQ			= 0x01
-MCAP_MD_CREATE_MDL_RSP			= 0x02
-MCAP_MD_RECONNECT_MDL_REQ		= 0x03
-MCAP_MD_RECONNECT_MDL_RSP		= 0x04
-MCAP_MD_ABORT_MDL_REQ			= 0x05
-MCAP_MD_ABORT_MDL_RSP			= 0x06
-MCAP_MD_DELETE_MDL_REQ			= 0x07
-MCAP_MD_DELETE_MDL_RSP			= 0x08
+MCAP_ERROR_RSP				 = 0x00
+MCAP_MD_CREATE_MDL_REQ			 = 0x01
+MCAP_MD_CREATE_MDL_RSP			 = 0x02
+MCAP_MD_RECONNECT_MDL_REQ		 = 0x03
+MCAP_MD_RECONNECT_MDL_RSP		 = 0x04
+MCAP_MD_ABORT_MDL_REQ			 = 0x05
+MCAP_MD_ABORT_MDL_RSP			 = 0x06
+MCAP_MD_DELETE_MDL_REQ			 = 0x07
+MCAP_MD_DELETE_MDL_RSP			 = 0x08
 
 # CSP Op Coodes
 
-MCAP_MD_SYNC_CAP_REQ			= 0x11
-MCAP_MD_SYNC_CAP_RSP			= 0x12
-MCAP_MD_SYNC_SET_REQ			= 0x13
-MCAP_MD_SYNC_SET_RSP			= 0x14
-MCAP_MD_SYNC_INFO_IND			= 0x15
-MCAP_MD_SYNC_INFO_IND_RESEREVED		= 0x16
+MCAP_MD_SYNC_CAP_REQ			 = 0x11
+MCAP_MD_SYNC_CAP_RSP			 = 0x12
+MCAP_MD_SYNC_SET_REQ			 = 0x13
+MCAP_MD_SYNC_SET_RSP			 = 0x14
+MCAP_MD_SYNC_INFO_IND			 = 0x15
+MCAP_MD_SYNC_INFO_IND_RESEREVED		 = 0x16
 
 MCAP_MD_SYNC_MIN = MCAP_MD_SYNC_CAP_REQ
 MCAP_MD_SYNC_MAX = MCAP_MD_SYNC_INFO_IND
 
 # Response Codes
-MCAP_RSP_SUCCESS			= 0x00
-MCAP_RSP_INVALID_OP_CODE		= 0x01
-MCAP_RSP_INVALID_PARAMETER_VALUE	= 0x02
-MCAP_RSP_INVALID_MDEP			= 0x03
-MCAP_RSP_MDEP_BUSY			= 0x04
-MCAP_RSP_INVALID_MDL			= 0x05
-MCAP_RSP_MDL_BUSY			= 0x06
-MCAP_RSP_INVALID_OPERATION		= 0x07
-MCAP_RSP_RESOURCE_UNAVAILABLE		= 0x08
-MCAP_RSP_UNSPECIFIED_ERROR		= 0x09
-MCAP_RSP_REQUEST_NOT_SUPPORTED		= 0x0A
-MCAP_RSP_CONFIGURATION_REJECTED		= 0x0B
+MCAP_RSP_SUCCESS			 = 0x00
+MCAP_RSP_INVALID_OP_CODE		 = 0x01
+MCAP_RSP_INVALID_PARAMETER_VALUE	 = 0x02
+MCAP_RSP_INVALID_MDEP			 = 0x03
+MCAP_RSP_MDEP_BUSY			 = 0x04
+MCAP_RSP_INVALID_MDL			 = 0x05
+MCAP_RSP_MDL_BUSY			 = 0x06
+MCAP_RSP_INVALID_OPERATION		 = 0x07
+MCAP_RSP_RESOURCE_UNAVAILABLE		 = 0x08
+MCAP_RSP_UNSPECIFIED_ERROR		 = 0x09
+MCAP_RSP_REQUEST_NOT_SUPPORTED		 = 0x0A
+MCAP_RSP_CONFIGURATION_REJECTED		 = 0x0B
 
 # MDL IDs
-MCAP_MDL_ID_INITIAL			= 0x0001
-MCAP_MDL_ID_FINAL			= 0xFEFF
-MCAP_MDL_ID_ALL				= 0xFFFF
+MCAP_MDL_ID_INITIAL			 = 0x0001
+MCAP_MDL_ID_FINAL			 = 0xFEFF
+MCAP_MDL_ID_ALL				 = 0xFFFF
 
 # MDEP IDs
-MCAP_MDEP_ID_INITIAL			= 0x00
-MCAP_MDEP_ID_FINAL			= 0x7F
+MCAP_MDEP_ID_INITIAL			 = 0x00
+MCAP_MDEP_ID_FINAL			 = 0x7F
 
 # State
-MCAP_MCL_ROLE_ACCEPTOR		= 'ACCEPTOR'
-MCAP_MCL_ROLE_INITIATOR		= 'INITIATOR'  
+MCAP_MCL_ROLE_ACCEPTOR		 = 'ACCEPTOR'
+MCAP_MCL_ROLE_INITIATOR		 = 'INITIATOR'
 
-MCAP_MCL_STATE_IDLE		= 'IDLE'
-MCAP_MCL_STATE_CONNECTED	= 'CONNECTED'
-MCAP_MCL_STATE_PENDING		= 'PENDING'
-MCAP_MCL_STATE_WAITING		= 'WAITING'
-MCAP_MCL_STATE_ACTIVE		= 'ACTIVE'
+MCAP_MCL_STATE_IDLE		 = 'IDLE'
+MCAP_MCL_STATE_CONNECTED	 = 'CONNECTED'
+MCAP_MCL_STATE_PENDING		 = 'PENDING'
+MCAP_MCL_STATE_WAITING		 = 'WAITING'
+MCAP_MCL_STATE_ACTIVE		 = 'ACTIVE'
 
-MCAP_MDL_STATE_LISTENING	= 'LISTENING'
-MCAP_MDL_STATE_WAITING		= 'WAITING'
-MCAP_MDL_STATE_ACTIVE		= 'ACTIVE'
-MCAP_MDL_STATE_CLOSED		= 'CLOSED'
-MCAP_MDL_STATE_DELETED		= 'DELETED'
+MCAP_MDL_STATE_LISTENING	 = 'LISTENING'
+MCAP_MDL_STATE_WAITING		 = 'WAITING'
+MCAP_MDL_STATE_ACTIVE		 = 'ACTIVE'
+MCAP_MDL_STATE_CLOSED		 = 'CLOSED'
+MCAP_MDL_STATE_DELETED		 = 'DELETED'
 
 # CSP and Bluetooth clock special values
 
 btclock_immediate = 0xffffffff
-tmstamp_dontset   = 0xffffffffffffffff
-btclock_max       = 0xfffffff
+tmstamp_dontset = 0xffffffffffffffff
+btclock_max = 0xfffffff
 
 # Verbose error messages
 
-error_rsp_messages = { 
+error_rsp_messages = {
 	MCAP_RSP_INVALID_OP_CODE:		"Invalid Op Code",
 	MCAP_RSP_INVALID_PARAMETER_VALUE:	"Invalid Parameter Value",
 	MCAP_RSP_INVALID_MDEP:			"Invalid MDEP",
@@ -209,7 +221,7 @@ class CSPResponse(object):
 
 # Specific request messages
 
-class CreateMDLRequest( MDLRequest ):
+class CreateMDLRequest(MDLRequest):
 	mask2 = ">BB"
 	mask2_size = struct.calcsize(mask2)
 
@@ -236,7 +248,7 @@ class CreateMDLRequest( MDLRequest ):
 		return CreateMDLRequest(*data)
 
 
-class ReconnectMDLRequest( MDLRequest ):
+class ReconnectMDLRequest(MDLRequest):
 
 	def __init__(self, mdlid):
 		MDLRequest.__init__(self, MCAP_MD_RECONNECT_MDL_REQ, mdlid)
@@ -249,7 +261,7 @@ class ReconnectMDLRequest( MDLRequest ):
 		return ReconnectMDLRequest(*data)
 
 
-class AbortMDLRequest( MDLRequest ):
+class AbortMDLRequest(MDLRequest):
 
 	def __init__(self, mdlid):
                 MDLRequest.__init__(self, MCAP_MD_ABORT_MDL_REQ, mdlid)
@@ -262,7 +274,7 @@ class AbortMDLRequest( MDLRequest ):
 		return AbortMDLRequest(*data)
 
 
-class DeleteMDLRequest( MDLRequest ):
+class DeleteMDLRequest(MDLRequest):
 
 	def __init__(self, mdlid):
                 MDLRequest.__init__(self, MCAP_MD_DELETE_MDL_REQ, mdlid)
@@ -275,7 +287,7 @@ class DeleteMDLRequest( MDLRequest ):
 		return DeleteMDLRequest(*data)
 
 
-class CSPCapabilitiesRequest( CSPRequest ):
+class CSPCapabilitiesRequest(CSPRequest):
 	mask2 = ">H"
 	mask2_size = struct.calcsize(mask2)
 
@@ -300,7 +312,7 @@ class CSPCapabilitiesRequest( CSPRequest ):
 		return CSPCapabilitiesRequest(*data)
 
 
-class CSPSetRequest( CSPRequest ):
+class CSPSetRequest(CSPRequest):
 	mask2 = ">BIQ"
 	mask2_size = struct.calcsize(mask2)
 
@@ -340,7 +352,7 @@ class CSPSetRequest( CSPRequest ):
 		return CSPSetRequest(*data)
 
 
-class CSPInfoIndication( CSPRequest ):
+class CSPInfoIndication(CSPRequest):
 	mask2 = ">IQH"
 	mask2_size = struct.calcsize(mask2)
 
@@ -369,7 +381,7 @@ class CSPInfoIndication( CSPRequest ):
 
 # Specific response messages
 
-class ErrorMDLResponse( MDLResponse ):
+class ErrorMDLResponse(MDLResponse):
 
         def __init__(self, errcode=MCAP_RSP_INVALID_OP_CODE, mdlid=0x0000):
                 MDLResponse.__init__(self, MCAP_ERROR_RSP, errcode, mdlid)
@@ -382,7 +394,7 @@ class ErrorMDLResponse( MDLResponse ):
 		return ErrorMDLResponse(*data)
 
 
-class CreateMDLResponse( MDLResponse ):
+class CreateMDLResponse(MDLResponse):
 	mask2 = ">B"
 	mask2_size = struct.calcsize(mask2)
 
@@ -391,7 +403,7 @@ class CreateMDLResponse( MDLResponse ):
 			raise InvalidResponse("%d" % rspcode)
                 MDLResponse.__init__(self, MCAP_MD_CREATE_MDL_RSP, rspcode, mdlid)
                 self.config = config
-	
+
 	def encode(self):
 		s = MDLResponse.encode(self)
 		if not self.rspcode:
@@ -432,7 +444,7 @@ class CreateMDLResponse( MDLResponse ):
 			MCAP_RSP_REQUEST_NOT_SUPPORTED,
 			MCAP_RSP_CONFIGURATION_REJECTED]
 
-class ReconnectMDLResponse( MDLResponse ):
+class ReconnectMDLResponse(MDLResponse):
 
         def __init__(self, rspcode, mdlid):
 		if not self.is_valid_response(rspcode):
@@ -456,11 +468,11 @@ class ReconnectMDLResponse( MDLResponse ):
 			MCAP_RSP_MDL_BUSY,
 			MCAP_RSP_INVALID_OPERATION,
 			MCAP_RSP_RESOURCE_UNAVAILABLE,
-			MCAP_RSP_UNSPECIFIED_ERROR, 
+			MCAP_RSP_UNSPECIFIED_ERROR,
 			MCAP_RSP_REQUEST_NOT_SUPPORTED]
 
 
-class AbortMDLResponse( MDLResponse ):
+class AbortMDLResponse(MDLResponse):
 
         def __init__(self, rspcode, mdlid):
 		if not self.is_valid_response(rspcode):
@@ -485,7 +497,7 @@ class AbortMDLResponse( MDLResponse ):
 			MCAP_RSP_REQUEST_NOT_SUPPORTED ]
 
 
-class DeleteMDLResponse( MDLResponse ):
+class DeleteMDLResponse(MDLResponse):
 
         def __init__(self, rspcode, mdlid):
 		if not self.is_valid_response(rspcode):
@@ -507,11 +519,11 @@ class DeleteMDLResponse( MDLResponse ):
 			MCAP_RSP_INVALID_MDL,
 			MCAP_RSP_MDL_BUSY,
 			MCAP_RSP_INVALID_OPERATION,
-			MCAP_RSP_UNSPECIFIED_ERROR, 
+			MCAP_RSP_UNSPECIFIED_ERROR,
 			MCAP_RSP_REQUEST_NOT_SUPPORTED]
 
 
-class CSPCapabilitiesResponse( CSPResponse ):
+class CSPCapabilitiesResponse(CSPResponse):
 	mask2 = ">BHHH"
 	mask2_size = struct.calcsize(mask2)
 	# CSP responses don't change length even in case of error
@@ -542,7 +554,7 @@ class CSPCapabilitiesResponse( CSPResponse ):
 		return CSPCapabilitiesResponse(*data)
 
 
-class CSPSetResponse( CSPResponse ):
+class CSPSetResponse(CSPResponse):
 	mask2 = ">IQH"
 	mask2_size = struct.calcsize(mask2)
 	# CSP responses don't change length even in case of error
@@ -557,7 +569,7 @@ class CSPSetResponse( CSPResponse ):
 		return CSPResponse.encode(self) + \
 			struct.pack(self.mask2, self.btclock, self.timestamp,
 				self.tmstampacc)
-	
+
 	@staticmethod
 	def length(rspcode):
 		return CSPResponse.length(rspcode) + CSPSetResponse.mask2_size
@@ -616,7 +628,7 @@ class MessageParser:
 
 
 def testmsg(hexmsg):
-	binmsg = [ chr(int(hexmsg[i:i+2], 16)) for i in range(0, len(hexmsg), 2) ]
+	binmsg = [ chr(int(hexmsg[i:i + 2], 16)) for i in range(0, len(hexmsg), 2) ]
 	return "".join(binmsg)
 
 
@@ -641,7 +653,7 @@ def test():
 	# TEST PARSER
 
 	parser = MessageParser()
-	
+
 	# test CreateReq message parsing
 	msg = testmsg("0100230ABC")
 	msgObj = parser.parse(msg)
@@ -650,31 +662,31 @@ def test():
 	assert(msgObj.mdepid == 0x0A)
 	assert(msgObj.config == 0xBC)
 	assert(msgObj.encode() == msg)
-	
-	
+
+
 	# test ReconnectReq message parsing
 	msg = testmsg("0300AB")
 	msgObj = parser.parse(msg)
 	assert(msgObj.opcode == MCAP_MD_RECONNECT_MDL_REQ)
 	assert(msgObj.mdlid == 0x00AB)
 	assert(msgObj.encode() == msg)
-	
-	
+
+
 	# test AbortReq message parsing
 	msg = testmsg("0500AB")
 	msgObj = parser.parse(msg)
 	assert(msgObj.opcode == MCAP_MD_ABORT_MDL_REQ)
 	assert(msgObj.mdlid == 0x00AB)
 	assert(msgObj.encode() == msg)
-	
-	
+
+
 	# test DeleteReq message parsing
 	msg = testmsg("0700CC")
 	msgObj = parser.parse(msg)
 	assert(msgObj.opcode == MCAP_MD_DELETE_MDL_REQ)
 	assert(msgObj.mdlid == 0x00CC)
 	assert(msgObj.encode() == msg)
-	
+
 
 	# test CreateRsp message parsing
 	msg = testmsg("0200002307")
@@ -684,7 +696,7 @@ def test():
 	assert(msgObj.rspcode == MCAP_RSP_SUCCESS)
 	assert(msgObj.config == 0x07)
 	assert(msgObj.encode() == msg)
-	
+
 	# test CreateRsp message parsing
 	msg = testmsg("02050023")
 	msgObj = parser.parse(msg)
@@ -693,8 +705,8 @@ def test():
 	assert(msgObj.rspcode == MCAP_RSP_INVALID_MDL)
 	assert(msgObj.config == 0x00)
 	assert(msgObj.encode() == msg)
-	
-	
+
+
 	# test ReconnectRsp message parsing
 	msg = testmsg("040200AB")
 	msgObj = parser.parse(msg)
@@ -702,8 +714,8 @@ def test():
 	assert(msgObj.mdlid == 0x00AB)
 	assert(msgObj.rspcode == MCAP_RSP_INVALID_PARAMETER_VALUE)
 	assert(msgObj.encode() == msg)
-	
-	
+
+
 	# test AbortRsp message parsing
 	msg = testmsg("0605FFFF")
 	msgObj = parser.parse(msg)
@@ -711,7 +723,7 @@ def test():
 	assert(msgObj.mdlid == 0xFFFF)
 	assert(msgObj.rspcode == MCAP_RSP_INVALID_MDL)
 	assert(msgObj.encode() == msg)
-	
+
 
 	# test DeleteRsp message parsing
 	msg = testmsg("080000CC")
@@ -728,7 +740,7 @@ def test():
 	except Exception, e:
 		exc = e
 	assert(isinstance(exc, InvalidMessage))
-	
+
 	exc = None
 	try:
 		parser.parse(testmsg("01"))

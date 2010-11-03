@@ -1,14 +1,26 @@
-#!/usr/bin/env python
 # -*- coding: utf-8
 
-################################################################
+#######################################################################
+# Copyright 2010 Signove Corporation - All rights reserved.
+# Contact: Signove Corporation (contact@signove.com)
 #
-# Copyright (c) 2010 Signove. All rights reserved.
-# See the COPYING file for licensing details.
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
 #
-# Autors: Elvis Pfützenreuter < epx at signove dot com >
-#         Raul Herbster < raul dot herbster at signove dot com >
-################################################################
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the
+# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+# Boston, MA 02111-1307  USA
+#
+# If you have questions regarding the use of this file, please contact
+# Signove at contact@signove.com.
+#######################################################################
 
 import sys
 from mcap.mcap_instance import MCAPInstance, InvalidOperation
@@ -114,7 +126,7 @@ class HealthApplication(MCAPInstance):
 
 		self.remove_old_devices(addr, new_devices)
 
-		
+
 	def device_created3(self, addr, hdprec, feature):
 		'''
 		Gets a particular feature of an HDP record and
@@ -211,7 +223,7 @@ class HealthApplication(MCAPInstance):
 
 		self.description = ""
 
-		if 'Description' in config: 
+		if 'Description' in config:
 			self.description = config["Description"][:240]
 
 		self.sdp_record['features'].append({
@@ -239,7 +251,7 @@ class HealthApplication(MCAPInstance):
 		if self.csp_enabled:
 			procedures.append('csp')
 			procedures.append('csp_master')
-			
+
                 r['mcap_procedures'] = tuple(procedures)
 
 		xml_record = hdp_record.gen_xml(self.sdp_record)
