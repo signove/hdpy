@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 
 MAX_APPS = 6
-MAX_CHANNELS = 6 # in both directions, per device
-DISTINGUISH_APP = False
-RENEW_APP = True
-SINK_INITIATOR = False
+MAX_CHANNELS = 1 # per device/application
+DISTINGUISH_APP = True
+RENEW_APP = False
+SINK_INITIATOR = True
 
-# TODO data protocol with meaningful challenge/response and app distinguish
-# TODO source and sink UUID (both should appear, only Sink appears)
-# TODO balance channels between apps, make MAX_CHANNELS per app, not per device
 # TODO do something different with Streaming channels
+
+
+if not DISTINGUISH_APP:
+	MAX_CHANNELS *= MAX_APPS # count by device, not by device*app
 
 import sys
 import os
@@ -37,7 +38,9 @@ class MasterControl(object):
 		self.devices = {}
 
 		self.channels = {}
-		self.chan_dev = {}
+		self.chan_dev_app = {}
+		self.channel_sig = {}
+		self.data_seq = 0
 		self.accepted = []
 		self.initiated = []
 		self.sockets = {}
@@ -119,12 +122,6 @@ class MasterControl(object):
 		if is_src or is_snk:
 			self.devices[path] = hdevice
 
-	def find_channels_device(self, channel_path):
-		for device_path, chanlist in self.chan_dev.items():
-			if channel_path in chanlist:
-				return device_path
-		return None
-
 	def CallSometime(self, lo, hi, cb, *args):
 		to = lo + random.randint(lo, hi)
 		self.CallLater(to, cb, *args)
@@ -179,10 +176,37 @@ class MasterControl(object):
 		msg = msg % path
 		self.Dot(msg)
 
-	def RandomData(self):
-		s = [chr(random.randint(0, 255)) \
-			for x in range(0, random.randint(2, 500))]
-		return "".join(s)
+	def MakeData(self, channel_path):
+		self.data_seq += 1
+		return self.channel_sig[channel_path] + " %d" % self.data_seq
+
+	def CheckData(self, channel_path, data):
+		expected = self.channel_sig[channel_path]
+		ok = data[:len(expected)] == expected
+		if not ok:
+			self.Msg("%s %s %s" % (expected, data, channel_path))
+		return ok
+
+	def max_channels(self, device_path, seq):
+		if not DISTINGUISH_APP:
+			seq = 0
+
+		if device_path not in self.chan_dev_app:
+			self.chan_dev_app[device_path] = {}
+			return False
+
+		if seq not in self.chan_dev_app[device_path]:
+			self.chan_dev_app[device_path][seq] = []
+			return False
+
+		return len(self.chan_dev_app[device_path][seq]) < MAX_CHANNELS
+
+	def find_channels_device(self, channel_path):
+		for device_path, apps in self.chan_dev_app.items():
+			for apps, chanlist in apps.items():
+				if channel_path in chanlist:
+					return device_path
+		return None
 
 	######################################################################
 
@@ -214,6 +238,7 @@ class MasterControl(object):
 		
 	def Received(self, sk, data, channel_path):
 		self.Dot('>%d' % sk.fileno())
+		self.CheckData(channel_path, data)
 
 	def EOF(self, sk, channel_path):
 		self.CloseSocket(sk, channel_path)
@@ -305,7 +330,7 @@ class MasterControl(object):
 		else:
 			# just send data
 			try:
-				sk.send(self.RandomData())
+				sk.send(self.MakeData(channel_path))
 				self.Dot("<%d" % sk.fileno())
 			except IOError:
 				self.ChannelDot(channel_path, "SSe:%s")
@@ -317,20 +342,55 @@ class MasterControl(object):
 					self.Dot("SSex")
 					self.DestroyChannel(channel_path)
 
+	def RememberChannel(self, accepted, channel_path, channel, device_path, app_path):
+		appseq = self.apps.index(app_path)
+		
+		self.channels[channel_path] = channel
+		if accepted:
+			if channel_path not in self.accepted:
+				self.accepted.append(channel_path)
+		else:
+			if channel_path not in self.initiated:
+				self.initiated.append(channel_path)
+
+		if device_path not in self.chan_dev_app:
+			self.chan_dev_app[device_path] = {}
+
+		chan_app = self.chan_dev_app[device_path]
+
+		if appseq not in chan_app:
+			chan_app[appseq] = []
+
+		if channel_path not in chan_app[appseq]:
+			chan_app[appseq].append(channel_path)
+
+		data_type = 0x2000 + appseq // 2
+		role = ["Source", "Sink"][appseq % 2]
+		self.channel_sig[channel_path] = "%d %s" % (data_type, role)
+
 
 	def ChannelConnected(self, channel_path, interface, device_path):
 		self.ChannelDot(channel_path, ">C:%s")
 		channel = bus.get_object("org.bluez", channel_path)
 		channel = dbus.Interface(channel, "org.bluez.HealthChannel")
 
-		self.channels[channel_path] = channel
-		if channel_path not in self.accepted:
-			self.accepted.append(channel_path)
+		try:
+			props = channel.GetProperties()
+		except Exception:
+			self.ChannelDot(channel_path, ">Cpe")
+			return
 
-		if device_path not in self.chan_dev:
-			self.chan_dev[device_path] = []
-		if channel_path not in self.chan_dev[device_path]:
-			self.chan_dev[device_path].append(channel_path)
+		if DISTINGUISH_APP:
+			app_path = props['Application']
+		else:
+			app = self.apps[0]
+
+		if app_path not in self.apps:
+			# not our channel, or some error
+			self.Dot("&")
+			return
+
+		self.RememberChannel(True, channel_path, channel, device_path, app_path)
 
 		if not self.EngageChannel(channel_path):
 			# if failed right after signal, destroy right now
@@ -353,31 +413,46 @@ class MasterControl(object):
 		self.echo_pending = False
 		self.Dot("HF")
 
+	def ChooseDeviceApp(self):
+		# Choose target device and application more or less randomly
+
+		is_source = random.randint(0, 1)
+
+		if not is_source:
+			if not SINK_INITIATOR:
+				is_source = 1
+		if is_source:
+			devs = self.sources
+		else:
+			devs = self.sinks
+
+		if not devs:
+			return False, False, None, None, None
+
+		is_sink = 1 - is_source
+
+		app0 = random.randint(0, MAX_APPS // 2 - 1)
+		dev0 = random.randint(0, len(devs) - 1)
+
+		for x in range(app0, app0 + MAX_APPS // 2):
+			for y in range(dev0, dev0 + len(devs)):
+				device_path = devs[y % len(devs)]
+				seq = (x % (MAX_APPS // 2)) * 2 + is_sink
+				if not self.max_channels(device_path, seq):
+					return True, True, is_source, device_path, seq
+
+		return False, True, None, None, None
+
 	def InitiateSomeConnection(self):
 		# Initiates a connection with some given device
 
-		seq = random.randint(0, MAX_APPS - 1)
-		is_source = seq % 2 == 0
-		if not is_source:
-			# sink
-			if not SINK_INITIATOR:
-				return False
-			# find a maching source device
-			if not self.sources:
-				return False
-			device_path = random.choice(self.sources)
-		else:
-			# source, find a matching sink device
-			if not self.sinks:
-				return False
-			device_path = random.choice(self.sinks)
+		ok, res, is_source, device_path, seq = self.ChooseDeviceApp()
+
+		if not ok:
+			# all devices/apps fully connected
+			return res
 
 		device = self.devices[device_path]
-
-		if device_path in self.chan_dev:
-			if len(self.chan_dev[device_path]) >= MAX_CHANNELS:
-				self.Dot("q")
-				return True
 
 		# Sinks can not choose
 		config = "Any"
@@ -387,8 +462,6 @@ class MasterControl(object):
 			else:
 				# First must be reliable
 				config = "Reliable"
-
-		# TODO audit app x data type etc.
 
 		self.ChannelDot(device_path, "@%s")
 		device.CreateChannel(self.apps[seq], config,
@@ -414,19 +487,11 @@ class MasterControl(object):
 
 		device_path = props['Device']
 		if DISTINGUISH_APP:
-			# TODO use this
-			application = props['Application']
+			app_path = props['Application']
 		else:
-			application = ""
+			app_path = self.apps[0]
 
-		self.channels[channel_path] = channel
-		if channel_path not in self.initiated:
-			self.initiated.append(channel_path)
-
-		if device_path not in self.chan_dev:
-			self.chan_dev[device_path] = []
-		if channel_path not in self.chan_dev[device_path]:
-			self.chan_dev[device_path].append(channel_path)
+		self.RememberChannel(True, channel_path, channel, device_path, app_path)
 
 		self.EngageChannel(channel_path)
 		# do not destroy it if it fails the first time.
@@ -455,12 +520,18 @@ class MasterControl(object):
 		except ValueError: 
 			pass
 
-		if device in self.chan_dev:
-			if channel in self.chan_dev[device]:
-				self.chan_dev[device].remove(channel)
+		if device in self.chan_dev_app:
+			apps = self.chan_dev_app[device]
+			for app, channels in apps.items():
+				if channel in channels:
+					channels.remove(channel)
+					break
 
 		if channel in self.sockets:
 			self.CloseSocket(sk, channel)
+
+		if channel in self.channel_sig:
+			del self.channel_sig[channel]
 
 		del self.channels[channel]
 
