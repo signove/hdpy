@@ -178,10 +178,10 @@ class MasterControl(object):
 
 	def MakeData(self, channel_path):
 		self.data_seq += 1
-		return self.channel_sig[channel_path] + " %d" % self.data_seq
+		return self.channel_sig[channel_path][0] + " %d" % self.data_seq
 
 	def CheckData(self, channel_path, data):
-		expected = self.channel_sig[channel_path]
+		expected = self.channel_sig[channel_path][1]
 		ok = data[:len(expected)] == expected
 		if not ok:
 			self.Msg("%s %s %s" % (expected, data, channel_path))
@@ -365,8 +365,12 @@ class MasterControl(object):
 			chan_app[appseq].append(channel_path)
 
 		data_type = 0x2000 + appseq // 2
-		role = ["Source", "Sink"][appseq % 2]
-		self.channel_sig[channel_path] = "%d %s" % (data_type, role)
+		my_role = ["Source", "Sink"][appseq % 2]
+		remote_role = ["Source", "Sink"][(appseq + 1) % 2]
+		self.channel_sig[channel_path] = \
+			["%d %s" % (data_type, my_role),
+			 "%d %s" % (data_type, remote_role),
+			]
 
 
 	def ChannelConnected(self, channel_path, interface, device_path):
@@ -391,6 +395,9 @@ class MasterControl(object):
 			return
 
 		self.RememberChannel(True, channel_path, channel, device_path, app_path)
+
+		if "-a" in sys.argv:
+			self.AuditChannelCount()
 
 		if not self.EngageChannel(channel_path):
 			# if failed right after signal, destroy right now
@@ -443,8 +450,20 @@ class MasterControl(object):
 
 		return False, True, None, None, None
 
+	def AuditChannelCount(self):
+		print '----------------------'
+		for device_path, apps in self.chan_dev_app.items():
+			print device_path,
+			for appseq, chanlist in apps.items():
+				print "%d:%d" % (appseq, len(chanlist)),
+			print
+		print '----------------------'
+
 	def InitiateSomeConnection(self):
 		# Initiates a connection with some given device
+
+		if "-a" in sys.argv:
+			self.AuditChannelCount()
 
 		ok, res, is_source, device_path, seq = self.ChooseDeviceApp()
 
