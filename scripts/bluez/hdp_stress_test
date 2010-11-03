@@ -451,6 +451,7 @@ class MasterControl(object):
 		return False, True, None, None, None
 
 	def AuditChannelCount(self):
+		print
 		print '----------------------'
 		for device_path, apps in self.chan_dev_app.items():
 			print device_path,
@@ -458,6 +459,7 @@ class MasterControl(object):
 				print "%d:%d" % (appseq, len(chanlist)),
 			print
 		print '----------------------'
+		print
 
 	def InitiateSomeConnection(self):
 		# Initiates a connection with some given device
