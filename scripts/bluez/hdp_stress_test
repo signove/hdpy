@@ -549,7 +549,7 @@ class MasterControl(object):
 					break
 
 		if channel in self.sockets:
-			self.CloseSocket(sk, channel)
+			self.CloseSocket(self.sockets[channel], channel)
 
 		if channel in self.channel_sig:
 			del self.channel_sig[channel]
