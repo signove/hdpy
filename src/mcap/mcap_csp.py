@@ -91,7 +91,7 @@ class BluetoothClock:
 	def read_native(self):
 		# FIXME handle temporary failure
 		return mcap_sock.hci_read_clock(self.raw_socket, None)
-
+	
 	def read(self, piconet):
 		"""
 		Reads Bluetooth clock.
@@ -114,7 +114,7 @@ class BluetoothClock:
 
 
 btclock_field = btclock_max + 1
-btclock_half = btclock_field // 2
+btclock_half  = btclock_field // 2
 
 
 class CSPStateMachine(object):
@@ -173,15 +173,15 @@ class CSPStateMachine(object):
 
 	def get_btclock(self):
 		return self.clock().read(self.mcl.remote_addr)
-
+	
 	def get_btclock_native(self):
 		return self.clock().read_native()
 
-	@staticmethod
+	@staticmethod 
 	def bt2us(btclock):
 		return int(312.5 * btclock)
 
-	@staticmethod
+	@staticmethod 
 	def btdiff(btclock1, btclock2):
 		return CSPStateMachine.btoffset(btclock1, btclock2)
 
@@ -203,7 +203,7 @@ class CSPStateMachine(object):
 			oft -= btclock_field
 		return ofd
 
-	@staticmethod
+	@staticmethod 
 	def us2bt(tmstamp):
 		return int(tmstamp / 312.5)
 
@@ -222,7 +222,7 @@ class CSPStateMachine(object):
 		if message.opcode == MCAP_MD_SYNC_SET_REQ \
 			and not self.local_got_caps:
 			raise InvalidOperation('CSP: Cannot set before get caps')
-
+			
 		if message.opcode != MCAP_MD_SYNC_INFO_IND:
 			self.request_in_flight = message.opcode
 			self.last_request = message
@@ -296,7 +296,7 @@ class CSPStateMachine(object):
 			synclead = self.synclead_ms()
 			tmstampres = self.tmstampres
 			tmstampacc = self.tmstampacc
-
+		
 		rsp = CSPCapabilitiesResponse(rspcode,
 				btclockres, synclead,
 				tmstampres, tmstampacc)
@@ -350,18 +350,18 @@ class CSPStateMachine(object):
 			if to < 0:
 				# can not update timestamp in the past :)
 				rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
-
+			
 			# convert to us
 			to = self.bt2us(to)
 
-			if to > (60 * 1000 * 1000 + 1):
+			if to > (60*1000*1000 + 1):
 				# more than 60 seconds in the future
 				rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
 
 			elif to < self.latency():
 				# would never make it in time
 				rspcode = MCAP_RSP_INVALID_PARAMETER_VALUE
-
+			
 		if rspcode == MCAP_RSP_SUCCESS and message.update:
 			ito = int(1000000 \
 				* self.remote_reqaccuracy \
@@ -379,7 +379,7 @@ class CSPStateMachine(object):
 					self.tmstampacc)
 		else:
 			ito = "None"
-
+			
 		if rspcode == MCAP_RSP_SUCCESS:
 			self.stop_indication_alarm()
 
@@ -486,7 +486,7 @@ class CSPStateMachine(object):
 				message.rspcode != MCAP_RSP_SUCCESS,
 				message.btclock, message.timestamp,
 				message.tmstampacc)
-
+	
 	def info_indication(self, message):
 		if not self.indication_expected:
 			print "Unexpected indication received, ignoring"
@@ -583,7 +583,7 @@ def test(argv0, target=None, l2cap_psm=None, ertm=None):
 	assert(CSPStateMachine.btoffset(0, 0xfffffff) == -1)
 	assert(CSPStateMachine.btoffset(0xffffffe, 0) == 2)
 	assert(CSPStateMachine.btoffset(0, 0x7ffffff) == 0x7ffffff)
-	assert(CSPStateMachine.btoffset(0, 0x8000000) == 0x8000000)
+	assert(CSPStateMachine.btoffset(0, 0x8000000) == 0x8000000) 
 	assert(CSPStateMachine.btoffset(0, 0x8000001) == -0x7ffffff)
 	assert(CSPStateMachine.btoffsetdiff(1, 1) == 0)
 	assert(CSPStateMachine.btoffsetdiff(1, 1000) == 999)
