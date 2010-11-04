@@ -133,7 +133,8 @@ class MDL(object):
 			return
 
 		set_security(sk)
-		set_reliable(sk, self.reliable)
+		# in kernel 2.6.36 you can not call this at this point
+		# set_reliable(sk, self.reliable)
 		sk.setblocking(True)
 		self.sk = sk
 		self.state = MCAP_MDL_STATE_ACTIVE
@@ -230,7 +231,8 @@ class MCL(object):
 
 		self.sk = sk
 		set_security(sk)
-		set_reliable(sk, True)
+		# In kernel 2.6.36 you can not do this again here
+		# set_reliable(sk, True)
 		sk.setblocking(True)
 		self.state = MCAP_MCL_STATE_CONNECTED
 		self.acceptor = True
