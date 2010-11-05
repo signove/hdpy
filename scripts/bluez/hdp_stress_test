@@ -1,16 +1,6 @@
 #!/usr/bin/env python
 
-MAX_APPS = 6
-MAX_CHANNELS = 1 # per device/application
-DISTINGUISH_APP = True
-RENEW_APP = False
-SINK_INITIATOR = True
-
 # TODO do something different with Streaming channels
-
-
-if not DISTINGUISH_APP:
-	MAX_CHANNELS *= MAX_APPS # count by device, not by device*app
 
 import sys
 import os
@@ -611,11 +601,64 @@ class MasterControl(object):
 		self.Msg('Renewing application')
 
 
+MAX_CHANNELS = 1 # per device/application
+
+if "-c" in sys.argv:
+	MAX_CHANNELS = int(sys.argv[sys.argv.index("-c") + 1])
+
+DATA_TYPES = 3
+
+if "-t" in sys.argv:
+	DATA_TYPES = int(sys.argv[sys.argv.index("-t") + 1])
+
+MAX_APPS = DATA_TYPES * 2
+
+DISTINGUISH_APP = "-p" not in sys.argv
+
+if not DISTINGUISH_APP:
+	MAX_CHANNELS *= MAX_APPS # count by device, not by device*app
+
+SINK_INITIATOR = "-k" not in sys.argv
+RENEW_APP = "-n" not in sys.argv
+
 mcp = MasterControl()
 
 loop = glib.MainLoop()
 loop.run()
 
+# USAGE
+#
+# This script is meant to be run in at least two machines, and
+# will try to connect to all machines that have been paired and
+# are known to offer HDP service.
+#
+# If remote machine is paired but script does not connect, you
+# may need to run the script with -s parameter in both of them,
+# and re-pair them. This ensures that both know that the other one
+# runs HDP.
+#
 # -s
 #	Silent. Do not search devices and do not try to connect.
-#	Useful in pairing phase, when devices learn each other's service class
+#	Useful in pairing phase, when devices learn each other's
+#	service classes.
+# -a
+#	Audit. Shows how many connections are per device/application.
+#	Mostly for debugging.
+# -p
+#	Do not distinguish channels per application. This is needed if
+#	if your HDP API version does not support the 'Application'
+#	property in HealthChannel interface.
+#
+# -c [n]
+#	Maximum number of channels per device/data type/role. Default is 1.
+#
+# -t [n]
+#	Number of different data types. The number of applications will
+#	be twice as high (one source and one sink per data type).
+#	Default is 3.
+#
+# -k
+#	Prevents sink applications to be data channel initiators.
+#
+# -n
+#	Prevents applications to be renewed (destroyed and recreated).
