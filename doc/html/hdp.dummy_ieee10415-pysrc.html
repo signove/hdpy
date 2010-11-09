@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>hdp.dummy_ieee10415</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+      <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="hdp-module.html">Package&nbsp;hdp</a> ::
+        Module&nbsp;dummy_ieee10415
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+        <tr><td align="right"><span class="options"
+            >[<a href="frames.html" target="_top">frames</a
+            >]&nbsp;|&nbsp;<a href="hdp.dummy_ieee10415-pysrc.html"
+            target="_top">no&nbsp;frames</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<h1 class="epydoc">Source Code for <a href="hdp.dummy_ieee10415-module.html">Module hdp.dummy_ieee10415</a></h1>
+<pre class="py-src">
+<a name="L1"></a><tt class="py-lineno">  1</tt>  <tt class="py-line"><tt class="py-comment"># -*- coding: utf-8</tt> </tt>
+<a name="L2"></a><tt class="py-lineno">  2</tt>  <tt class="py-line"> </tt>
+<a name="L3"></a><tt class="py-lineno">  3</tt>  <tt class="py-line"><tt class="py-comment">#######################################################################</tt> </tt>
+<a name="L4"></a><tt class="py-lineno">  4</tt>  <tt class="py-line"><tt class="py-comment"># Copyright 2010 Signove Corporation - All rights reserved.</tt> </tt>
+<a name="L5"></a><tt class="py-lineno">  5</tt>  <tt class="py-line"><tt class="py-comment"># Contact: Signove Corporation (contact@signove.com)</tt> </tt>
+<a name="L6"></a><tt class="py-lineno">  6</tt>  <tt class="py-line"><tt class="py-comment">#</tt> </tt>
+<a name="L7"></a><tt class="py-lineno">  7</tt>  <tt class="py-line"><tt class="py-comment"># This library is free software; you can redistribute it and/or modify</tt> </tt>
+<a name="L8"></a><tt class="py-lineno">  8</tt>  <tt class="py-line"><tt class="py-comment"># it under the terms of version 2.1 of the GNU Lesser General Public</tt> </tt>
+<a name="L9"></a><tt class="py-lineno">  9</tt>  <tt class="py-line"><tt class="py-comment"># License as published by the Free Software Foundation.</tt> </tt>
+<a name="L10"></a><tt class="py-lineno"> 10</tt>  <tt class="py-line"><tt class="py-comment">#</tt> </tt>
+<a name="L11"></a><tt class="py-lineno"> 11</tt>  <tt class="py-line"><tt class="py-comment"># This library is distributed in the hope that it will be useful,</tt> </tt>
+<a name="L12"></a><tt class="py-lineno"> 12</tt>  <tt class="py-line"><tt class="py-comment"># but WITHOUT ANY WARRANTY; without even the implied warranty of</tt> </tt>
+<a name="L13"></a><tt class="py-lineno"> 13</tt>  <tt class="py-line"><tt class="py-comment"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</tt> </tt>
+<a name="L14"></a><tt class="py-lineno"> 14</tt>  <tt class="py-line"><tt class="py-comment"># GNU Lesser General Public License for more details.</tt> </tt>
+<a name="L15"></a><tt class="py-lineno"> 15</tt>  <tt class="py-line"><tt class="py-comment">#</tt> </tt>
+<a name="L16"></a><tt class="py-lineno"> 16</tt>  <tt class="py-line"><tt class="py-comment"># You should have received a copy of the GNU Lesser General Public</tt> </tt>
+<a name="L17"></a><tt class="py-lineno"> 17</tt>  <tt class="py-line"><tt class="py-comment"># License along with this library; if not, write to the</tt> </tt>
+<a name="L18"></a><tt class="py-lineno"> 18</tt>  <tt class="py-line"><tt class="py-comment"># Free Software Foundation, Inc., 59 Temple Place, Suite 330,</tt> </tt>
+<a name="L19"></a><tt class="py-lineno"> 19</tt>  <tt class="py-line"><tt class="py-comment"># Boston, MA 02111-1307  USA</tt> </tt>
+<a name="L20"></a><tt class="py-lineno"> 20</tt>  <tt class="py-line"><tt class="py-comment">#</tt> </tt>
+<a name="L21"></a><tt class="py-lineno"> 21</tt>  <tt class="py-line"><tt class="py-comment"># If you have questions regarding the use of this file, please contact</tt> </tt>
+<a name="L22"></a><tt class="py-lineno"> 22</tt>  <tt class="py-line"><tt class="py-comment"># Signove at contact@signove.com.</tt> </tt>
+<a name="L23"></a><tt class="py-lineno"> 23</tt>  <tt class="py-line"><tt class="py-comment">#######################################################################</tt> </tt>
+<a name="L24"></a><tt class="py-lineno"> 24</tt>  <tt class="py-line"> </tt>
+<a name="L25"></a><tt class="py-lineno"> 25</tt>  <tt class="py-line"><tt class="py-comment">#From IEEE Standard 11073-10404 page 62</tt> </tt>
+<a name="L26"></a><tt class="py-lineno"> 26</tt>  <tt class="py-line"> </tt>
+<a name="L27"></a><tt class="py-lineno"> 27</tt>  <tt class="py-line"><tt class="py-keyword">from</tt> <tt id="link-0" class="py-name" targets="Module hdp.hdp_utils=hdp.hdp_utils-module.html"><a title="hdp.hdp_utils" class="py-name" href="#" onclick="return doclink('link-0', 'hdp_utils', 'link-0');">hdp_utils</a></tt> <tt class="py-keyword">import</tt> <tt class="py-op">*</tt> </tt>
+<a name="L28"></a><tt class="py-lineno"> 28</tt>  <tt class="py-line"> </tt>
+<a name="L29"></a><tt class="py-lineno"> 29</tt>  <tt class="py-line"> </tt>
+<a name="L30"></a><tt class="py-lineno"> 30</tt>  <tt class="py-line"><tt id="link-1" class="py-name" targets="Variable hdp.dummy_ieee10404.assoc_resp_msg=hdp.dummy_ieee10404-module.html#assoc_resp_msg,Variable hdp.dummy_ieee10407.assoc_resp_msg=hdp.dummy_ieee10407-module.html#assoc_resp_msg,Variable hdp.dummy_ieee10415.assoc_resp_msg=hdp.dummy_ieee10415-module.html#assoc_resp_msg"><a title="hdp.dummy_ieee10404.assoc_resp_msg
+hdp.dummy_ieee10407.assoc_resp_msg
+hdp.dummy_ieee10415.assoc_resp_msg" class="py-name" href="#" onclick="return doclink('link-1', 'assoc_resp_msg', 'link-1');">assoc_resp_msg</a></tt> <tt class="py-op">=</tt> <tt class="py-op">(</tt> </tt>
+<a name="L31"></a><tt class="py-lineno"> 31</tt>  <tt class="py-line">        <tt class="py-number">0xe3</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#APDU CHOICE Type(AareApdu)</tt> </tt>
+<a name="L32"></a><tt class="py-lineno"> 32</tt>  <tt class="py-line">        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x2c</tt><tt class="py-op">,</tt> <tt class="py-comment">#CHOICE.length = 44</tt> </tt>
+<a name="L33"></a><tt class="py-lineno"> 33</tt>  <tt class="py-line">        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#result=accept</tt> </tt>
+<a name="L34"></a><tt class="py-lineno"> 34</tt>  <tt class="py-line">        <tt class="py-number">0x50</tt><tt class="py-op">,</tt> <tt class="py-number">0x79</tt><tt class="py-op">,</tt> <tt class="py-comment">#data-proto-id = 20601</tt> </tt>
+<a name="L35"></a><tt class="py-lineno"> 35</tt>  <tt class="py-line">        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x26</tt><tt class="py-op">,</tt> <tt class="py-comment">#data-proto-info length = 38</tt> </tt>
+<a name="L36"></a><tt class="py-lineno"> 36</tt>  <tt class="py-line">        <tt class="py-number">0x80</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#protocolVersion</tt> </tt>
+<a name="L37"></a><tt class="py-lineno"> 37</tt>  <tt class="py-line">        <tt class="py-number">0x80</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#encoding rules = MDER</tt> </tt>
+<a name="L38"></a><tt class="py-lineno"> 38</tt>  <tt class="py-line">        <tt class="py-number">0x80</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#nomenclatureVersion</tt> </tt>
+<a name="L39"></a><tt class="py-lineno"> 39</tt>  <tt class="py-line">        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#functionalUnits, normal Association</tt> </tt>
+<a name="L40"></a><tt class="py-lineno"> 40</tt>  <tt class="py-line">        <tt class="py-number">0x80</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#systemType = sys-type-manager</tt> </tt>
+<a name="L41"></a><tt class="py-lineno"> 41</tt>  <tt class="py-line">        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x08</tt><tt class="py-op">,</tt> <tt class="py-comment">#system-id length = 8 and value (manufacturer- and device- specific) </tt> </tt>
+<a name="L42"></a><tt class="py-lineno"> 42</tt>  <tt class="py-line">        <tt class="py-number">0x88</tt><tt class="py-op">,</tt> <tt class="py-number">0x77</tt><tt class="py-op">,</tt> <tt class="py-number">0x66</tt><tt class="py-op">,</tt> <tt class="py-number">0x55</tt><tt class="py-op">,</tt> <tt class="py-number">0x44</tt><tt class="py-op">,</tt> <tt class="py-number">0x33</tt><tt class="py-op">,</tt> <tt class="py-number">0x22</tt><tt class="py-op">,</tt> <tt class="py-number">0x11</tt><tt class="py-op">,</tt> </tt>
+<a name="L43"></a><tt class="py-lineno"> 43</tt>  <tt class="py-line">        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#Manager's response to config-id is always 0</tt> </tt>
+<a name="L44"></a><tt class="py-lineno"> 44</tt>  <tt class="py-line">        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#Manager's response to data-req-mode-flags is always 0</tt> </tt>
+<a name="L45"></a><tt class="py-lineno"> 45</tt>  <tt class="py-line">        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#data-req-init-agent-count and data-req-init-manager-count are always 0</tt> </tt>
+<a name="L46"></a><tt class="py-lineno"> 46</tt>  <tt class="py-line">        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#optionList.count = 0 | optionList.length = 0</tt> </tt>
+<a name="L47"></a><tt class="py-lineno"> 47</tt>  <tt class="py-line">        <tt class="py-op">)</tt> </tt>
+<a name="L48"></a><tt class="py-lineno"> 48</tt>  <tt class="py-line"> </tt>
+<a name="L49"></a><tt class="py-lineno"> 49</tt>  <tt class="py-line"> </tt>
+<a name="L50"></a><tt class="py-lineno"> 50</tt>  <tt class="py-line"><tt id="link-2" class="py-name" targets="Variable hdp.dummy_ieee10407.assoc_rel_resp=hdp.dummy_ieee10407-module.html#assoc_rel_resp,Variable hdp.dummy_ieee10415.assoc_rel_resp=hdp.dummy_ieee10415-module.html#assoc_rel_resp"><a title="hdp.dummy_ieee10407.assoc_rel_resp
+hdp.dummy_ieee10415.assoc_rel_resp" class="py-name" href="#" onclick="return doclink('link-2', 'assoc_rel_resp', 'link-2');">assoc_rel_resp</a></tt> <tt class="py-op">=</tt> <tt class="py-op">(</tt> </tt>
+<a name="L51"></a><tt class="py-lineno"> 51</tt>  <tt class="py-line">        <tt class="py-number">0xe5</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#APDU CHOICE Type(RlreApdu)</tt> </tt>
+<a name="L52"></a><tt class="py-lineno"> 52</tt>  <tt class="py-line">        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x02</tt><tt class="py-op">,</tt> <tt class="py-comment">#CHOICE.length = 2</tt> </tt>
+<a name="L53"></a><tt class="py-lineno"> 53</tt>  <tt class="py-line">        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#reason = normal</tt> </tt>
+<a name="L54"></a><tt class="py-lineno"> 54</tt>  <tt class="py-line">        <tt class="py-op">)</tt> </tt>
+<a name="L55"></a><tt class="py-lineno"> 55</tt>  <tt class="py-line"> </tt>
+<a name="L56"></a><tt class="py-lineno"> 56</tt>  <tt class="py-line"> </tt>
+<a name="parse_message"></a><div id="parse_message-def"><a name="L57"></a><tt class="py-lineno"> 57</tt> <a class="py-toggle" href="#" id="parse_message-toggle" onclick="return toggle('parse_message');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="hdp.dummy_ieee10415-module.html#parse_message">parse_message</a><tt class="py-op">(</tt><tt class="py-param">msg</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="parse_message-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="parse_message-expanded"><a name="L58"></a><tt class="py-lineno"> 58</tt>  <tt class="py-line">        <tt class="py-keyword">global</tt> <tt id="link-3" class="py-name"><a title="hdp.dummy_ieee10404.assoc_resp_msg
+hdp.dummy_ieee10407.assoc_resp_msg
+hdp.dummy_ieee10415.assoc_resp_msg" class="py-name" href="#" onclick="return doclink('link-3', 'assoc_resp_msg', 'link-1');">assoc_resp_msg</a></tt> </tt>
+<a name="L59"></a><tt class="py-lineno"> 59</tt>  <tt class="py-line">        <tt class="py-keyword">global</tt> <tt id="link-4" class="py-name"><a title="hdp.dummy_ieee10407.assoc_rel_resp
+hdp.dummy_ieee10415.assoc_rel_resp" class="py-name" href="#" onclick="return doclink('link-4', 'assoc_rel_resp', 'link-2');">assoc_rel_resp</a></tt> </tt>
+<a name="L60"></a><tt class="py-lineno"> 60</tt>  <tt class="py-line"> </tt>
+<a name="L61"></a><tt class="py-lineno"> 61</tt>  <tt class="py-line">        <tt class="py-name">resp</tt> <tt class="py-op">=</tt> <tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L62"></a><tt class="py-lineno"> 62</tt>  <tt class="py-line"> </tt>
+<a name="L63"></a><tt class="py-lineno"> 63</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> <tt class="py-op">==</tt> <tt class="py-number">0xe2</tt><tt class="py-op">:</tt> </tt>
+<a name="L64"></a><tt class="py-lineno"> 64</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-string">'IEEE association request\n'</tt> </tt>
+<a name="L65"></a><tt class="py-lineno"> 65</tt>  <tt class="py-line">                <tt class="py-name">resp</tt> <tt class="py-op">=</tt> <tt id="link-5" class="py-name"><a title="hdp.dummy_ieee10404.assoc_resp_msg
+hdp.dummy_ieee10407.assoc_resp_msg
+hdp.dummy_ieee10415.assoc_resp_msg" class="py-name" href="#" onclick="return doclink('link-5', 'assoc_resp_msg', 'link-1');">assoc_resp_msg</a></tt> </tt>
+<a name="L66"></a><tt class="py-lineno"> 66</tt>  <tt class="py-line"> </tt>
+<a name="L67"></a><tt class="py-lineno"> 67</tt>  <tt class="py-line">        <tt class="py-keyword">elif</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> <tt class="py-op">==</tt> <tt class="py-number">0xe7</tt><tt class="py-op">:</tt> </tt>
+<a name="L68"></a><tt class="py-lineno"> 68</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-string">'IEEE agent data\n'</tt> </tt>
+<a name="L69"></a><tt class="py-lineno"> 69</tt>  <tt class="py-line">                <tt class="py-name">resp</tt> <tt class="py-op">=</tt> <tt class="py-op">(</tt> </tt>
+<a name="L70"></a><tt class="py-lineno"> 70</tt>  <tt class="py-line">                        <tt class="py-number">0xe7</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#APDU CHOICE Type(PrstApdu)</tt> </tt>
+<a name="L71"></a><tt class="py-lineno"> 71</tt>  <tt class="py-line">                        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x12</tt><tt class="py-op">,</tt> <tt class="py-comment">#CHOICE.length = 18</tt> </tt>
+<a name="L72"></a><tt class="py-lineno"> 72</tt>  <tt class="py-line">                        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x10</tt><tt class="py-op">,</tt> <tt class="py-comment">#OCTET STRING.length = 16</tt> </tt>
+<a name="L73"></a><tt class="py-lineno"> 73</tt>  <tt class="py-line">                        <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">6</tt><tt class="py-op">]</tt><tt class="py-op">)</tt><tt class="py-op">,</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">7</tt><tt class="py-op">]</tt><tt class="py-op">)</tt><tt class="py-op">,</tt> <tt class="py-comment">#invoke-id (mirrored from invocation) </tt> </tt>
+<a name="L74"></a><tt class="py-lineno"> 74</tt>  <tt class="py-line">                        <tt class="py-number">0x02</tt><tt class="py-op">,</tt> <tt class="py-number">0x01</tt><tt class="py-op">,</tt> <tt class="py-comment">#CHOICE(Remote Operation Response | Confirmed Event Report)</tt> </tt>
+<a name="L75"></a><tt class="py-lineno"> 75</tt>  <tt class="py-line">                        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x0a</tt><tt class="py-op">,</tt> <tt class="py-comment">#CHOICE.length = 10</tt> </tt>
+<a name="L76"></a><tt class="py-lineno"> 76</tt>  <tt class="py-line">                        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#obj-handle = 0 (MDS object)</tt> </tt>
+<a name="L77"></a><tt class="py-lineno"> 77</tt>  <tt class="py-line">                        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#currentTime = 0</tt> </tt>
+<a name="L78"></a><tt class="py-lineno"> 78</tt>  <tt class="py-line">                        <tt class="py-number">0x0d</tt><tt class="py-op">,</tt> <tt class="py-number">0x1d</tt><tt class="py-op">,</tt> <tt class="py-comment">#event-type = MDC_NOTI_SCAN_REPORT_FIXED</tt> </tt>
+<a name="L79"></a><tt class="py-lineno"> 79</tt>  <tt class="py-line">                        <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-number">0x00</tt><tt class="py-op">,</tt> <tt class="py-comment">#event-reply-info.length = 0</tt> </tt>
+<a name="L80"></a><tt class="py-lineno"> 80</tt>  <tt class="py-line">                <tt class="py-op">)</tt> </tt>
+<a name="L81"></a><tt class="py-lineno"> 81</tt>  <tt class="py-line"> </tt>
+<a name="L82"></a><tt class="py-lineno"> 82</tt>  <tt class="py-line">                <tt class="py-name">weight</tt> <tt class="py-op">=</tt> <tt class="py-op">(</tt><tt class="py-number">16</tt> <tt class="py-op">*</tt> <tt class="py-number">16</tt> <tt class="py-op">*</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">42</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> <tt class="py-op">+</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">43</tt><tt class="py-op">]</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> <tt class="py-op">/</tt> <tt class="py-number">10.0</tt> </tt>
+<a name="L83"></a><tt class="py-lineno"> 83</tt>  <tt class="py-line">                <tt class="py-name">bmi</tt> <tt class="py-op">=</tt> <tt class="py-op">(</tt><tt class="py-number">16</tt> <tt class="py-op">*</tt> <tt class="py-number">16</tt> <tt class="py-op">*</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">74</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> <tt class="py-op">+</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">75</tt><tt class="py-op">]</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> <tt class="py-op">/</tt> <tt class="py-number">10.0</tt> </tt>
+<a name="L84"></a><tt class="py-lineno"> 84</tt>  <tt class="py-line">                <tt class="py-name">body_fat</tt> <tt class="py-op">=</tt> <tt class="py-op">(</tt><tt class="py-number">16</tt> <tt class="py-op">*</tt> <tt class="py-number">16</tt> <tt class="py-op">*</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">90</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> <tt class="py-op">+</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">91</tt><tt class="py-op">]</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> <tt class="py-op">/</tt> <tt class="py-number">10.0</tt> </tt>
+<a name="L85"></a><tt class="py-lineno"> 85</tt>  <tt class="py-line">                <tt class="py-name">meta</tt> <tt class="py-op">=</tt> <tt class="py-number">16</tt> <tt class="py-op">*</tt> <tt class="py-number">16</tt> <tt class="py-op">*</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">106</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> <tt class="py-op">+</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">107</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L86"></a><tt class="py-lineno"> 86</tt>  <tt class="py-line">                <tt class="py-name">body_age</tt> <tt class="py-op">=</tt> <tt class="py-number">16</tt> <tt class="py-op">*</tt> <tt class="py-number">16</tt> <tt class="py-op">*</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">134</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> <tt class="py-op">+</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">135</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L87"></a><tt class="py-lineno"> 87</tt>  <tt class="py-line">                <tt class="py-name">age</tt> <tt class="py-op">=</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">59</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L88"></a><tt class="py-lineno"> 88</tt>  <tt class="py-line">                <tt class="py-name">vis_fat</tt> <tt class="py-op">=</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">121</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> <tt class="py-op">/</tt> <tt class="py-number">10.0</tt> </tt>
+<a name="L89"></a><tt class="py-lineno"> 89</tt>  <tt class="py-line">                <tt class="py-name">skeletal_muscle</tt> <tt class="py-op">=</tt> <tt class="py-name">None</tt> </tt>
+<a name="L90"></a><tt class="py-lineno"> 90</tt>  <tt class="py-line"> </tt>
+<a name="L91"></a><tt class="py-lineno"> 91</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-string">'\nDate: %x%x, %x-%x'</tt> <tt class="py-op">%</tt> <tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">60</tt><tt class="py-op">]</tt><tt class="py-op">,</tt> <tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">61</tt><tt class="py-op">]</tt><tt class="py-op">,</tt> <tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">62</tt><tt class="py-op">]</tt><tt class="py-op">,</tt> <tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">63</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L92"></a><tt class="py-lineno"> 92</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-string">'Time: %x:%x:%x%x'</tt> <tt class="py-op">%</tt> <tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">64</tt><tt class="py-op">]</tt><tt class="py-op">,</tt> <tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">65</tt><tt class="py-op">]</tt><tt class="py-op">,</tt> <tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">66</tt><tt class="py-op">]</tt><tt class="py-op">,</tt> <tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">67</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L93"></a><tt class="py-lineno"> 93</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-string">'Body age: %d, real age %d,'</tt> <tt class="py-op">%</tt> <tt class="py-op">(</tt><tt class="py-name">body_age</tt><tt class="py-op">,</tt> <tt class="py-name">age</tt><tt class="py-op">)</tt> </tt>
+<a name="L94"></a><tt class="py-lineno"> 94</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-string">'Weight: %g, BMI: %g, Body Fat: %g,'</tt> <tt class="py-op">%</tt> <tt class="py-op">(</tt><tt class="py-name">weight</tt><tt class="py-op">,</tt> <tt class="py-name">bmi</tt><tt class="py-op">,</tt> <tt class="py-name">body_fat</tt><tt class="py-op">)</tt> </tt>
+<a name="L95"></a><tt class="py-lineno"> 95</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-string">'Resting Metabolism: %d, Visceral Fat: %g\n'</tt> <tt class="py-op">%</tt> <tt class="py-op">(</tt><tt class="py-name">meta</tt><tt class="py-op">,</tt> <tt class="py-name">vis_fat</tt><tt class="py-op">)</tt> </tt>
+<a name="L96"></a><tt class="py-lineno"> 96</tt>  <tt class="py-line"> </tt>
+<a name="L97"></a><tt class="py-lineno"> 97</tt>  <tt class="py-line">        <tt class="py-keyword">elif</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> <tt class="py-op">==</tt> <tt class="py-number">0xe4</tt><tt class="py-op">:</tt> </tt>
+<a name="L98"></a><tt class="py-lineno"> 98</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-string">'Association release request\n'</tt> </tt>
+<a name="L99"></a><tt class="py-lineno"> 99</tt>  <tt class="py-line">                <tt class="py-name">resp</tt> <tt class="py-op">=</tt> <tt id="link-6" class="py-name"><a title="hdp.dummy_ieee10407.assoc_rel_resp
+hdp.dummy_ieee10415.assoc_rel_resp" class="py-name" href="#" onclick="return doclink('link-6', 'assoc_rel_resp', 'link-2');">assoc_rel_resp</a></tt> </tt>
+<a name="L100"></a><tt class="py-lineno">100</tt>  <tt class="py-line"> </tt>
+<a name="L101"></a><tt class="py-lineno">101</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-name">resp</tt> </tt>
+</div><a name="L102"></a><tt class="py-lineno">102</tt>  <tt class="py-line"> </tt>
+<a name="L103"></a><tt class="py-lineno">103</tt>  <tt class="py-line"> </tt>
+<a name="parse_message_str"></a><div id="parse_message_str-def"><a name="L104"></a><tt class="py-lineno">104</tt> <a class="py-toggle" href="#" id="parse_message_str-toggle" onclick="return toggle('parse_message_str');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="hdp.dummy_ieee10415-module.html#parse_message_str">parse_message_str</a><tt class="py-op">(</tt><tt class="py-param">msg</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="parse_message_str-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="parse_message_str-expanded"><a name="L105"></a><tt class="py-lineno">105</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt id="link-7" class="py-name" targets="Function hdp.hdp_utils.b2s()=hdp.hdp_utils-module.html#b2s"><a title="hdp.hdp_utils.b2s" class="py-name" href="#" onclick="return doclink('link-7', 'b2s', 'link-7');">b2s</a></tt><tt class="py-op">(</tt><tt id="link-8" class="py-name" targets="Function hdp.dummy_ieee10404.parse_message()=hdp.dummy_ieee10404-module.html#parse_message,Function hdp.dummy_ieee10407.parse_message()=hdp.dummy_ieee10407-module.html#parse_message,Function hdp.dummy_ieee10415.parse_message()=hdp.dummy_ieee10415-module.html#parse_message"><a title="hdp.dummy_ieee10404.parse_message
+hdp.dummy_ieee10407.parse_message
+hdp.dummy_ieee10415.parse_message" class="py-name" href="#" onclick="return doclink('link-8', 'parse_message', 'link-8');">parse_message</a></tt><tt class="py-op">(</tt><tt id="link-9" class="py-name" targets="Function hdp.hdp_utils.s2b()=hdp.hdp_utils-module.html#s2b"><a title="hdp.hdp_utils.s2b" class="py-name" href="#" onclick="return doclink('link-9', 's2b', 'link-9');">s2b</a></tt><tt class="py-op">(</tt><tt class="py-name">msg</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L106"></a><tt class="py-lineno">106</tt>  <tt class="py-line"> </tt><script type="text/javascript">
+<!--
+expandto(location.href);
+// -->
+</script>
+</pre>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+      <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Tue Nov  9 09:27:10 2010
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

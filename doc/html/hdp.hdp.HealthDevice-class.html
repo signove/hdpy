@@ -1,0 +1,1033 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>hdp.hdp.HealthDevice</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+      <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="hdp-module.html">Package&nbsp;hdp</a> ::
+        <a href="hdp.hdp-module.html">Module&nbsp;hdp</a> ::
+        Class&nbsp;HealthDevice
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+        <tr><td align="right"><span class="options"
+            >[<a href="frames.html" target="_top">frames</a
+            >]&nbsp;|&nbsp;<a href="hdp.hdp.HealthDevice-class.html"
+            target="_top">no&nbsp;frames</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class HealthDevice</h1><p class="nomargin-top"><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice">source&nbsp;code</a></span></p>
+<pre class="base-tree">
+object --+
+         |
+        <strong class="uidshort">HealthDevice</strong>
+</pre>
+
+<hr />
+<p>The HealthDevice represents a single (endpoint, role, data_type) in 
+  the remote device.</p>
+  <p>Each device is bound to a given HealthApplication object, so data_type
+  and role are implicitly defined (being the remote device's role the 
+  opposite of our application's).</p>
+  <p>The MDEP ID is also known by this class, if the remote device 
+  publishes a SDP record. If not, or if this device is created 
+  automatically when we are acceptors, MDEP ID is zero.</p>
+
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthDevice-class.html#__init__" class="summary-sig-name">__init__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">app</span>,
+        <span class="summary-sig-arg">addr_control</span>,
+        <span class="summary-sig-arg">addr_data</span>,
+        <span class="summary-sig-arg">mdepid</span>)</span><br />
+      x.__init__(...) initializes x; see x.__class__.__doc__ for signature</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="bdaddr"></a><span class="summary-sig-name">bdaddr</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.bdaddr">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="cpsm"></a><span class="summary-sig-name">cpsm</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.cpsm">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="dpsm"></a><span class="summary-sig-name">dpsm</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.dpsm">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="pending"></a><span class="summary-sig-name">pending</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.pending">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="mcl_connected"></a><span class="summary-sig-name">mcl_connected</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mcl</span>,
+        <span class="summary-sig-arg">err</span>,
+        <span class="summary-sig-arg">reconn</span>)</span><br />
+      Called back by app when related MCL is connected</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.mcl_connected">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="mcl_disconnected"></a><span class="summary-sig-name">mcl_disconnected</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mcl</span>)</span><br />
+      Called back by app when MCL is disconnected</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.mcl_disconnected">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="mcl_deleted"></a><span class="summary-sig-name">mcl_deleted</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mcl</span>)</span><br />
+      Called back by app when MCL is invalidated</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.mcl_deleted">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="mdl_ready"></a><span class="summary-sig-name">mdl_ready</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mdl</span>,
+        <span class="summary-sig-arg">err</span>)</span><br />
+      Called back by app when MDLReady triggers</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.mdl_ready">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="mdl_connected"></a><span class="summary-sig-name">mdl_connected</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mdl</span>,
+        <span class="summary-sig-arg">channel</span>,
+        <span class="summary-sig-arg">reconn</span>,
+        <span class="summary-sig-arg">err</span>)</span><br />
+      Called back by app when MDLConnected triggers</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.mdl_connected">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="mdlecho_connected"></a><span class="summary-sig-name">mdlecho_connected</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mdl</span>,
+        <span class="summary-sig-arg">ok</span>)</span><br />
+      Called back when an Echo MDL initiated by us has connected</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.mdlecho_connected">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="mdlecho_pong"></a><span class="summary-sig-name">mdlecho_pong</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mdl</span>,
+        <span class="summary-sig-arg">data</span>)</span><br />
+      Called back when an Echo MDL returned data</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.mdlecho_pong">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="stop"></a><span class="summary-sig-name">stop</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      Called back by app when it is being stopped</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.stop">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="kill"></a><span class="summary-sig-name">kill</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.kill">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="queue_event_process"></a><span class="summary-sig-name">queue_event_process</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">event</span>,
+        <span class="summary-sig-arg">err</span>,
+        <span class="summary-sig-arg">details</span>=<span class="summary-sig-default">{}</span>)</span><br />
+      Handles queue in face of events</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.queue_event_process">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="queue_mcl_conn_up"></a><span class="summary-sig-name">queue_mcl_conn_up</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      Called when a connection is successful</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.queue_mcl_conn_up">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="queue_mdl_conn_up"></a><span class="summary-sig-name">queue_mdl_conn_up</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">channel</span>,
+        <span class="summary-sig-arg">reconn</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.queue_mdl_conn_up">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="queue_mdl_echo_conn_up"></a><span class="summary-sig-name">queue_mdl_echo_conn_up</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mdl</span>,
+        <span class="summary-sig-arg">ok</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.queue_mdl_echo_conn_up">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="queue_fail"></a><span class="summary-sig-name">queue_fail</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">err</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.queue_fail">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="queue_flush"></a><span class="summary-sig-name">queue_flush</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.queue_flush">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="queue_dispatch"></a><span class="summary-sig-name">queue_dispatch</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.queue_dispatch">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="enqueue"></a><span class="summary-sig-name">enqueue</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">op</span>,
+        <span class="summary-sig-arg">arg</span>,
+        <span class="summary-sig-arg">reply</span>,
+        <span class="summary-sig-arg">error</span>,
+        <span class="summary-sig-arg">ident</span>=<span class="summary-sig-default">None</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.enqueue">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="_Echo"></a><span class="summary-sig-name">_Echo</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">reply_handler</span>,
+        <span class="summary-sig-arg">error_handler</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice._Echo">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__Echo"></a><span class="summary-sig-name">__Echo</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">dummy</span>,
+        <span class="summary-sig-arg">queueop</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.__Echo">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="_CreateChannel"></a><span class="summary-sig-name">_CreateChannel</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">conf</span>,
+        <span class="summary-sig-arg">reply_handler</span>,
+        <span class="summary-sig-arg">error_handler</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice._CreateChannel">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__CreateChannel"></a><span class="summary-sig-name">__CreateChannel</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">args</span>,
+        <span class="summary-sig-arg">queueop</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.__CreateChannel">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="_DeleteChannel"></a><span class="summary-sig-name">_DeleteChannel</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">channel</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice._DeleteChannel">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__DeleteChannel"></a><span class="summary-sig-name">__DeleteChannel</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">channel</span>,
+        <span class="summary-sig-arg">queueop</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.__DeleteChannel">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="_ReconnectChannel"></a><span class="summary-sig-name">_ReconnectChannel</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">channel</span>,
+        <span class="summary-sig-arg">reply_handler</span>,
+        <span class="summary-sig-arg">error_handler</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice._ReconnectChannel">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__ReconnectChannel"></a><span class="summary-sig-name">__ReconnectChannel</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">channel</span>,
+        <span class="summary-sig-arg">queueop</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.__ReconnectChannel">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="CloseMCL"></a><span class="summary-sig-name">CloseMCL</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.CloseMCL">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthDevice-class.html#Echo" class="summary-sig-name">Echo</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">reply_handler</span>,
+        <span class="summary-sig-arg">error_handler</span>)</span><br />
+      Sends an echo petition to the remote service.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.Echo">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthDevice-class.html#CreateChannel" class="summary-sig-name">CreateChannel</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">app</span>,
+        <span class="summary-sig-arg">conf</span>,
+        <span class="summary-sig-arg">reply_handler</span>,
+        <span class="summary-sig-arg">error_handler</span>)</span><br />
+      Creates a new data channel with the indicated config to the remote 
+      Service.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.CreateChannel">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthDevice-class.html#DestroyChannel" class="summary-sig-name">DestroyChannel</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">channel</span>)</span><br />
+      Destroys (deletes) a given data channel.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.DestroyChannel">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__delattr__</code>,
+      <code>__format__</code>,
+      <code>__getattribute__</code>,
+      <code>__hash__</code>,
+      <code>__new__</code>,
+      <code>__reduce__</code>,
+      <code>__reduce_ex__</code>,
+      <code>__repr__</code>,
+      <code>__setattr__</code>,
+      <code>__sizeof__</code>,
+      <code>__str__</code>,
+      <code>__subclasshook__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS VARIABLES ==================== -->
+<a name="section-ClassVariables"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Class Variables</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-ClassVariables"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="IDLE"></a><span class="summary-name">IDLE</span> = <code title="0">0</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="DISPATCH"></a><span class="summary-name">DISPATCH</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="WAITING_MCL"></a><span class="summary-name">WAITING_MCL</span> = <code title="3">3</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="MCL_UP"></a><span class="summary-name">MCL_UP</span> = <code title="4">4</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="WAITING_MDL"></a><span class="summary-name">WAITING_MDL</span> = <code title="5">5</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="MDL_UP"></a><span class="summary-name">MDL_UP</span> = <code title="6">6</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="IN_FLIGHT"></a><span class="summary-name">IN_FLIGHT</span> = <code title="7">7</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="CONNECTION"></a><span class="summary-name">CONNECTION</span> = <code title="1">1</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="DISCONNECTION"></a><span class="summary-name">DISCONNECTION</span> = <code title="2">2</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="DELETION"></a><span class="summary-name">DELETION</span> = <code title="3">3</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="MDL_READY"></a><span class="summary-name">MDL_READY</span> = <code title="4">4</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="MDL_CONNECTION"></a><span class="summary-name">MDL_CONNECTION</span> = <code title="5">5</code>
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="MDL_ECHO_CONNECTION"></a><span class="summary-name">MDL_ECHO_CONNECTION</span> = <code title="6">6</code>
+    </td>
+  </tr>
+</table>
+<!-- ==================== PROPERTIES ==================== -->
+<a name="section-Properties"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Properties</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Properties"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>object</code></b>:
+      <code>__class__</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== METHOD DETAILS ==================== -->
+<a name="section-MethodDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Method Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-MethodDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="__init__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__init__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">app</span>,
+        <span class="sig-arg">addr_control</span>,
+        <span class="sig-arg">addr_data</span>,
+        <span class="sig-arg">mdepid</span>)</span>
+    <br /><em class="fname">(Constructor)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.__init__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>x.__init__(...) initializes x; see x.__class__.__doc__ for 
+  signature</p>
+  <dl class="fields">
+    <dt>Overrides:
+        object.__init__
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="Echo"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">Echo</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">reply_handler</span>,
+        <span class="sig-arg">error_handler</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.Echo">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Sends an echo petition to the remote service.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>reply_handler</code></strong> (function.) - A function to handle the reply.</li>
+        <li><strong class="pname"><code>error_handler</code></strong> (function.) - A function to handle errors.</li>
+    </ul></dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="CreateChannel"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">CreateChannel</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">app</span>,
+        <span class="sig-arg">conf</span>,
+        <span class="sig-arg">reply_handler</span>,
+        <span class="sig-arg">error_handler</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.CreateChannel">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Creates a new data channel with the indicated config to the remote 
+  Service. The configuration 'conf' should indicate the channel quality of 
+  service using one of this values &quot;Reliable&quot;, 
+  &quot;Streaming&quot; or &quot;Any&quot;.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>app</code></strong> (Object.) - Application.</li>
+        <li><strong class="pname"><code>conf</code></strong> (Integer.) - Configuration to create a channel.</li>
+        <li><strong class="pname"><code>reply_handler</code></strong> (function.) - A function to handle the reply.</li>
+        <li><strong class="pname"><code>error_handler</code></strong> (function.) - A function to handle errors.</li>
+    </ul></dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="DestroyChannel"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">DestroyChannel</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">channel</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthDevice.DestroyChannel">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Destroys (deletes) a given data channel.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>channel</code></strong> (Object.) - Data channel to destroy.</li>
+    </ul></dd>
+    <dt>Returns:</dt>
+        <dd>True if the channel is destroyed.</dd>
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+      <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Tue Nov  9 09:27:09 2010
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

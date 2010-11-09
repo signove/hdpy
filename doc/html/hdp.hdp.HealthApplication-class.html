@@ -1,0 +1,1844 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>hdp.hdp.HealthApplication</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+      <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="hdp-module.html">Package&nbsp;hdp</a> ::
+        <a href="hdp.hdp-module.html">Module&nbsp;hdp</a> ::
+        Class&nbsp;HealthApplication
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+        <tr><td align="right"><span class="options"
+            >[<a href="frames.html" target="_top">frames</a
+            >]&nbsp;|&nbsp;<a href="hdp.hdp.HealthApplication-class.html"
+            target="_top">no&nbsp;frames</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class HealthApplication</h1><p class="nomargin-top"><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication">source&nbsp;code</a></span></p>
+<pre class="base-tree">
+<a href="mcap.mcap_instance.MCAPInstance-class.html">mcap.mcap_instance.MCAPInstance</a> --+
+                                  |
+                                 <strong class="uidshort">HealthApplication</strong>
+</pre>
+
+<hr />
+<p>This is the application class which manages devices and channels. It 
+  inherits from MCAPInstance.</p>
+
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#__init__" class="summary-sig-name">__init__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">manager</span>,
+        <span class="summary-sig-arg">config</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="device_created"></a><span class="summary-sig-name">device_created</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">addr</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.device_created">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="device_created2"></a><span class="summary-sig-name">device_created2</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">addr</span>,
+        <span class="summary-sig-arg">records</span>)</span><br />
+      Gets the SDP records for the discovered device and transverses them 
+      to extract individual devices</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.device_created2">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="device_created3"></a><span class="summary-sig-name">device_created3</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">addr</span>,
+        <span class="summary-sig-arg">hdprec</span>,
+        <span class="summary-sig-arg">feature</span>)</span><br />
+      Gets a particular feature of an HDP record and makes a HealthDevice 
+      out of it</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.device_created3">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#device_removed" class="summary-sig-name">device_removed</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">addr</span>)</span><br />
+      Called when a device is removed.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.device_removed">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#device_found" class="summary-sig-name">device_found</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">addr</span>)</span><br />
+      Called when a device is found.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.device_found">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#device_disappeared" class="summary-sig-name">device_disappeared</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">addr</span>)</span><br />
+      Called when a device disappears.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.device_disappeared">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#bluetooth_dead" class="summary-sig-name">bluetooth_dead</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Called when the bluetooth is dead.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.bluetooth_dead">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#bluetooth_alive" class="summary-sig-name">bluetooth_alive</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Called when the bluetooth is alive.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.bluetooth_alive">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#adapter_added" class="summary-sig-name">adapter_added</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">name</span>)</span><br />
+      Called when an adapter is added.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.adapter_added">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#adapter_removed" class="summary-sig-name">adapter_removed</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">name</span>)</span><br />
+      Called when an adapter is removed.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.adapter_removed">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#process_config" class="summary-sig-name">process_config</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">config</span>)</span><br />
+      Processes configuration dictionary.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.process_config">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="publish"></a><span class="summary-sig-name">publish</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      Publish SDP.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.publish">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="unpublish"></a><span class="summary-sig-name">unpublish</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      Unpublish SDP</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.unpublish">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="suspend"></a><span class="summary-sig-name">suspend</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      Reversible 'stopping'</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.suspend">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="resume"></a><span class="summary-sig-name">resume</span>(<span class="summary-sig-arg">self</span>)</span><br />
+      Resume operations</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.resume">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#stop" class="summary-sig-name">stop</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Irreversible stop</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.stop">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#channel_by_mdl" class="summary-sig-name">channel_by_mdl</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mdl</span>)</span><br />
+      Returns the channel referenced to a mdl.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.channel_by_mdl">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="got_channel_by_mdl"></a><span class="summary-sig-name">got_channel_by_mdl</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mdl</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.got_channel_by_mdl">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#create_channel" class="summary-sig-name">create_channel</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mdl</span>,
+        <span class="summary-sig-arg">acceptor</span>)</span><br />
+      Creates a HealthChannel object.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.create_channel">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#add_channel" class="summary-sig-name">add_channel</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">channel</span>)</span><br />
+      Adds a channel to the channel list.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.add_channel">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#remove_channel" class="summary-sig-name">remove_channel</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">channel</span>)</span><br />
+      Removes a channel from the channel list.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.remove_channel">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#device_by_mcl" class="summary-sig-name">device_by_mcl</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mcl</span>)</span><br />
+      Returns a HealthDevice based on a mcl referenced to it.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.device_by_mcl">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#create_device_by_mcl" class="summary-sig-name">create_device_by_mcl</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mcl</span>)</span><br />
+      Creates and returns a HealthDevice based on a mcl object.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.create_device_by_mcl">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#create_device" class="summary-sig-name">create_device</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">bdaddr</span>,
+        <span class="summary-sig-arg">cpsm</span>,
+        <span class="summary-sig-arg">dpsm</span>,
+        <span class="summary-sig-arg">mdepid</span>)</span><br />
+      Creates a device based on its address, cpsm, dpsm and mdepid.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.create_device">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#match_device" class="summary-sig-name">match_device</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">bdaddr</span>,
+        <span class="summary-sig-arg">cpsm</span>,
+        <span class="summary-sig-arg">dpsm</span>,
+        <span class="summary-sig-arg">mdepid</span>)</span><br />
+      Returns a HealthDevice based on its address, cpsm, dpsm and mdepid.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.match_device">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#remove_old_devices" class="summary-sig-name">remove_old_devices</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">bdaddr</span>,
+        <span class="summary-sig-arg">new_devices</span>)</span><br />
+      Removes old devices based on its address and based on a list of new 
+      devices.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.remove_old_devices">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#add_device" class="summary-sig-name">add_device</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">device</span>)</span><br />
+      Add a device to a list.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.add_device">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#remove_device" class="summary-sig-name">remove_device</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">device</span>)</span><br />
+      Remove a device from the device list.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.remove_device">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#MCLConnected" class="summary-sig-name">MCLConnected</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mcl</span>,
+        <span class="summary-sig-arg">err</span>)</span><br />
+      Called when MCL connects.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MCLConnected">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#MCLDisconnected" class="summary-sig-name">MCLDisconnected</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mcl</span>)</span><br />
+      Called when MCL disconnects.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MCLDisconnected">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#MCLReconnected" class="summary-sig-name">MCLReconnected</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mcl</span>,
+        <span class="summary-sig-arg">err</span>)</span><br />
+      Called when MCL reconnects.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MCLReconnected">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#MCLUncached" class="summary-sig-name">MCLUncached</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mcl</span>)</span><br />
+      Called when MCL uncaches.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MCLUncached">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#MDLInquire" class="summary-sig-name">MDLInquire</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mdepid</span>,
+        <span class="summary-sig-arg">config</span>)</span><br />
+      Verifies if MDL is ok, if it is reliable.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLInquire">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#MDLReady" class="summary-sig-name">MDLReady</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mcl</span>,
+        <span class="summary-sig-arg">mdl</span>,
+        <span class="summary-sig-arg">err</span>)</span><br />
+      MDL is Ready, so connect MDL.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLReady">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#MDLRequested" class="summary-sig-name">MDLRequested</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mcl</span>,
+        <span class="summary-sig-arg">mdl</span>,
+        <span class="summary-sig-arg">mdep_id</span>,
+        <span class="summary-sig-arg">conf</span>)</span><br />
+      Followed by MDLAborted or MDLConnected.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLRequested">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#MDLReconnected" class="summary-sig-name">MDLReconnected</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mdl</span>)</span><br />
+      Acceptor-only.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLReconnected">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#MDLAborted" class="summary-sig-name">MDLAborted</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mcl</span>,
+        <span class="summary-sig-arg">mdl</span>)</span><br />
+      Informs that MDL connection has been aborted, and we should not wait 
+      for MDLConnected().</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLAborted">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#MDLConnected" class="summary-sig-name">MDLConnected</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mdl</span>,
+        <span class="summary-sig-arg">err</span>)</span><br />
+      Called when MDL is connected.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLConnected">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="MDLConnectedEcho"></a><span class="summary-sig-name">MDLConnectedEcho</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mdl</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLConnectedEcho">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="echo_watch"></a><span class="summary-sig-name">echo_watch</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">sk</span>,
+        <span class="summary-sig-arg">evt</span>,
+        <span class="summary-sig-arg">mdl</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.echo_watch">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#MDLDeleted" class="summary-sig-name">MDLDeleted</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mdl</span>)</span><br />
+      The MDL has been removed from remote side, either by our initiative 
+      or remote's.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLDeleted">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="hdp.hdp.HealthApplication-class.html#MDLClosed" class="summary-sig-name">MDLClosed</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">mdl</span>)</span><br />
+      Notifies that the given MDL has been closed.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLClosed">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code><a href="mcap.mcap_instance.MCAPInstance-class.html">mcap.mcap_instance.MCAPInstance</a></code></b>:
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#AbortMDL">AbortMDL</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#CloseMCL">CloseMCL</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#CloseMDL">CloseMDL</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#ConnectMDL">ConnectMDL</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#CreateMCL">CreateMCL</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#CreateMDL">CreateMDL</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#CreateMDLID">CreateMDLID</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#DeleteAll">DeleteAll</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#DeleteMCL">DeleteMCL</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#DeleteMDL">DeleteMDL</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#ReconnectMDL">ReconnectMDL</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#ReconnectionDisable">ReconnectionDisable</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#ReconnectionEnable">ReconnectionEnable</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#Recv">Recv</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#RecvDump">RecvDump</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#Send">Send</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#SendDump">SendDump</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#SendRawRequest">SendRawRequest</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#SyncBtClock">SyncBtClock</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#SyncCapabilities">SyncCapabilities</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#SyncCapabilitiesResponse">SyncCapabilitiesResponse</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#SyncDisable">SyncDisable</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#SyncEnable">SyncEnable</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#SyncInfoIndication">SyncInfoIndication</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#SyncSet">SyncSet</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#SyncSetResponse">SyncSetResponse</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#SyncTimestamp">SyncTimestamp</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#TakeFd">TakeFd</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#activity_mcl">activity_mcl</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#add_mcl">add_mcl</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#closed_mcl">closed_mcl</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#csp_capabilities">csp_capabilities</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#csp_indication">csp_indication</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#csp_set">csp_set</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#error_cc">error_cc</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#error_dc">error_dc</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#mclconnected_mcl">mclconnected_mcl</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#mdl_activity">mdl_activity</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#mdl_watch">mdl_watch</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#mdlaborted_mcl">mdlaborted_mcl</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#mdlclosed_mcl">mdlclosed_mcl</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#mdlconnected_mcl">mdlconnected_mcl</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#mdldeleted_mcl">mdldeleted_mcl</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#mdlgranted_mcl">mdlgranted_mcl</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#mdlinquire_mcl">mdlinquire_mcl</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#mdlreconn_mcl">mdlreconn_mcl</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#mdlrequested_mcl">mdlrequested_mcl</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#new_cc">new_cc</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#new_dc">new_dc</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#peer_connected">peer_connected</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#peer_mcl">peer_mcl</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#remove_mcl">remove_mcl</a></code>,
+      <code><a href="mcap.mcap_instance.MCAPInstance-class.html#start">start</a></code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== METHOD DETAILS ==================== -->
+<a name="section-MethodDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Method Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-MethodDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="__init__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__init__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">manager</span>,
+        <span class="sig-arg">config</span>)</span>
+    <br /><em class="fname">(Constructor)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.__init__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="mcap.mcap_instance.MCAPInstance-class.html#__init__">mcap.mcap_instance.MCAPInstance.__init__</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="device_removed"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">device_removed</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">addr</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.device_removed">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Called when a device is removed.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>addr</code></strong> (String.) - Address of device removed.</li>
+    </ul></dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="device_found"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">device_found</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">addr</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.device_found">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Called when a device is found. Can be extended by subclasses.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>addr</code></strong> (String.) - Address of device found.</li>
+    </ul></dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="device_disappeared"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">device_disappeared</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">addr</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.device_disappeared">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Called when a device disappears. Can be extended by subclasses.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>addr</code></strong> (String.) - Address of device disappeared.</li>
+    </ul></dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="bluetooth_dead"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">bluetooth_dead</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.bluetooth_dead">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Called when the bluetooth is dead. Can be extended by subclasses</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="bluetooth_alive"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">bluetooth_alive</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.bluetooth_alive">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Called when the bluetooth is alive. Can be extended by subclasses</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="adapter_added"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">adapter_added</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">name</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.adapter_added">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Called when an adapter is added. Can be extended by subclasses</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>name</code></strong> (string.) - Name of adapter added.</li>
+    </ul></dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="adapter_removed"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">adapter_removed</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">name</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.adapter_removed">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Called when an adapter is removed. Can be extended by subclasses</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>name</code></strong> (string.) - Name of adapter removed.</li>
+    </ul></dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="process_config"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">process_config</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">config</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.process_config">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Processes configuration dictionary.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>config</code></strong> (Dictionary.) - Configuration dictionary.</li>
+    </ul></dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="stop"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">stop</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.stop">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Irreversible stop</p>
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="mcap.mcap_instance.MCAPInstance-class.html#stop">mcap.mcap_instance.MCAPInstance.stop</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="channel_by_mdl"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">channel_by_mdl</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mdl</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.channel_by_mdl">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns the channel referenced to a mdl.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>mdl</code></strong> (MDL object.) - MDL object.</li>
+    </ul></dd>
+    <dt>Returns:</dt>
+        <dd>A HealthChannel object.</dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="create_channel"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">create_channel</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mdl</span>,
+        <span class="sig-arg">acceptor</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.create_channel">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Creates a HealthChannel object.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>mdl</code></strong> (MDL object.) - MDL object.</li>
+        <li><strong class="pname"><code>acceptor</code></strong> (Acceptor object.) - Acceptor object.</li>
+    </ul></dd>
+    <dt>Returns:</dt>
+        <dd>A HealthChannel object.</dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="add_channel"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">add_channel</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">channel</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.add_channel">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Adds a channel to the channel list.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>channel</code></strong> (HealthChannel.) - The channel to be added.</li>
+    </ul></dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="remove_channel"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">remove_channel</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">channel</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.remove_channel">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Removes a channel from the channel list.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>channel</code></strong> (HealthChannel.) - The channel to be removed.</li>
+    </ul></dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="device_by_mcl"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">device_by_mcl</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mcl</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.device_by_mcl">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns a HealthDevice based on a mcl referenced to it.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>mcl</code></strong> (MCL object.) - MCL object.</li>
+    </ul></dd>
+    <dt>Returns:</dt>
+        <dd>A HealthDevice object.</dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="create_device_by_mcl"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">create_device_by_mcl</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mcl</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.create_device_by_mcl">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Creates and returns a HealthDevice based on a mcl object.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>mcl</code></strong> (MCL object.) - MCL object.</li>
+    </ul></dd>
+    <dt>Returns:</dt>
+        <dd>A HealthDevice object.</dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="create_device"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">create_device</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">bdaddr</span>,
+        <span class="sig-arg">cpsm</span>,
+        <span class="sig-arg">dpsm</span>,
+        <span class="sig-arg">mdepid</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.create_device">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Creates a device based on its address, cpsm, dpsm and mdepid.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>bdaddr</code></strong> (String.) - Device address.</li>
+        <li><strong class="pname"><code>cpsm</code></strong> (Integer.) - cpsm.</li>
+        <li><strong class="pname"><code>dpsm</code></strong> (Integer.) - dpsm.</li>
+        <li><strong class="pname"><code>mdepid</code></strong> (Integer.) - mdepid.</li>
+    </ul></dd>
+    <dt>Returns:</dt>
+        <dd>A HealthDevice object.</dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="match_device"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">match_device</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">bdaddr</span>,
+        <span class="sig-arg">cpsm</span>,
+        <span class="sig-arg">dpsm</span>,
+        <span class="sig-arg">mdepid</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.match_device">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns a HealthDevice based on its address, cpsm, dpsm and 
+  mdepid.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>bdaddr</code></strong> (String.) - Device address.</li>
+        <li><strong class="pname"><code>cpsm</code></strong> (Integer.) - cpsm.</li>
+        <li><strong class="pname"><code>dpsm</code></strong> (Integer.) - dpsm.</li>
+        <li><strong class="pname"><code>mdepid</code></strong> (Integer.) - mdepid.</li>
+    </ul></dd>
+    <dt>Returns:</dt>
+        <dd>A HealthDevice object.</dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="remove_old_devices"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">remove_old_devices</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">bdaddr</span>,
+        <span class="sig-arg">new_devices</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.remove_old_devices">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Removes old devices based on its address and based on a list of new 
+  devices.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>bdaddr</code></strong> (String.) - Device address.</li>
+        <li><strong class="pname"><code>new_devices</code></strong> (List.) - A list of new devices.</li>
+    </ul></dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="add_device"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">add_device</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">device</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.add_device">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Add a device to a list.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>device</code></strong> (HealthDevice object.) - The device to be added to the device list.</li>
+    </ul></dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="remove_device"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">remove_device</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">device</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.remove_device">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Remove a device from the device list.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>device</code></strong> (HealthDevice object.) - The device to be added to a list.</li>
+    </ul></dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="MCLConnected"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">MCLConnected</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mcl</span>,
+        <span class="sig-arg">err</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MCLConnected">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Called when MCL connects.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>mcl</code></strong> (MCL object.) - MCL object connected.</li>
+        <li><strong class="pname"><code>err</code></strong> (String.) - Error string.</li>
+    </ul></dd>
+    <dt>Overrides:
+        <a href="mcap.mcap_instance.MCAPInstance-class.html#MCLConnected">mcap.mcap_instance.MCAPInstance.MCLConnected</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="MCLDisconnected"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">MCLDisconnected</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mcl</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MCLDisconnected">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Called when MCL disconnects.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>mcl</code></strong> (MCL object.) - MCL object disconnected.</li>
+    </ul></dd>
+    <dt>Overrides:
+        <a href="mcap.mcap_instance.MCAPInstance-class.html#MCLDisconnected">mcap.mcap_instance.MCAPInstance.MCLDisconnected</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="MCLReconnected"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">MCLReconnected</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mcl</span>,
+        <span class="sig-arg">err</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MCLReconnected">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Called when MCL reconnects.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>mcl</code></strong> (MCL object.) - MCL object reconnected.</li>
+        <li><strong class="pname"><code>err</code></strong> (String.) - Error string.</li>
+    </ul></dd>
+    <dt>Overrides:
+        <a href="mcap.mcap_instance.MCAPInstance-class.html#MCLReconnected">mcap.mcap_instance.MCAPInstance.MCLReconnected</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="MCLUncached"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">MCLUncached</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mcl</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MCLUncached">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Called when MCL uncaches.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>mcl</code></strong> (MCL object.) - MCL object uncached.</li>
+    </ul></dd>
+    <dt>Overrides:
+        <a href="mcap.mcap_instance.MCAPInstance-class.html#MCLUncached">mcap.mcap_instance.MCAPInstance.MCLUncached</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="MDLInquire"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">MDLInquire</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mdepid</span>,
+        <span class="sig-arg">config</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLInquire">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Verifies if MDL is ok, if it is reliable. Returns a tuple containing 
+  ok and reliable booleans and configuration.</p>
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="mcap.mcap_instance.MCAPInstance-class.html#MDLInquire">mcap.mcap_instance.MCAPInstance.MDLInquire</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="MDLReady"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">MDLReady</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mcl</span>,
+        <span class="sig-arg">mdl</span>,
+        <span class="sig-arg">err</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLReady">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>MDL is Ready, so connect MDL.</p>
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="mcap.mcap_instance.MCAPInstance-class.html#MDLReady">mcap.mcap_instance.MCAPInstance.MDLReady</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="MDLRequested"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">MDLRequested</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mcl</span>,
+        <span class="sig-arg">mdl</span>,
+        <span class="sig-arg">mdep_id</span>,
+        <span class="sig-arg">conf</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLRequested">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Followed by MDLAborted or MDLConnected. Remote side initiated MDL 
+  creation with the given characteristics. his event only handles MDLs that
+  remote side has initiated.</p>
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="mcap.mcap_instance.MCAPInstance-class.html#MDLRequested">mcap.mcap_instance.MCAPInstance.MDLRequested</a>
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="MDLReconnected"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">MDLReconnected</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mdl</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLReconnected">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Acceptor-only. Reconnection request was granted. It is not needed to 
+  do nothing, only wait for MDLConnected(), if we intend to accept the 
+  MDL.</p>
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="mcap.mcap_instance.MCAPInstance-class.html#MDLReconnected">mcap.mcap_instance.MCAPInstance.MDLReconnected</a>
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="MDLAborted"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">MDLAborted</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mcl</span>,
+        <span class="sig-arg">mdl</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLAborted">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Informs that MDL connection has been aborted, and we should not wait 
+  for MDLConnected().</p>
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="mcap.mcap_instance.MCAPInstance-class.html#MDLAborted">mcap.mcap_instance.MCAPInstance.MDLAborted</a>
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="MDLConnected"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">MDLConnected</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mdl</span>,
+        <span class="sig-arg">err</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLConnected">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Called when MDL is connected.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>mdl</code></strong> (MDL object.) - MDL object connected.</li>
+        <li><strong class="pname"><code>err</code></strong> (String.) - Error string.</li>
+    </ul></dd>
+    <dt>Overrides:
+        <a href="mcap.mcap_instance.MCAPInstance-class.html#MDLConnected">mcap.mcap_instance.MCAPInstance.MDLConnected</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="MDLDeleted"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">MDLDeleted</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mdl</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLDeleted">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>The MDL has been removed from remote side, either by our initiative or
+  remote's.</p>
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="mcap.mcap_instance.MCAPInstance-class.html#MDLDeleted">mcap.mcap_instance.MCAPInstance.MDLDeleted</a>
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="MDLClosed"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">MDLClosed</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">mdl</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="hdp.hdp-pysrc.html#HealthApplication.MDLClosed">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Notifies that the given MDL has been closed.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>mdl</code></strong> - MDL object closed.</li>
+    </ul></dd>
+    <dt>Overrides:
+        <a href="mcap.mcap_instance.MCAPInstance-class.html#MDLClosed">mcap.mcap_instance.MCAPInstance.MDLClosed</a>
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+      <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Tue Nov  9 09:27:09 2010
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>
