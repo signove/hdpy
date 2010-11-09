@@ -32,10 +32,18 @@ import string
 
 
 class HDPRecordException(Exception):
+	"""HDPRecordException exception
+	"""
 	pass
 
 
 def myuint(value):
+	"""Converts a non-integer value to a unsigned integer value. Throws the
+	HDPRecordException if value is negative.
+	@param value: The value to be converted to uint.
+	@type value: String
+	@return: The converted value.
+	"""
 	if type(value) is not int:
 		try:
 			value = string.atoi(value, 0)
@@ -48,6 +56,17 @@ def myuint(value):
 
 
 def add_attr(doc, parent, attr, data):
+	"""Adds an attribute 'attr' and data 'data[1]' to a parent 'parent' of a XML
+	document 'doc'.
+	@param doc: The xml document.
+	@type doc: Xml document.
+	@param parent: The parent that will receive the edited doc child.
+	@type parent: Xml document.
+	@param attr: The attribute to be edited on doc.
+	@type attr: String.
+	@param data: The data to be set as attr value.
+	@type data: List.
+	"""
 	if attr is not None:
 		child = doc.createElement("attribute")
 		child.setAttribute("id", "0x%04x" % myuint(attr))
@@ -77,6 +96,13 @@ def add_attr(doc, parent, attr, data):
 
 
 def gen_xml(service):
+	"""Generate the xml in the format that BlueZ understands. The 'service'
+	parameter is a dictionary representing a parsed xml. The data obtained in
+	this dictionary is used to generate the xml.
+	@param service: Dictionary representing a parsed xml.
+	@type service: Dictionary.
+	@return: The Xml document.
+	"""
 	if not service['features']:
 		raise HDPRecordException("No HDP features")
 
@@ -219,6 +245,13 @@ def gen_xml(service):
 
 
 def parse_uint(node):
+	"""Parses a value of a 'node'. Returns a tuple containing a uint, which is 
+	the value and a string representing a possible error. If no errors the
+	string is empty.
+	@param node: Node of a xml document.
+	@type node: Xml document.
+	@return: A tuple with the parsed value and the error string.
+	"""
 	value = 0
 	error = ""
 	xvalue = node.attributes.get("value")
@@ -238,6 +271,13 @@ def parse_uint(node):
 
 
 def parse_text(node):
+	"""Parses a value of a 'node'. Returns a tuple containing a string, which is
+	the value and a string representing a possible error. If no errors the error
+	string is empty.
+	@param node: Node of a xml document.
+	@type node: Xml document.
+	@return: A tuple with the parsed value and the error string.
+	"""
 	value = ""
 	error = ""
 	xvalue = node.attributes.get("value")
@@ -251,10 +291,22 @@ def parse_text(node):
 
 
 def parse_uuid(node):
+	"""Returns a string representing the uuid of the 'node' passed as parameter.
+	@param node: Node of a xml document.
+	@type node: Xml document.
+	@return: A tuple with the parsed value and the error string.
+	"""
 	return parse_text(node)
 
 
 def parse_name(nodelist, service):
+	"""Parses the name on the first element of 'nodelist' parameter and set it
+	as 'service['name']' value.
+	@param nodelist: List containing nodes of xml documents.
+	@type nodelist: List.
+	@param service: Dictionary representing a parsed xml.
+	@type service: Dictionary.
+	"""
 	if len(nodelist) != 1 or nodelist[0].tagName != 'text':
 		service['error'] = "Bad name attr"
 		return
@@ -268,6 +320,13 @@ def parse_name(nodelist, service):
 
 
 def parse_description(nodelist, service):
+	"""Parses the description on the first element of 'nodelist' parameter and
+	set it as 'service['description']' value.
+	@param nodelist: List containing nodes of xml documents.
+	@type nodelist: List.
+	@param service: Dictionary representing a parsed xml.
+	@type service: Dictionary.
+	"""
 	if len(nodelist) != 1 or nodelist[0].tagName != 'text':
 		service['error'] = "Bad description attr"
 		return
@@ -281,6 +340,13 @@ def parse_description(nodelist, service):
 
 
 def parse_provider(nodelist, service):
+	"""Parses the provider on the first element of 'nodelist' parameter and
+	set it as 'service['provider']' value.
+	@param nodelist: List containing nodes of xml documents.
+	@type nodelist: list.
+	@param service: Dictionary representing a parsed xml.
+	@type service: Dictionary.
+	"""
 	if len(nodelist) != 1 or nodelist[0].tagName != 'text':
 		service['error'] = "Bad provider attr"
 		return
@@ -294,6 +360,13 @@ def parse_provider(nodelist, service):
 
 
 def parse_handle(nodelist, service):
+	"""Parses the handle on the first element of 'nodelist' parameter and
+	set it as 'service['handle']' value.
+	@param nodelist: a list containing nodes of xml documents.
+	@type nodelist: list.
+	@param service: dictionary representing a parsed xml.
+	@type service: dictionary.
+	"""
 	if len(nodelist) != 1 or nodelist[0].tagName != 'uint32':
 		service['error'] = "Bad handle"
 		return
@@ -307,6 +380,13 @@ def parse_handle(nodelist, service):
 
 
 def parse_data_spec(nodelist, service):
+	"""Parses the data spec on the first element of 'nodelist' parameter and
+	set it as 'service['data_spec']' value.
+	@param nodelist: List containing nodes of xml documents.
+	@type nodelist: List.
+	@param service: Dictionary representing a parsed xml.
+	@type service: Dictionary.
+	"""
 	if len(nodelist) != 1 or nodelist[0].tagName != 'uint8':
 		service['error'] = "Bad data spec"
 		return
@@ -323,6 +403,14 @@ def parse_data_spec(nodelist, service):
 
 
 def parse_mcap_procedures(nodelist, service):
+	"""Parses the mcap procedures on the first element of 'nodelist' parameter
+	and set a tuple of strings representing the procedures as
+	'service['description']' value.
+	@param nodelist: List containing nodes of xml documents.
+	@type nodelist: List.
+	@param service: Dictionary representing a parsed xml.
+	@type service: Dictionary.
+	"""
 	if len(nodelist) != 1 or nodelist[0].tagName != 'uint8':
 		service['error'] = "Bad MCAP supported procs"
 		return
@@ -347,6 +435,13 @@ def parse_mcap_procedures(nodelist, service):
 
 
 def parse_pdl(nodelist, service):
+	"""Verifies if version of HDP is 0x0100 and set it to 'service['_version']'
+	value.
+	@param nodelist: List containing nodes of xml documents.
+	@type nodelist: List.
+	@param service: Dictionary representing a parsed xml.
+	@type service: Dictionary.
+	"""
 	if len(nodelist) != 1 or nodelist[0].tagName != 'sequence':
 		service['error'] = "Bad profile descriptor list (1)"
 		return
@@ -385,6 +480,15 @@ def parse_pdl(nodelist, service):
 
 
 def parse_roles(nodelist, service):
+	"""Verify if the roles of 'nodelist' has uuids 0x1401 or 0x1402, which
+	identifies a source or a sink respectively and set it to 'service['_roles']'
+	as a dictionary with 'source' or 'sink' as keys and booleans (true or false)
+	as values.
+	@param nodelist: List containing nodes of xml documents.
+	@type nodelist: List.
+	@param service: Dictionary representing a parsed xml.
+	@type service: Dictionary.
+	"""
 	if len(nodelist) != 1 or nodelist[0].tagName != 'sequence':
 		service['error'] = "Bad role attribute"
 		return
@@ -424,6 +528,14 @@ def parse_roles(nodelist, service):
 
 
 def parse_additional_protos(nodelist, service):
+	"""Verifies expected LCAP in add protocol attr and expected MCAP data
+	channel protocol attr and set 'service['mcap_data_psm']' with data psm
+	value.
+	@param nodelist: List containing nodes of xml documents.
+	@type nodelist: List.
+	@param service: Dictionary representing a parsed xml.
+	@type service: Dictionary.
+	"""
 	if len(nodelist) != 1 or nodelist[0].tagName != 'sequence':
 		service['error'] = "Bad additional protocol attribute"
 		return
@@ -482,6 +594,13 @@ def parse_additional_protos(nodelist, service):
 
 
 def parse_proto(nodelist, service):
+	"""Verifies expected LCAP in add protocol attr, expected MCAP control attr
+	and mcap version and set control psm as 'service['mcap_control_psm']' value.
+	@param nodelist: List containing nodes of xml documents.
+	@type nodelist: List.
+	@param service: Dictionary representing a parsed xml.
+	@type service: Dictionary.
+	"""
 	if len(nodelist) != 1 or nodelist[0].tagName != 'sequence':
 		service['error'] = "Bad protocol attribute"
 		return
@@ -541,6 +660,13 @@ def parse_proto(nodelist, service):
 
 
 def parse_features(nodelist, service):
+	"""Set the value of 'service['features']' with a dictionary containing
+	'mdep_id', 'data_type' and 'role' ('source' or 'sink').
+	@param nodelist: List containing nodes of xml documents.
+	@type nodelist: List.
+	@param service: Dictionary representing a parsed xml.
+	@type service: Dictionary.
+	"""
 	if len(nodelist) != 1 or nodelist[0].tagName != 'sequence':
 		service['error'] = "Bad feature attr"
 		return
@@ -606,6 +732,13 @@ attr_handlers = {
 
 
 def parse_xml_record_inner(node, forgive_handle):
+	"""Parses the 'node' parameter into a dictionary, which is returned.
+	@param node: Node of a xml document.
+	@type node: Xml document.
+	@param forgive_handle: Ignore 'handle' attribute.
+	@type forgive_handle: Boolean.
+	@return: The dictionary representing the parsed Xml.
+	"""
 	service = {}
 	service['handle'] = None
 	service['features'] = None
@@ -694,6 +827,16 @@ def parse_xml_record_inner(node, forgive_handle):
 
 
 def parse_xml_record(node, forgive_handle, raise_bad_record):
+	"""Calls 'parse_xml_record_inner' method to parse an element with tagName
+	'record' and raises 'HDPRecordException' if an error occurs.
+	@param node: Node of a xml document.
+	@type node: Xml document.
+	@param forgive_handle: Ignore 'handle' attribute.
+	@type forgive_handle: Boolean.
+	@param raise_bad_record: Define if HDPRecordException will be raised.
+	@type raise_bad_record: Boolean.
+	@return: The dictionary representing the parsed Xml.
+	"""
 	service = parse_xml_record_inner(node, forgive_handle)
 
 	if service and 'error' in service and raise_bad_record:
@@ -704,6 +847,10 @@ def parse_xml_record(node, forgive_handle, raise_bad_record):
 
 
 def remove_text_nodes(node):
+	"""Remove all 'child' from node with 'nodeType' equals to 'TEXT_NODE'.
+	@param node: Node of a xml document.
+	@type node: Xml document.
+	"""
 	text_nodes = []
 
 	for child in node.childNodes:
@@ -719,6 +866,19 @@ def remove_text_nodes(node):
 
 def parse_xml(xmlstring, forgive_handle=False, filter_xml_exception=True,
 		raise_bad_record=True):
+	"""Parses a string representing the xml document, remove all text nodes and
+	calls 'parse_xml_record' method for each element with tag name 'record'
+	passing it as parameter. Returns the parsed string as a dictionary.
+	@param xmlstring: String representing a xml document.
+	@type xmlstring: String.
+	@param forgive_handle: Ignore 'handle' attribute.
+	@type forgive_handle: Boolean.
+	@param filter_xml_exception: Defines if HDPRecordException will be raised.
+	@type filter_xml_exception: Boolean.
+	@param raise_bad_record: Define if HDPRecordException will be raised.
+	@type raise_bad_record: Boolean.
+	@return: The dictionary representing the parsed Xml.
+	"""
 	try:
 		doc = xml.dom.minidom.parseString(xmlstring)
 	except:

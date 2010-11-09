@@ -32,16 +32,30 @@ import random
 
 
 class HealthError(Exception):
+	"""HealthError exception
+	"""
 	pass
 
 
 class HealthManager(object):
+	"""This class provide ways to create an object of type 'HealthApplication',
+	destroy an object of type 'HealthApplication', search for new BlueZ devices,
+	and manage signals.
+	"""
 	def __init__(self):
 		self.applications = []
 		self.signal_handler = None
 		pass
 
 	def CreateApplication(self, config): # -> HealthApplication
+		"""Returns the path of the new registered application. The agent
+		parameter is the path of the object with the callbacks to
+		notify events.
+		@param config: A dictionary containing information to create a
+		HealthApplication object. The keys of this dictionary are DataType,
+		Role, Description and ChannelType.
+		@type config: Dictionary. 
+		"""
 		application = HealthApplication(self, config)
 		if not application:
 			return None
@@ -49,16 +63,40 @@ class HealthManager(object):
 		return application
 
 	def DestroyApplication(self, application):
+		"""Closes the HDP application identified by the object path. Also
+		application will be closed if the process that started it leaves
+		the bus.
+		@param application: Object patho for application.
+		@type application: HealthApplication.
+		"""
 		application.stop()
 		self.applications.remove(application)
 
 	def UpdateDevices(self):
+		"""Search for new BlueZ devices.
+		"""
 		BlueZ().search()
 
 	def RegisterSignalHandler(self, signal_handler):
+		"""Registers a signal handler.
+		@param signal_handler: The signal handler must be a function that
+		receives an object, an interface and data as parameters.
+		@type signal_handler: function.
+		"""
 		self.signal_handler = signal_handler
 
 	def signal(self, name, obj, interface, data):
+		"""Calls the matching signal_handler.
+		@param name: Signal name.
+		@type name: String.
+		@param obj: The object who sent the signal.
+		@type obj: object.
+		@param interface: The interface for the object who sent the signal.
+		@type interface: String.
+		@param data: Data sent from the Signal
+		@type data: undefined.
+		@return: what signal_handler returns.
+		"""
 		if not self.signal_handler:
 			DBG(1, "Ignored signal due to lack of signal handler")
 			return
@@ -74,6 +112,9 @@ class HealthManager(object):
 
 
 class HealthApplication(MCAPInstance):
+	"""This is the application class which manages devices and channels. It
+	inherits from MCAPInstance.
+	"""
 	def __init__(self, manager, config):
 		err = self.process_config(config)
 		if err:
@@ -150,12 +191,18 @@ class HealthApplication(MCAPInstance):
 		return self.create_device(addr, cpsm, dpsm, mdepid)
 
 	def device_removed(self, addr):
+		"""Called when a device is removed.
+		@param addr: Address of device removed.
+		@type addr: String.
+		"""
 		self.remove_old_devices(addr, [])
 		DBG(2, "HDP: device removed %s" % addr)
 
 	def device_found(self, addr):
-		''' Can be extended by subclasses '''
-
+		""" Called when a device is found. Can be extended by subclasses.
+		@param addr: Address of device found.
+		@type addr: String.
+		"""
 		def closure_ok(records):
 			self.device_created2(addr, records)
 
@@ -169,28 +216,43 @@ class HealthApplication(MCAPInstance):
 		DBG(3, "HDP: device found %s" % addr)
 
 	def device_disappeared(self, addr):
-		''' Can be extended by subclasses '''
+		"""Called when a device disappears. Can be extended by subclasses.
+		@param addr: Address of device disappeared.
+		@type addr: String.
+		"""
 		DBG(3, "HDP: device disappeared %s" % addr)
 
 	def bluetooth_dead(self):
-		''' Can be extended by subclasses '''
+		"""Called when the bluetooth is dead. Can be extended by subclasses
+		"""
 		DBG(1, "Obs: bt dead")
 		self.suspend()
 
 	def bluetooth_alive(self):
-		''' Can be extended by subclasses '''
+		"""Called when the bluetooth is alive. Can be extended by subclasses
+		"""
 		DBG(1, "Obs: bt alive")
 		self.resume()
 
 	def adapter_added(self, name):
-		''' Can be extended by subclasses '''
+		"""Called when an adapter is added. Can be extended by subclasses
+		@param name: Name of adapter added.
+		@type name: string.
+		"""
 		pass
 
 	def adapter_removed(self, name):
-		''' Can be extended by subclasses '''
+		"""Called when an adapter is removed. Can be extended by subclasses
+		@param name: Name of adapter removed.
+		@type name: string.
+		"""
 		pass
 
 	def process_config(self, config):
+		"""Processes configuration dictionary.
+		@param config: Configuration dictionary.
+		@type config: Dictionary.
+		"""
 		self.sdp_record = {'features': []}
 		self.sdp_handle = None
 
@@ -235,6 +297,8 @@ class HealthApplication(MCAPInstance):
 		return None
 
 	def publish(self):
+		"""Publish SDP.
+		"""
 		self.sdp_handle = None
 
 		r = self.sdp_record
@@ -258,6 +322,8 @@ class HealthApplication(MCAPInstance):
 		self.sdp_handle = BlueZ().add_record("any", xml_record)
 
 	def unpublish(self):
+		"""Unpublish SDP
+		"""
 		if not self.sdp_handle:
 			return
 		try:
@@ -267,9 +333,8 @@ class HealthApplication(MCAPInstance):
 		self.sdp_handle = None
 
 	def suspend(self):
-		'''
-		Reversible 'stopping'
-		'''
+		"""Reversible 'stopping'
+		"""
 		if self.suspended:
 			return
 
@@ -281,9 +346,8 @@ class HealthApplication(MCAPInstance):
 		self.suspended = True
 
 	def resume(self):
-		'''
-		Resume operations
-		'''
+		"""Resume operations
+		"""
 		if not self.suspended:
 			return
 
@@ -292,15 +356,19 @@ class HealthApplication(MCAPInstance):
 		self.publish()
 
 	def stop(self):
-		'''
-		Irreversible stop
-		'''
+		"""Irreversible stop
+		"""
 		self.suspend()
 
 		self.stopped = True
 		BlueZ().unregister_observer(self)
 
 	def channel_by_mdl(self, mdl):
+		"""Returns the channel referenced to a mdl.
+		@param mdl: MDL object.
+		@type mdl: MDL object.
+		@return: A HealthChannel object.
+		"""
 		channel = self.got_channel_by_mdl(mdl)
 		if not channel:
 			DBG(1, "WARNING: No channel for the given MDL")
@@ -315,22 +383,42 @@ class HealthApplication(MCAPInstance):
 		return channel
 
 	def create_channel(self, mdl, acceptor):
+		"""Creates a HealthChannel object.
+		@param mdl: MDL object.
+		@type mdl: MDL object.
+		@param acceptor: Acceptor object.
+		@type acceptor: Acceptor object.
+		@return: A HealthChannel object.
+		"""
 		device = self.device_by_mcl(mdl.mcl)
 		channel = HealthChannel(device, mdl, acceptor)
 		self.add_channel(channel)
 		return channel
 
 	def add_channel(self, channel):
+		"""Adds a channel to the channel list.
+		@param channel: The channel to be added.
+		@type channel: HealthChannel.
+		"""
 		if channel not in self.channels:
 			self.channels.append(channel)
 
 	def remove_channel(self, channel):
+		"""Removes a channel from the channel list.
+		@param channel: The channel to be removed.
+		@type channel: HealthChannel.
+		"""
 		try:
 			self.channels.remove(channel)
 		except ValueError:
 			DBG(0, "WARNING: Channel unknown, not removed")
 
 	def device_by_mcl(self, mcl):
+		"""Returns a HealthDevice based on a mcl referenced to it.
+		@param mcl: MCL object.
+		@type mcl: MCL object.
+		@return: A HealthDevice object.
+		"""
 		device = None
 		for candidate in self.devices:
 			if candidate.mcl is mcl:
@@ -342,12 +430,28 @@ class HealthApplication(MCAPInstance):
 		return device
 
 	def create_device_by_mcl(self, mcl):
+		"""Creates and returns a HealthDevice based on a mcl object.
+		@param mcl: MCL object.
+		@type mcl: MCL object.
+		@return: A HealthDevice object.
+		"""
 		device = HealthDevice(self, mcl.remote_addr,
 					mcl.remote_addr_dc, 0)
 		self.add_device(device)
 		return device
 
 	def create_device(self, bdaddr, cpsm, dpsm, mdepid):
+		"""Creates a device based on its address, cpsm, dpsm and mdepid.
+		@param bdaddr: Device address.
+		@type bdaddr: String.
+		@param cpsm: cpsm.
+		@type cpsm: Integer.
+		@param dpsm: dpsm.
+		@type dpsm: Integer.
+		@param mdepid: mdepid.
+		@type mdepid: Integer.
+		@return: A HealthDevice object.
+		"""
 		if self.match_device(bdaddr, cpsm, dpsm, mdepid):
 			DBG(0, "Warning: creating and adding HealthDevice" \
 				"with same characteristics as old one")
@@ -361,6 +465,17 @@ class HealthApplication(MCAPInstance):
 		return device
 
 	def match_device(self, bdaddr, cpsm, dpsm, mdepid):
+		"""Returns a HealthDevice based on its address, cpsm, dpsm and mdepid.
+		@param bdaddr: Device address.
+		@type bdaddr: String.
+		@param cpsm: cpsm.
+		@type cpsm: Integer.
+		@param dpsm: dpsm.
+		@type dpsm: Integer.
+		@param mdepid: mdepid.
+		@type mdepid: Integer.
+		@return: A HealthDevice object.
+		"""
 		for device in self.devices:
 			if device.bdaddr() == bdaddr and \
 					device.cpsm() == cpsm and \
@@ -370,18 +485,33 @@ class HealthApplication(MCAPInstance):
 		return None
 
 	def remove_old_devices(self, bdaddr, new_devices):
+		"""Removes old devices based on its address and based on a list of new
+		devices.
+		@param bdaddr: Device address.
+		@type bdaddr: String.
+		@param new_devices: A list of new devices.
+		@type new_devices: List.
+		"""
 		for device in self.devices:
 			if device.bdaddr() == bdaddr and \
 					device not in new_devices:
 				self.remove_device(device)
 
 	def add_device(self, device):
+		"""Add a device to a list.
+		@param device: The device to be added to the device list.
+		@type device: HealthDevice object.
+		"""
 		if device not in self.devices:
 			self.devices.append(device)
 			self.manager.signal("DeviceFound", self,
 						"org.bluez", device)
 
 	def remove_device(self, device):
+		"""Remove a device from the device list.
+		@param device: The device to be added to a list.
+		@type device: HealthDevice object.
+		"""
 		try:
 			device.kill()
 			self.devices.remove(device)
@@ -391,6 +521,12 @@ class HealthApplication(MCAPInstance):
 			DBG(0, "Warning: device %s unkown, not removed")
 
 	def MCLConnected(self, mcl, err):
+		"""Called when MCL connects.
+		@param mcl: MCL object connected.
+		@type mcl: MCL object.
+		@param err: Error string.
+		@type err: String.
+		"""
 		if self.stopped:
 			return
 
@@ -398,6 +534,10 @@ class HealthApplication(MCAPInstance):
 		device.mcl_connected(mcl, err, False)
 
 	def MCLDisconnected(self, mcl):
+		"""Called when MCL disconnects.
+		@param mcl: MCL object disconnected.
+		@type mcl: MCL object.
+		"""
 		if self.stopped:
 			return
 
@@ -405,6 +545,12 @@ class HealthApplication(MCAPInstance):
 		device.mcl_disconnected(mcl)
 
 	def MCLReconnected(self, mcl, err):
+		"""Called when MCL reconnects.
+		@param mcl: MCL object reconnected.
+		@type mcl: MCL object.
+		@param err: Error string.
+		@type err: String.
+		"""
 		if self.stopped:
 			return
 
@@ -412,6 +558,10 @@ class HealthApplication(MCAPInstance):
 		device.mcl_connected(mcl, err, True)
 
 	def MCLUncached(self, mcl):
+		"""Called when MCL uncaches.
+		@param mcl: MCL object uncached.
+		@type mcl: MCL object.
+		"""
 		if self.stopped:
 			return
 
@@ -419,6 +569,9 @@ class HealthApplication(MCAPInstance):
 		device.mcl_deleted(mcl)
 
 	def MDLInquire(self, mdepid, config):
+		"""Verifies if MDL is ok, if it is reliable. Returns a tuple containing
+		ok and reliable booleans and configuration.
+		"""
 		if self.stopped:
 			return
 
@@ -456,6 +609,8 @@ class HealthApplication(MCAPInstance):
 		return ok, reliable, config
 
 	def MDLReady(self, mcl, mdl, err):
+		"""MDL is Ready, so connect MDL.
+		"""
 		if self.stopped:
 			return
 
@@ -481,6 +636,12 @@ class HealthApplication(MCAPInstance):
 		pass
 
 	def MDLConnected(self, mdl, err):
+		"""Called when MDL is connected.
+		@param mdl: MDL object connected.
+		@type mdl: MDL object.
+		@param err: Error string.
+		@type err: String.
+		"""
 		if self.stopped:
 			return
 
@@ -569,14 +730,14 @@ class QueueItem(object):
 	operation.
 
 	operation: function/method to be called when queue dispatches.
-		   Prototype is op(arg, queue_item)
+	Prototype is op(arg, queue_item)
 	arg: a single argument for operation. May be a tuple if several
-		arguments must be passed, but it is NOT expanded.
+	arguments must be passed, but it is NOT expanded.
 	cb_ok, cb_nok: callbacks to be notified on success or failure,
-		   respectively
+	respectively
 	ident: some 'cargo' data that may be needed when async operation
- 		completes, so we can check if the completed operation
-		matches with the queue item being processed.
+	completes, so we can check if the completed operation
+	matches with the queue item being processed.
 	'''
 	def __init__(self, operation, arg, cb_ok, cb_nok, ident):
 		self.operation = operation
@@ -924,15 +1085,27 @@ class HealthDevice(object):
 	# Public API
 
 	def Echo(self, reply_handler, error_handler):
-		"""
-		Sends an echo petition to the remote device. Calls error
-		handler in case of error.
+		"""Sends an echo petition to the remote service.
+		@param reply_handler: A function to handle the reply.
+		@type reply_handler: function.
+		@param error_handler: A function to handle errors.
+		@type error_handler: function.
 		"""
 		self._Echo(reply_handler, error_handler)
 
 	def CreateChannel(self, app, conf, reply_handler, error_handler):
-		"""
-		Creates a data channel with device 
+		"""Creates a new data channel with the indicated config to the
+		remote Service. The configuration 'conf' should indicate the channel
+		quality of service using one of this values "Reliable", "Streaming" or
+		"Any".
+		@param app: Application.
+		@type app: Object.
+		@param conf: Configuration to create a channel.
+		@type conf: Integer.
+		@param reply_handler: A function to handle the reply.
+		@type reply_handler: function.
+		@param error_handler: A function to handle errors.
+		@type error_handler: function.
 		"""
 
 		if app and (app is not self.app):
@@ -947,8 +1120,10 @@ class HealthDevice(object):
 		self._CreateChannel(conf, reply_handler, error_handler)
 
 	def DestroyChannel(self, channel):
-		"""
-		Destroys (deletes) a given data channel
+		"""Destroys (deletes) a given data channel.
+		@param channel: Data channel to destroy.
+		@type channel: Object.
+		@return: True if the channel is destroyed.
 		"""
 		if channel.device is not self:
 			raise HealthError("Channel does not belong to this device")
