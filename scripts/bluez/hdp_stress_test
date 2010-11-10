@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+# all freqs in milisseconds
+conn_freq = {'min': 1000, 'max': 10000}
+send_freq = {'min': 1, 'max': 200}
+echo_freq = {'min': 1, 'max': 5000}
+renew_freq = {'min': 10000, 'max': 300000}
+
 # TODO do something different with Streaming channels
 
 import sys
@@ -12,7 +18,6 @@ import gobject
 import random
 import time
 from dbus.mainloop.glib import DBusGMainLoop
-
 
 DBusGMainLoop(set_as_default=True)
 loop = gobject.MainLoop()
@@ -69,13 +74,10 @@ class MasterControl(object):
 		if "-s" not in sys.argv:
 			self.find_devices()
 
-		# TODO move these magic values to top
-		self.CallPeriodically(1000, 10000, self.InitiateSomeConnection)
-		self.CallPeriodically(1, 200, self.SendSomeData)
-		self.CallPeriodically(1, 50000, self.Echo)
-		if RENEW_APP:
-			self.CallPeriodically(10000, 300000,
-					self.RenewApplication)
+		self.CallPeriodically(conn_freq, self.InitiateSomeConnection)
+		self.CallPeriodically(send_freq, self.SendSomeData)
+		self.CallPeriodically(echo_freq, self.Echo)
+		self.CallPeriodically(renew_freq, self.RenewApplication)
 
 	def find_devices(self):
 		adapter = self.manager.DefaultAdapter()
@@ -122,12 +124,20 @@ class MasterControl(object):
 			return False
 		glib.timeout_add(to, closure, *args)
 
-	def CallPeriodically(self, lo, hi, cb, *args):
+	def CallPeriodically(self, freq, cb, *args):
+		if freq['min'] <= 0 or freq['max'] <= 0:
+			# never calls
+			return
+
+		if freq['min'] >= freq['max']:
+			raise Exception("Bad frequency: %s" % freq)
+
 		def closure(*args):
 			cb(*args)
-			self.CallPeriodically(lo, hi, cb, *args)
+			self.CallPeriodically(freq, cb, *args)
 			return False
-		to = lo + random.randint(lo, hi)
+
+		to = freq['min'] + random.randint(freq['min'], freq['max'])
 		glib.timeout_add(to, closure, *args)
 
 	def Dot(self, character="."):
@@ -392,7 +402,7 @@ class MasterControl(object):
 			self.DestroyChannel(channel_path)
 	
 	def Echo(self):
-		if self.echo_pending:
+		if self.echo_pending or not self.devices:
 			return
 		self.echo_pending = True
 		self.Dot("H")
@@ -590,7 +600,25 @@ class MasterControl(object):
 
 	def DestroyApplication(self, seq):
 		path = self.apps[seq]
+		try:
+			# bug regression test
+			self.hmanager.DestroyApplication(path + "/blex")
+			self.Msg('Should not have worked (1)')
+			sys.exit(2)
+		except Exception:
+			pass
+		
 		self.hmanager.DestroyApplication(path)
+
+		if (random.randint() % 2 == 0):
+			try:
+				# bug regression test
+				self.hmanager.DestroyApplication(path)
+				self.Msg('Should not have worked (2)')
+				sys.exit(2)
+			except Exception:
+				pass
+
 		self.apps[seq] = None
 		self.Msg('Application %s destroyed' % path)
 
@@ -619,7 +647,12 @@ if not DISTINGUISH_APP:
 	MAX_CHANNELS *= MAX_APPS # count by device, not by device*app
 
 SINK_INITIATOR = "-k" not in sys.argv
-RENEW_APP = "-n" not in sys.argv
+
+if "-n" in sys.argv:
+	renew_freq['min'] = 0
+
+if "-e" in sys.argv:
+	conn_freq['min'] = send_freq['min'] = 0
 
 mcp = MasterControl()
 
@@ -662,3 +695,6 @@ loop.run()
 #
 # -n
 #	Prevents applications to be renewed (destroyed and recreated).
+#
+# -e
+#	Just does Echos, no connections nor data send.
