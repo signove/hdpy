@@ -4,6 +4,7 @@
 conn_freq = {'min': 1000, 'max': 10000}
 send_freq = {'min': 1, 'max': 200}
 echo_freq = {'min': 1, 'max': 5000}
+echo_freq2 = {'min': 1, 'max': 100}
 renew_freq = {'min': 10000, 'max': 300000}
 
 # TODO do something different with Streaming channels
@@ -303,7 +304,7 @@ class MasterControl(object):
 			if not self.EngageChannel(channel_path):
 				# failed to connect
 				self.Dot("ReF")
-				if random.randint(0, 2) == 0:
+				if random.choice((True, False, False)):
 					self.Dot("ReDC")
 					self.DestroyChannel(channel_path)
 				return
@@ -320,7 +321,7 @@ class MasterControl(object):
 			self.CloseSocket(sk, channel_path)
 			channel.Release()
 
-			if random.randint(0, 2) == 0:
+			if random.choice((True, False, False)):
 				# 33% chance of destroying upon closure
 				self.ChannelDot(channel_path, "SSx:%s")
 				self.DestroyChannel(channel_path)
@@ -335,7 +336,7 @@ class MasterControl(object):
 				self.CloseSocket(sk, channel_path)
 				channel.Release()
 
-				if random.randint(0, 2) == 0:
+				if random.choice((True, False, False)):
 					# 33% chance of destroying upon closure
 					self.Dot("SSex")
 					self.DestroyChannel(channel_path)
@@ -424,7 +425,7 @@ class MasterControl(object):
 		if not SINK_INITIATOR:
 			is_source = 1
 		else:
-			is_source = random.randint(0, 1)
+			is_source = random.choice((0, 1))
 
 		if is_source:
 			devs = self.sinks
@@ -610,7 +611,7 @@ class MasterControl(object):
 		
 		self.hmanager.DestroyApplication(path)
 
-		if (random.randint() % 2 == 0):
+		if random.choice((False, True)):
 			try:
 				# bug regression test
 				self.hmanager.DestroyApplication(path)
@@ -653,6 +654,10 @@ if "-n" in sys.argv:
 
 if "-e" in sys.argv:
 	conn_freq['min'] = send_freq['min'] = 0
+
+if "-E" in sys.argv:
+	echo_freq['min'] = echo_freq2['min']
+	echo_freq['max'] = echo_freq2['max']
 
 mcp = MasterControl()
 
@@ -698,3 +703,5 @@ loop.run()
 #
 # -e
 #	Just does Echos, no connections nor data send.
+# -E
+#	Increases frequency of echos.
