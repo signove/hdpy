@@ -8,9 +8,12 @@ import glib
 import string
 from test_suite import TestSuite, mcap_suites
 import subprocess
+import fcntl
+import os
 
 mcap_iface = "org.bluez.mcap"
-bdaddr = "00:80:98:E7:36:9F"
+# bdaddr = "00:80:98:E7:36:9f"
+bdaddr = "00:80:98:E7:36:85"
 cpsm = 0x1001
 dpsm = 0x1003
 mdepid = 1
@@ -310,21 +313,29 @@ def check_cmd(cmd):
         pass
     return False
 
+def flush(fd):
+    try:
+        while fd.read(512):
+            pass
+    except IOError:
+        pass
+
 def stdin_cb(fd, condition):
     global mcap_tests
 
-    string.split(fd.readline()) # Read enter key
+    keys = fd.readline() # Read input line
+
     cmd = mcap_tests.get_current_command()
 
-    if not check_cmd(cmd):
-        print "Available commands"
-        for c in commands:
-            print "\t%s" % commands[c]["help"]
-        return True
-    commands[cmd[0].lower()]["fun"](cmd)
+    if not keys or keys[0] != '\x1b':
+        commands[cmd[0].lower()]["fun"](cmd)
+    else:
+        print "Skipping..."
+	print
 
     mcap_tests.next_command()
     mcap_tests.command_info()
+    flush(fd);
     return True
 
 
@@ -360,6 +371,9 @@ bus.add_signal_receiver(adapter_signal, bus_name="org.bluez",
 
 session = mcap.StartSession(cpsm, dpsm)
 
+fd = sys.stdin.fileno()
+fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
 
 try:
     print "Starting tests Session: ", session

@@ -1,10 +1,9 @@
-
 mcap_suites = {
                 "01_CM": {
-                          "CE_BV_01_C": ["con_mcl", "con_dc"], #TODO: Failed with Invalid MDL configuration
+                          "CE_BV_01_C": ["con_mcl", "con_dc"],
                           "CE_BV_02_C": ["send_data"],
                           "CE_BV_03_C": ["con_mcl", "send_data"],
-                          "CE_BV_04_C": ["con_dc"] #TODO: Failed with Invalid MDL configuration
+                          "CE_BV_04_C": ["con_dc", "send_data"],
                           },
                 "02_CM_DIS": {
                               "CM_DIS_01_C": ["close_mcl"],
@@ -14,11 +13,11 @@ mcap_suites = {
                               "CM_DIS_05_C": []
                               },
                 "03_CM_REC": {
-                              "CM_REC_BV_01_C": ["send_data", "close_dc", "close_mcl", "con_mcl", "recon_dc"], #TODO: Failed with Invalid MDL configuration
+                              "CM_REC_BV_01_C": ["send_data", "close_dc", "close_mcl", "con_mcl", "recon_dc", "send_data", "close_dc", "close_mcl"],
                               "CM_REC_BV_02_C": ["send_data", "send_data"],
-#                              "CM_REC_BV_03_C": ["send_data", "bt_down", "bt_up", "con_mcl", "recon_dc", "send_data"], #TODO: Failed with Invalid MDL configuration
-                              "CM_REC_BV_04_C": ["send_data", "bt_down", "bt_up", "send_data"],
-                              "CM_REC_BV_05_C": ["send_data", "close_dc", "recon_dc"], #TODO: Failed with Invalid MDL configuration
+                              "CM_REC_BV_03_C": ["send_data", "bt_down", "bt_up", "con_mcl", "recon_dc", "send_data"], # FIXME
+                              "CM_REC_BV_04_C": ["send_data", "bt_down", "bt_up", "send_data"], # FIXME
+                              "CM_REC_BV_05_C": ["send_data", "close_dc", "recon_dc"],
                               "CM_REC_BV_06_C": ["send_data", "send_data"]
                               },
                 "04_CM_DEL": {
@@ -28,7 +27,7 @@ mcap_suites = {
                               "CM_DEL_BV_04_C": [],
                               },
                 "05_CM_ABT": {
-                              "CM_ABT_BV_01_C": ["con_mcl", "con_dc", "abort_dc"], #TODO: Fix it
+                              "CM_ABT_BV_01_C": ["con_mcl", "neg_dc", "abort_dc", "close_mcl"],
                               "CM_ABT_BV_02_C": [],
                               "CM_ABT_BV_03_C": [],
                               },
@@ -57,7 +56,7 @@ mcap_suites = {
                 "07_INV": {
                            "INV_BI_01_C": ["con_dc"],
                            "INV_BI_02_C": ["con_dc"],
-                           "INV_BI_03_C": ["con_mcl", "con_dc"], #TODO: Failed with Invalid MDL configuration
+                           "INV_BI_03_C": ["con_mcl", "con_dc", "send_data", "close_dc", "close_mcl"],
                            "INV_BI_04_C": [],
                            "INV_BI_05_C": [],
                            "INV_BI_06_C": [],
