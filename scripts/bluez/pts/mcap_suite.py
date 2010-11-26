@@ -323,17 +323,24 @@ def flush(fd):
 def stdin_cb(fd, condition):
     global mcap_tests
 
-    keys = fd.readline() # Read input line
+    keys = fd.readline().strip() # Read input line
 
     cmd = mcap_tests.get_current_command()
 
-    if not keys or keys[0] != '\x1b':
-        commands[cmd[0].lower()]["fun"](cmd)
+    if keys:
+        if keys[0] == '\x1b':
+            print
+            print "Skipping..."
+	    print
+            if not mcap_tests.next_command():
+                print "####### END ########"
+        else:
+            mcap_tests.seek_command(keys)
     else:
-        print "Skipping..."
-	print
+        commands[cmd[0].lower()]["fun"](cmd)
+        if not mcap_tests.next_command():
+            print "####### END ########"
 
-    mcap_tests.next_command()
     mcap_tests.command_info()
     flush(fd);
     return True

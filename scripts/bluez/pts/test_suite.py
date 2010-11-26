@@ -100,6 +100,9 @@ class TestSuite:
         self.suites = suites
         self.suite_names_dict = suites.keys()
         self.suite_names_dict.sort()
+        self.reposition_test()
+
+    def reposition_test(self):
         self.current_suite = self.suites[self.suite_names_dict[self.current_suite_index]]
 
         self.current_suite_keys = self.current_suite.keys()
@@ -111,10 +114,31 @@ class TestSuite:
         else:
             self.next_command()
 
-
     def get_current_command(self):
         return [self.current_command]
 
+    def command_matching(self, token):
+        suite_name = self.suite_names_dict[self.current_suite_index]
+        test_name = self.current_suite_keys[self.current_test_index]
+	print suite_name, test_name
+	return token in suite_name or token in test_name
+
+    def seek_command(self, token):
+        saved_current_suite_index = self.current_suite_index
+	saved_current_test_index = self.current_test_index
+        saved_current_command_index = self.current_command_index
+
+	while self.next_command():
+            if self.command_matching(token):
+                print "Found"
+                return True
+
+        self.current_suite_index = saved_current_suite_index
+        self.current_test_index = saved_current_test_index
+        self.current_command_index = saved_current_command_index
+        self.reposition_test()
+        print "Not found, reverting"
+        return False
 
     def next_command(self):
         has_next_command = False
@@ -130,8 +154,7 @@ class TestSuite:
                     self.current_test_index = 0
                     self.current_suite_index += 1
                     if self.current_suite_index >= len(self.suite_names_dict):
-                        print "Done"
-                        exit()
+                        return False
 
                     self.current_suite = self.suites[self.suite_names_dict[self.current_suite_index]]
                     self.current_suite_keys = self.current_suite.keys()
@@ -147,6 +170,7 @@ class TestSuite:
                 has_next_command = True
 
         self.current_command = self.current_test_commands[self.current_command_index]
+	return True
 
 
     def command_info(self):
