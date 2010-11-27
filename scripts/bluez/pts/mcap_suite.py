@@ -124,6 +124,11 @@ def send_data(cmd):
         except Exception, e:
             print "Error", e
 
+def away(cmd):
+    print "#################################################"
+    print "Go away                                          "
+    print "#################################################"
+
 def con_mdl(cmd):
     global last_mdl
     print "Connect mdl"
@@ -287,6 +292,7 @@ commands = {"con_mcl": {"help":"con_mcl", "npar": 0, "fun": con_mcl},
     "close_dc": {"help":"close_dc mdl", "npar": 0, "fun": close_mdl},
     "recon_dc": {"help":"recon_dc mdl", "npar": 0, "fun": recon_mdl},
     "del_dc": {"help":"del_dc mdl", "npar": 0, "fun": del_mdl},
+    "away": {"help":"away", "npar": 0, "fun": away},
     "del_all": {"help":"del_all", "npar": 0, "fun": del_all},
     "abort_dc": {"help":"abort_dc mdl", "npar": 0, "fun": abort_mdl},
     "neg_dc": {"help":"neg_dc", "npar": 0, "fun": neg_mdl},

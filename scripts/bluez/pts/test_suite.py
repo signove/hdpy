@@ -15,8 +15,8 @@ mcap_suites = {
                 "03_CM_REC": {
                               "CM_REC_BV_01_C": ["send_data", "close_dc", "close_mcl", "con_mcl", "recon_dc", "send_data", "close_dc", "close_mcl"],
                               "CM_REC_BV_02_C": ["send_data", "send_data"],
-                              "CM_REC_BV_03_C": ["send_data", "bt_down", "bt_up", "con_mcl", "recon_dc", "send_data"], # FIXME
-                              "CM_REC_BV_04_C": ["send_data", "bt_down", "bt_up", "send_data"], # FIXME
+                              "CM_REC_BV_03_C": ["send_data", "away", "send_data", "con_mcl", "recon_dc", "send_data"],
+                              "CM_REC_BV_04_C": ["send_data", "away", "send_data"],
                               "CM_REC_BV_05_C": ["send_data", "close_dc", "recon_dc"],
                               "CM_REC_BV_06_C": ["send_data", "send_data"]
                               },
@@ -120,13 +120,23 @@ class TestSuite:
     def command_matching(self, token):
         suite_name = self.suite_names_dict[self.current_suite_index]
         test_name = self.current_suite_keys[self.current_test_index]
-	print suite_name, test_name
 	return token in suite_name or token in test_name
 
     def seek_command(self, token):
         saved_current_suite_index = self.current_suite_index
 	saved_current_test_index = self.current_test_index
         saved_current_command_index = self.current_command_index
+
+	while self.next_command():
+            if self.command_matching(token):
+                print "Found"
+                return True
+
+        print "Trying from beginning"
+
+	self.current_suite_index = 0
+	self.current_test_index = 0
+	self.current_command_index = 0
 
 	while self.next_command():
             if self.command_matching(token):
