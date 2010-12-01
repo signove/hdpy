@@ -1,0 +1,245 @@
+#!/usr/bin/python
+# -*- coding: utf-8
+
+#######################################################################
+# Copyright 2010 Signove Corporation - All rights reserved.
+# Contact: Signove Corporation (contact@signove.com)
+#
+# This library is free software; you can redistribute it and/or modify
+# it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the
+# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+# Boston, MA 02111-1307  USA
+#
+# If you have questions regarding the use of this file, please contact
+# Signove at contact@signove.com.
+#######################################################################
+
+import dbus
+import sys
+
+
+# PTS suite specs
+
+hdp_snk_con =  (('BV_01_I', ['create_app_sink']),
+				('BV_02_I', ['create_app_sink']),
+				('BV_03_I', ['create_app_sink']),
+				('BV_04_I', ['create_app_sink', 'create_channel_any']),
+				('BV_05_I', []),
+				('BV_06_I', []),
+				('BV_07_I', []),
+				('BV_08_I', []),
+				('BV_09_I', []),
+				('BV_10_I', []))
+
+hdp_src_suites = ()
+hdp_snk_suites = (('CON', hdp_snk_con), )
+
+suites = {'SRC': hdp_src_suites, 'SNK': hdp_snk_suites}
+
+
+def goin():
+	try:
+		cmd = sys.stdin.read(1)[0]
+		if not cmd or cmd != '\n':
+			return False
+	except:
+		return False
+
+	return True
+
+
+class HDPAutoPTS:
+	""" Runs an interactive prompt for automatically test BlueZ against PTS.
+	User is required only to input ENTER for entering a test suite and sending
+	the inquired commands or ESC for jumping the test suite.
+	"""
+	def __init__(self, suites):
+		self.suites = suites
+		self.bus = dbus.SystemBus()
+		self.manager = dbus.Interface(self.bus.get_object("org.bluez", "/"),
+				"org.bluez.Manager")
+		self.hdp_manager = dbus.Interface(self.bus.get_object("org.bluez",
+				"/org/bluez"), "org.bluez.HealthManager")
+
+		self.channels = []
+		self.device = None
+		self.app = None
+		self.running = False
+		self.select_adapter()
+
+	def select_adapter(self):
+		select = self.manager.DefaultAdapter()
+		adapters = self.manager.ListAdapters()
+
+		print "Select an adapter [%s]:" % (select)
+		i = 1
+		for ad in adapters:
+			print "\t%d. %s" % (i, ad)
+			i = i + 1
+
+		set = None
+		while set == None:
+			try:
+				print 'Select: ',
+				cmd = sys.stdin.readline()
+				if cmd == '\n':
+					print '\n'
+					break
+				pos = int(cmd) - 1
+				if pos < 0:
+					raise TypeError
+				select = adapters[pos]
+				set = True
+			except (TypeError, IndexError, ValueError):
+				print "Wrong selection, choose a device from the list."
+			except KeyboardInterrupt:
+				sys.exit()
+
+		self.adapter = dbus.Interface(self.bus.get_object("org.bluez", select),
+				"org.bluez.Adapter")
+
+	def select_device(self):
+		devices = self.adapter.ListDevices()
+
+		if len(devices) == 0:
+			print "No devices available"
+			sys.exit()
+
+		print "Select a device [%s]:" % (devices[0])
+		i = 1
+		for dev in devices:
+			print "%d. %s" % (i, dev)
+			i = i + 1
+
+		set = None
+		select = devices[0]
+		while set == None:
+			try:
+				print 'Select: ',
+				cmd = sys.stdin.readline()
+				if cmd == '\n':
+					break
+				pos = int(cmd) - 1
+				if pos < 0:
+					raise TypeError
+				select = devices[pos]
+				set = True
+			except (TypeError, IndexError, ValueError):
+				print "Wrong selection, try again: ",
+			except KeyboardInterrupt:
+				sys.exit()
+
+		print "Connecting to", select
+		self.device = dbus.Interface(self.bus.get_object("org.bluez", select),
+						"org.bluez.HealthDevice")
+
+	def help(self):
+		print 'Available commands: ', ', '.join(self.commands.keys())
+
+	def exit(self):
+		print 'Exiting'
+		self.running = False
+
+	def create_app(self, role):
+		self.app = self.hdp_manager.CreateApplication(
+				{"DataType": dbus.types.UInt16(4103),
+				 "Role": role})
+
+	def create_app_sink(self):
+		self.create_app('sink')
+
+	def create_app_source(self):
+		self.create_app('source')
+
+	def destroy_app(self):
+		self.hdp_manager.DestroyApplication(self.app)
+		self.app = None
+
+	def create_channel(self, type):
+		self.select_device()
+		try:
+			channel = self.device.CreateChannel(self.app, type)
+			self.channels.append(channel)
+		except dbus.exceptions.DBusException, e:
+			print 'Failed to create channel. You might have selected the' \
+				' wrong device, try again.', e
+			self.create_channel(type)
+
+	def destroy_channel(self, channel):
+		if not self.device or not self.channels:
+			return
+		chan = self.device.DestroyChannel(channel)
+		self.channels.remove(channel)
+
+	def list_channels(self):
+		print '\n'.join(self.channels)
+
+	def create_channel_any(self):
+		self.create_channel("Any")
+
+	def create_channel_reliable(self):
+		self.create_channel('Reliable')
+
+	def create_channel_streaming(self):
+		self.create_channel('Streaming')
+
+
+	def run(self):
+		tidx = 0
+		for name, suite in self.suites.items():
+			print 'Running tests for suite', name
+
+			for sname, ssuite in suite:
+				print 'Run suite %s-%s ? (enter/ctrl-c): ' % (name, sname)
+
+				if not goin():
+					continue
+
+				for tname, tsuite in ssuite:
+					print '\nRun test %s-%s-%s ? (enter/ctrl-c): ' \
+						% (name, sname, tname)
+					tname = 'TC_%s_%s_%s' % (name, sname, tname)
+
+					if not goin():
+						continue
+
+					print '\n'
+
+					print 'Running test', tidx
+					print '\tName:', tname
+					print '\tSuite:', name, sname
+					print '\tCommands:', ', '.join(tsuite)
+
+					for c in tsuite:
+						print 'Execute', c, '? (enter/ctrl-c)'
+
+						if not goin():
+							break
+
+						try:
+							method = getattr(self, c)
+							method()
+						except AttributeError:
+							print 'Method %s not implemented within ' \
+								'HDPAutoPTS. Exiting test...\n' % c
+							break
+
+					tidx += 1
+
+					print 'Finished test, wait for PTS to confirm veredict'\
+						' before starting the next.'
+
+			print 'Finished suite', name
+
+
+if __name__ == '__main__':
+	HDPAutoPTS(suites).run()
