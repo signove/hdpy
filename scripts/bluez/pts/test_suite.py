@@ -1,3 +1,5 @@
+# Copyright (c) 2010 Signove Tecnologia
+
 mcap_suites = {
                 "01_CM": {
                           "CE_BV_01_C": ["con_mcl", "con_dc"],
@@ -47,7 +49,7 @@ mcap_suites = {
                            "ERR_BI_13C": [],
                            "ERR_BI_14C": [],
                            "ERR_BI_15C": ["con_dc"],
-#                           "ERR_BI_16C": [], #TODO: How implement this test
+                           "ERR_BI_16C": [], # FIXME see comment at the end of file
                            "ERR_BI_17C": ["con_dc"],
                            "ERR_BI_18C": ["con_dc"],
                            "ERR_BI_19C": [],
@@ -75,7 +77,7 @@ mcap_suites = {
                             "CS_R_BV_04_I": ["enable_csp", "send_data"],
                             },
                 "10_CS_ERR": {
-                              "CS_ERR_BI_01_C": ["enable_csp"], #TODO: Fix this test
+                              "CS_ERR_BI_01_C": ["enable_csp"],
                               "CS_ERR_BI_02_C": ["enable_csp"],
                               "CS_ERR_BI_03_C": ["enable_csp"],
                               "CS_ERR_BI_04_C": ["enable_csp"],
@@ -186,3 +188,9 @@ class TestSuite:
     def command_info(self):
         print '\n===> Suite: "%s", Test: "%s", Command: "%s"' % (
             self.suite_names_dict[self.current_suite_index][3:], self.current_suite_keys[self.current_test_index], self.current_command)
+
+
+# The test ERR_BI_16_C was not implemented (yet) because the MCAP plug-in does not
+# support a MDL refusal. A new signal or callback agent method would need to be
+# added to API, so the application (e.g. this test suite) instructs MCAP to
+# reject MDL with 'temporarily unavailable' error.

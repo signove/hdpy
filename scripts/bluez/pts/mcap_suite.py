@@ -1,5 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+#
+# Copyright (c) 2010 Signove Tecnologia
+# Parts based on another test script written by OpenHealth
 
 import sys
 import gobject
@@ -341,6 +344,9 @@ def stdin_cb(fd, condition):
             if not mcap_tests.next_command():
                 print "####### END ########"
         else:
+            if keys[0] == '/':
+                # This vi habit....
+                keys = keys[1:]
             mcap_tests.seek_command(keys)
     else:
         commands[cmd[0].lower()]["fun"](cmd)
