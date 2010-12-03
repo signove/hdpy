@@ -47,8 +47,8 @@ hdp_snk_con = { 'TC_SNK_CON_BV_01_I': ('create_app_sink', 'destroy_app'),
 										'create_channel_any',
 										'destroy_channel',
 										'destroy_app'),
-				'TC_SNK_CON_BV_05_I': (),
-				'TC_SNK_CON_BV_06_I': (),
+				'TC_SNK_CON_BV_05_I': ('create_app_sink', 'destroy_app'),
+				'TC_SNK_CON_BV_06_I': ('create_app_sink', ),
 				'TC_SNK_CON_BV_07_I': (),
 				'TC_SNK_CON_BV_08_I': (),
 				'TC_SNK_CON_BV_09_I': (),
@@ -255,6 +255,7 @@ class HDPAutoPTS:
 		self.create_app('source')
 
 	def destroy_app(self):
+		print 'Destroying app'
 		self.hdp_manager.DestroyApplication(self.app)
 		self.app = None
 
@@ -303,14 +304,15 @@ class HDPAutoPTS:
 		return True
 
 	def next_cmd(self):
-			cmds = self.test[1]
-			cmd_idx = cmds.index(self.cmd)
+		cmds = self.test[1]
+		cmd_idx = cmds.index(self.cmd)
 
-			if cmd_idx + 1 == len(cmds):
-				print 'Test finished'
-				self.next_text()
-			else:
-				self.cmd = cmds[cmd_idx + 1]
+		if cmd_idx + 1 == len(cmds):
+			print 'Test finished'
+			self.next_text()
+		else:
+			self.cmd = cmds[cmd_idx + 1]
+			print 'Execute command %s ? (yes/no)' % self.cmd
 
 	def next_text(self):
 		test_idx = self.tests.index(self.test)
