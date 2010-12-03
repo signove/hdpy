@@ -23,58 +23,135 @@
 # Signove at contact@signove.com.
 #######################################################################
 
-import dbus
+import os.path
 import sys
+import time
+import termios
+
+import glib
+import gobject
+import dbus
+import dbus.mainloop.glib
+import dbus.service
+
+from fcntl import ioctl
+from ctypes import c_long
 
 
 # PTS suite specs
+hdp_snk_con = { 'TC_SNK_CON_BV_01_I': ('create_app_sink', 'destroy_app'),
+				'TC_SNK_CON_BV_02_I': ('create_app_sink', 'destroy_app'),
+				'TC_SNK_CON_BV_03_I': ('create_app_sink', 'destroy_app'),
+				'TC_SNK_CON_BV_04_I': ( 'pair',
+										'create_app_sink',
+										'create_channel_any',
+										'destroy_channel',
+										'destroy_app'),
+				'TC_SNK_CON_BV_05_I': (),
+				'TC_SNK_CON_BV_06_I': (),
+				'TC_SNK_CON_BV_07_I': (),
+				'TC_SNK_CON_BV_08_I': (),
+				'TC_SNK_CON_BV_09_I': (),
+				'TC_SNK_CON_BV_10_I': ()}
 
-hdp_snk_con =  (('BV_01_I', ['create_app_sink']),
-				('BV_02_I', ['create_app_sink']),
-				('BV_03_I', ['create_app_sink']),
-				('BV_04_I', ['create_app_sink', 'create_channel_any']),
-				('BV_05_I', []),
-				('BV_06_I', []),
-				('BV_07_I', []),
-				('BV_08_I', []),
-				('BV_09_I', []),
-				('BV_10_I', []))
-
-hdp_src_suites = ()
-hdp_snk_suites = (('CON', hdp_snk_con), )
-
-suites = {'SRC': hdp_src_suites, 'SNK': hdp_snk_suites}
+hdp_src_suites = {}
+hdp_snk_suites = {'SNK_CON': hdp_snk_con}
+groups = {'SRC': hdp_src_suites,
+		  'SNK': hdp_snk_suites}
 
 
-def goin():
-	try:
-		cmd = sys.stdin.read(1)[0]
-		if not cmd or cmd != '\n':
-			return False
-	except:
-		return False
+class Rejected(dbus.DBusException):
+	_dbus_error_name = "org.bluez.Error.Rejected"
 
-	return True
+
+class PairAgent(dbus.service.Object):
+
+	def __init__(self, bus, path, obs):
+		dbus.service.Object.__init__(self, bus, path)
+		self.obs = obs
+
+	@dbus.service.method("org.bluez.Agent",
+					in_signature="", out_signature="")
+	def Release(self):
+		print 'Release'
+
+	@dbus.service.method("org.bluez.Agent",
+					in_signature="os", out_signature="")
+	def Authorize(self, device, uuid):
+		print "Authorize (%s, %s)" % (device, uuid)
+		authorize = raw_input("Authorize connection (yes/no): ")
+		if (authorize == "yes"):
+			return
+		raise Rejected("Connection rejected by user")
+
+	@dbus.service.method("org.bluez.Agent",
+					in_signature="o", out_signature="s")
+	def RequestPinCode(self, device):
+		print "RequestPinCode (%s)" % (device)
+		pin = raw_input("Enter PIN Code: ")
+		return pin
+
+	@dbus.service.method("org.bluez.Agent",
+					in_signature="o", out_signature="u")
+	def RequestPasskey(self, device):
+		print "RequestPasskey (%s)" % (device)
+		passkey = raw_input("Enter passkey: ")
+		return dbus.UInt32(passkey)
+
+	@dbus.service.method("org.bluez.Agent",
+					in_signature="ou", out_signature="")
+	def DisplayPasskey(self, device, passkey):
+		print "DisplayPasskey (%s, %d)" % (device, passkey)
+
+	@dbus.service.method("org.bluez.Agent",
+					in_signature="ou", out_signature="")
+	def RequestConfirmation(self, device, passkey):
+		print "RequestConfirmation (%s, %d)" % (device, passkey)
+		confirm = raw_input("Confirm passkey (yes/no): ")
+		if (confirm == "yes"):
+			return
+		raise Rejected("Passkey doesn't match")
+
+	@dbus.service.method("org.bluez.Agent",
+					in_signature="s", out_signature="")
+	def ConfirmModeChange(self, mode):
+		print "ConfirmModeChange (%s)" % (mode)
+		authorize = raw_input("Authorize mode change (yes/no): ")
+		if (authorize == "yes"):
+			return
+		raise Rejected("Mode change by user")
+
+	@dbus.service.method("org.bluez.Agent",
+					in_signature="", out_signature="")
+	def Cancel(self):
+		print "Cancel"
 
 
 class HDPAutoPTS:
 	""" Runs an interactive prompt for automatically test BlueZ against PTS.
-	User is required only to input ENTER for entering a test suite and sending
-	the inquired commands or ESC for jumping the test suite.
 	"""
-	def __init__(self, suites):
-		self.suites = suites
+	def __init__(self, tests, mainloop):
+		self.tests = tests
+		self.mainloop = mainloop
+
+		glib.io_add_watch(sys.stdin, glib.IO_IN | glib.IO_PRI, self.tick)
+
+
 		self.bus = dbus.SystemBus()
 		self.manager = dbus.Interface(self.bus.get_object("org.bluez", "/"),
 				"org.bluez.Manager")
 		self.hdp_manager = dbus.Interface(self.bus.get_object("org.bluez",
 				"/org/bluez"), "org.bluez.HealthManager")
+		self.agent = PairAgent(self.bus, '/test/agent', self)
 
 		self.channels = []
 		self.device = None
 		self.app = None
-		self.running = False
+		self.device_bdaddr = '00:80:98:E7:31:E1'
 		self.select_adapter()
+
+		self.test = None
+		self.cmd_idx = -1
 
 	def select_adapter(self):
 		select = self.manager.DefaultAdapter()
@@ -142,17 +219,34 @@ class HDPAutoPTS:
 		self.device = dbus.Interface(self.bus.get_object("org.bluez", select),
 						"org.bluez.HealthDevice")
 
-	def help(self):
-		print 'Available commands: ', ', '.join(self.commands.keys())
+	def pair(self):
+		print 'Pairing..'
+		self.pairing = True
+		self.adapter.CreatePairedDevice(self.device_bdaddr, '/test/agent',
+			'DisplayYesNo', reply_handler=self.pair_reply, error_handler=self.pair_error)
 
-	def exit(self):
-		print 'Exiting'
-		self.running = False
+		slept = 0
+		while self.pairing:
+			time.sleep(1)
+			slept += 1
+			if slept >= 10:
+				break
+
+		self.pairing = False
+
+	def pair_reply(self, device):
+		print 'Finished pairing with', device
+		self.pairing = False
+
+	def pair_error(self, error):
+		print 'Failed to pair,', error
+		self.pairing = False
 
 	def create_app(self, role):
 		self.app = self.hdp_manager.CreateApplication(
 				{"DataType": dbus.types.UInt16(4103),
 				 "Role": role})
+		print 'Created app', self.app
 
 	def create_app_sink(self):
 		self.create_app('sink')
@@ -171,10 +265,14 @@ class HDPAutoPTS:
 			self.channels.append(channel)
 		except dbus.exceptions.DBusException, e:
 			print 'Failed to create channel. You might have selected the' \
-				' wrong device, try again.', e
-			self.create_channel(type)
+				' wrong device or the test already passed, check PTS.', e
 
-	def destroy_channel(self, channel):
+	def destroy_channel(self, channel=None):
+		if not channel:
+			if len(self.channels) == 0:
+				return
+			channel = self.channels[0]
+
 		if not self.device or not self.channels:
 			return
 		chan = self.device.DestroyChannel(channel)
@@ -192,54 +290,112 @@ class HDPAutoPTS:
 	def create_channel_streaming(self):
 		self.create_channel('Streaming')
 
+	def tick(self, src, cond):
+		available = c_long()
+		ioctl(src, termios.FIONREAD, available)
+		ch = src.read(available.value)
+
+		if ch.startswith('no'):# == 'y\n':
+			self.skip()
+		else:
+			self.run()
+
+		return True
+
+	def next_cmd(self):
+			cmds = self.test[1]
+			cmd_idx = cmds.index(self.cmd)
+
+			if cmd_idx + 1 == len(cmds):
+				print 'Test finished'
+				self.next_text()
+			else:
+				self.cmd = cmds[cmd_idx + 1]
+
+	def next_text(self):
+		test_idx = self.tests.index(self.test)
+		if test_idx + 1 == len(self.tests):
+			print 'Done!'
+			self.mainloop.quit()
+		else:
+			self.test = self.tests[test_idx + 1]
+			print 'Run test %s ? (yes/no)' % self.test[0]
+
+		self.cmd = None
 
 	def run(self):
-		tidx = 0
-		for name, suite in self.suites.items():
-			print 'Running tests for suite', name
+		if not self.test:
+			self.test = self.tests[0]
+			self.cmd = None
+			print 'Run test %s ? (yes/no)' % self.test[0]
+			return
 
-			for sname, ssuite in suite:
-				print 'Run suite %s-%s ? (enter/ctrl-c): ' % (name, sname)
+		if not self.cmd:
+			self.cmd = self.test[1][0]
+			print 'Execute command %s ? (yes/no)' % self.cmd
+			return
 
-				if not goin():
-					continue
+		try:
+			getattr(self, self.cmd)()
+			self.next_cmd()
+		except Exception, e:
+			print 'Failed to call command', e, self.cmd
 
-				for tname, tsuite in ssuite:
-					print '\nRun test %s-%s-%s ? (enter/ctrl-c): ' \
-						% (name, sname, tname)
-					tname = 'TC_%s_%s_%s' % (name, sname, tname)
+	def skip(self):
+		self.cmd = None
+		print 'Bailing out test'
+		self.next_text()
 
-					if not goin():
-						continue
+def get_tests(fname):
+	tests = []
+	names = [l.replace('\n', '') for l in open(fname, 'r').readlines() if not
+			l.startswith('[')]
 
-					print '\n'
+	print 'Matching selected tests...'
 
-					print 'Running test', tidx
-					print '\tName:', tname
-					print '\tSuite:', name, sname
-					print '\tCommands:', ', '.join(tsuite)
+	for g in groups.values():
+		for s in g.values():
+			for test_name, test in s.items():
+				if test_name in names:
+					tests.append((test_name, test))
 
-					for c in tsuite:
-						print 'Execute', c, '? (enter/ctrl-c)'
+	tests.sort()
+	print 'Tests matched:', ', '.join([t[0] for t in tests])
+	return tests
 
-						if not goin():
-							break
+def usage():
+	print 'Usage: %s --list\t(list tests)' % sys.argv[0]
+	print '       %s infile\t(run tests listed on infile)' % sys.argv[0]
+	sys.exit(0)
 
-						try:
-							method = getattr(self, c)
-							method()
-						except AttributeError:
-							print 'Method %s not implemented within ' \
-								'HDPAutoPTS. Exiting test...\n' % c
-							break
-
-					tidx += 1
-
-					print 'Finished test, wait for PTS to confirm veredict'\
-						' before starting the next.'
-
-			print 'Finished suite', name
+def list_tests():
+	for gname, g in groups.items():
+		for sname, s in g.items():
+			print '[Namespace [%s.%s]]' % (gname, sname)
+			for test_name in s.keys():
+				print test_name
+		print '\n'
+	sys.exit(0)
 
 
 if __name__ == '__main__':
-	HDPAutoPTS(suites).run()
+	if len(sys.argv) != 2:
+		usage()
+	else:
+		{'--list': list_tests,
+		 '--help': usage,}.get(sys.argv[1], lambda: 1)()
+
+	if not os.path.exists(sys.argv[1]):
+		print 'Input file %s does not exist.' % sys.argv[1]
+		sys.exit(0)
+
+	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
+	mainloop = gobject.MainLoop()
+	tests = get_tests(sys.argv[1])
+	suite = HDPAutoPTS(tests, mainloop)
+
+	try:
+		mainloop.run()
+	except KeyboardInterrupt:
+		print 'Bye'
