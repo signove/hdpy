@@ -25,188 +25,172 @@
 
 import dbus
 import sys
-from sys import stdin
-
-end = False
-app = None
-device = None
-channels = []
-
-def setup():
-    global bus
-    global manager
-    global hdp_manager
-    bus = dbus.SystemBus()
-
-    manager = dbus.Interface(bus.get_object("org.bluez", "/"),
-                            "org.bluez.Manager")
-    hdp_manager = dbus.Interface(bus.get_object("org.bluez", "/org/bluez"),
-                        "org.bluez.HealthManager")
-
-def select_adapter():
-    global adapter
-    select = manager.DefaultAdapter()
-    adapters = manager.ListAdapters()
-
-    print "Select an adapter [%s]:" % (select)
-    i = 1
-    for ad in adapters:
-        print "%d. %s" % (i, ad)
-        i = i + 1
-
-    set = None
-    while set == None:
-        try:
-            cmd = sys.stdin.readline()
-            if cmd == '\n':
-                break
-            pos = int(cmd) - 1
-            if pos < 0:
-                raise TypeError
-            select = adapters[pos]
-            set = True
-        except (TypeError, IndexError, ValueError):
-            print "Wrong selection, try again: "
-        except KeyboardInterrupt:
-            sys.exit()
-    adapter = dbus.Interface(bus.get_object("org.bluez", select),
-                            "org.bluez.Adapter")
-
-def select_device():
-    global manager
-    global adapter
-    global device
-    devices = adapter.ListDevices()
-
-    if len(devices) == 0:
-        print "No devices available"
-        sys.exit()
-
-    print "Select a device [%s]:" % (devices[0])
-    i = 1
-    for dev in devices:
-        print "%d. %s" % (i, dev)
-        i = i + 1
-
-    set = None
-    select = devices[0]
-    while set == None:
-        try:
-            cmd = sys.stdin.readline()
-            if cmd == '\n':
-                break
-            pos = int(cmd) - 1
-            if pos < 0:
-                raise TypeError
-            select = devices[pos]
-            set = True
-        except (TypeError, IndexError, ValueError):
-            print "Wrong selection, try again: ",
-        except KeyboardInterrupt:
-            sys.exit()
-
-    print "Connecting to %s" % (select)
-    device = dbus.Interface(bus.get_object("org.bluez", select),
-                    "org.bluez.HealthDevice")
-
-def help():
-    print 'Help'
-
-def exit():
-    global end
-    end = True
-
-def create_app(role):
-    global app
-    app = hdp_manager.CreateApplication({"DataType": dbus.types.UInt16(4103),
-                    "Role": role})
-    print '%s created' % (app)
-
-def create_app_sink():
-    create_app('sink')
-
-def create_app_source():
-    create_app('source')
-
-def destroy_app():
-    global app
-    hdp_manager.DestroyApplication(app)
-    app = None
-
-def create_channel(type):
-    global channels
-    global app
-    global device
-    select_device()
-    try:
-        channel = device.CreateChannel(app, type)
-        channels.append(channel)
-    except dbus.exceptions.DBusException, e:
-        print e
-
-def destroy_channel(channel):
-    global channels
-    global device
-    chan = device.DestroyChannel(channel)
-    channels.remove(channel)
-
-def list_channels():
-    '''
-    List the channels created in this session.
-    '''
-    global channels
-    for ch in channels:
-        print ch
-
-def create_channel_any():
-    create_channel("Any")
-
-def create_channel_reliable():
-    create_channel('Reliable')
-
-def create_channel_streaming():
-    create_channel('Streaming')
-
-commands = {'help':help,
-            'exit':exit,
-            'create_app_sink':create_app_sink,
-            'create_app_source':create_app_source,
-            'destroy_app':destroy_app,
-            'create_channel_any':create_channel_any,
-            'create_channel_reliable':create_channel_reliable,
-            'create_channel_streaming':create_channel_streaming,
-#            'destroy_channel':destroy_channel,
-#            'list_channels':list_channels,
-            }
 
 
-def start_shell():
-    global commands
-    global end
-    print 'Available commands:'
-    i = 1
-    keys = commands.keys()
-    keys.sort()
-    for c in keys:
-        print c
+class PTSManualTester:
+	""" Runs an interactive prompt capable of sending commands to a health
+	device. Can be useful to certify BlueZ HDP against PTS.
+	"""
+	def __init__(self):
+		self.commands = {'help': self.help,
+				'exit': self.exit,
+				'create_app_sink': self.create_app_sink,
+				'create_app_source': self.create_app_source,
+				'destroy_app': self.destroy_app,
+				'create_channel_any': self.create_channel_any,
+				'create_channel_reliable': self.create_channel_reliable,
+				'create_channel_streaming': self.create_channel_streaming,
+				#'destroy_channel':destroy_channel,
+				#'list_channels':list_channels,
+				}
+		self.bus = dbus.SystemBus()
+		self.manager = dbus.Interface(self.bus.get_object("org.bluez", "/"),
+				"org.bluez.Manager")
+		self.hdp_manager = dbus.Interface(self.bus.get_object("org.bluez",
+				"/org/bluez"), "org.bluez.HealthManager")
+		self.channels = []
+		self.device = None
+		self.app = None
+		self.running = False
 
-    while not end:
-        print '$',
-        cmd = sys.stdin.readline()
-        try:
-            cmd = cmd.split('\n')[0]
-            cmd = cmd.split(' ')
-            if len(cmd) > 1:
-                commands[cmd[0]](cmd[1:])
-            else:
-                commands[cmd[0]]()
-        except KeyError:
-            print 'Unknown command'
-        except TypeError:
-            print 'Unknown parameters on function %s' % (cmd[0])
+		self.select_adapter()
+
+	def select_adapter(self):
+		select = self.manager.DefaultAdapter()
+		adapters = self.manager.ListAdapters()
+
+		print "Select an adapter [%s]:" % (select)
+		i = 1
+		for ad in adapters:
+			print "\t%d. %s" % (i, ad)
+			i = i + 1
+
+		set = None
+		while set == None:
+			try:
+				print 'Select: ',
+				cmd = sys.stdin.readline()
+				if cmd == '\n':
+					break
+				pos = int(cmd) - 1
+				if pos < 0:
+					raise TypeError
+				select = adapters[pos]
+				set = True
+			except (TypeError, IndexError, ValueError):
+				print "Wrong selection, choose a device from the list."
+			except KeyboardInterrupt:
+				sys.exit()
+
+		self.adapter = dbus.Interface(self.bus.get_object("org.bluez", select),
+				"org.bluez.Adapter")
+
+	def select_device(self):
+		devices = self.adapter.ListDevices()
+
+		if len(devices) == 0:
+			print "No devices available"
+			sys.exit()
+
+		print "Select a device [%s]:" % (devices[0])
+		i = 1
+		for dev in devices:
+			print "%d. %s" % (i, dev)
+			i = i + 1
+
+		set = None
+		select = devices[0]
+		while set == None:
+			try:
+				print 'Select: ',
+				cmd = sys.stdin.readline()
+				if cmd == '\n':
+					break
+				pos = int(cmd) - 1
+				if pos < 0:
+					raise TypeError
+				select = devices[pos]
+				set = True
+			except (TypeError, IndexError, ValueError):
+				print "Wrong selection, try again: ",
+			except KeyboardInterrupt:
+				sys.exit()
+
+		print "Connecting to", select
+		self.device = dbus.Interface(self.bus.get_object("org.bluez", select),
+						"org.bluez.HealthDevice")
+
+	def help(self):
+		print 'Available commands: ', ', '.join(self.commands.keys())
+
+	def exit(self):
+		print 'Exiting'
+		self.running = False
+
+	def create_app(self, role):
+		self.app = self.hdp_manager.CreateApplication(
+				{"DataType": dbus.types.UInt16(4103),
+				 "Role": role})
+		print 'Created app ', self.app
+
+	def create_app_sink(self):
+		self.create_app('sink')
+
+	def create_app_source(self):
+		self.create_app('source')
+
+	def destroy_app(self):
+		self.hdp_manager.DestroyApplication(self.app)
+		self.app = None
+
+	def create_channel(self, type):
+		self.select_device()
+		try:
+			channel = self.device.CreateChannel(self.app, type)
+			self.channels.append(channel)
+		except dbus.exceptions.DBusException, e:
+			print 'Failed to create channel.', e
+
+	def destroy_channel(self, channel):
+		if not self.device or not self.channels:
+			return
+		chan = self.device.DestroyChannel(channel)
+		self.channels.remove(channel)
+
+	def list_channels(self):
+		print '\n'.join(self.channels)
+
+	def create_channel_any(self):
+		self.create_channel("Any")
+
+	def create_channel_reliable(self):
+		self.create_channel('Reliable')
+
+	def create_channel_streaming(self):
+		self.create_channel('Streaming')
+
+	def run(self):
+		self.help()
+		self.running = True
+
+		while self.running:
+			print '$ ',
+			cmd = sys.stdin.readline()
+			try:
+				cmd = cmd.split('\n')[0]
+				cmd = cmd.split(' ')
+				if len(cmd) > 1:
+					self.commands[cmd[0]](cmd[1:])
+				else:
+					self.commands[cmd[0]]()
+			except KeyboardInterrupt:
+				self.exit()
+			except KeyError:
+				print 'Unknown command'
+			except TypeError, e:
+				print 'Unknown parameters on function %s' % (cmd[0])
+				print e
 
 
-setup()
-select_adapter()
-start_shell()
-print 'Bye'
+if __name__ == '__main__':
+	PTSManualTester().run()

@@ -28,12 +28,15 @@
 # whenever you need to interact with other MCAP actor.
 #
 
-from mcap.mcap_defs import *
-from mcap.mcap import *
-from threading import RLock
 import sys
 import time
 import glib
+
+from threading import RLock
+
+from mcap.mcap_defs import *
+from mcap.mcap import *
+
 
 class MCAPSessionServerStub:
 
