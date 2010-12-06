@@ -2,7 +2,7 @@
 
 mcap_suites = {
                 "01_CM": {
-                          "CE_BV_01_C": ["con_mcl", "con_dc"],
+                          "CE_BV_01_C": ["con_mcl", "con_dc", "send_data"],
                           "CE_BV_02_C": ["send_data"],
                           "CE_BV_03_C": ["con_mcl", "send_data"],
                           "CE_BV_04_C": ["con_dc", "send_data"],
