@@ -32,6 +32,7 @@ import glib
 import gobject
 import dbus
 import dbus.mainloop.glib
+import dbus.exceptions
 import dbus.service
 
 from fcntl import ioctl
@@ -39,20 +40,29 @@ from ctypes import c_long
 
 
 # PTS suite specs
-hdp_snk_con = { 'TC_SNK_CON_BV_01_I': ('create_app_sink', 'destroy_app'),
-				'TC_SNK_CON_BV_02_I': ('create_app_sink', 'destroy_app'),
-				'TC_SNK_CON_BV_03_I': ('create_app_sink', 'destroy_app'),
+hdp_snk_con = { 'TC_SNK_CON_BV_01_I': ( 'create_app_sink',
+										'destroy_app'),
+				'TC_SNK_CON_BV_02_I': ( 'create_app_sink',
+										'destroy_app'),
+				'TC_SNK_CON_BV_03_I': ( 'create_app_sink',
+										'destroy_app'),
 				'TC_SNK_CON_BV_04_I': ( 'pair',
 										'create_app_sink',
 										'create_channel_any',
 										'destroy_channel',
 										'destroy_app'),
 				'TC_SNK_CON_BV_05_I': ('create_app_sink', 'destroy_app'),
-				'TC_SNK_CON_BV_06_I': ('create_app_sink', ),
-				'TC_SNK_CON_BV_07_I': (),
-				'TC_SNK_CON_BV_08_I': (),
-				'TC_SNK_CON_BV_09_I': (),
-				'TC_SNK_CON_BV_10_I': ()}
+				'TC_SNK_CON_BV_06_I': ( 'create_app_sink',
+										'create_channel_any'),
+				'TC_SNK_CON_BV_07_I': ( 'discover', ),
+				'TC_SNK_CON_BV_08_I': ( 'delete_pairing',
+										'create_app_sink',
+										'destroy_app'),
+				'TC_SNK_CON_BV_09_I': ( 'create_app_sink',
+										'create_channel_any',
+										'destroy_channel',
+										'destroy_app'),
+				'TC_SNK_CON_BV_10_I': ( 'set_discoverable', ) }
 
 hdp_src_suites = {}
 hdp_snk_suites = {'SNK_CON': hdp_snk_con}
@@ -153,6 +163,9 @@ class HDPAutoPTS:
 		self.test = None
 		self.cmd_idx = -1
 
+		self.device_found = 0
+		self.discovering = False
+
 	def select_adapter(self):
 		select = self.manager.DefaultAdapter()
 		adapters = self.manager.ListAdapters()
@@ -183,6 +196,22 @@ class HDPAutoPTS:
 
 		self.adapter = dbus.Interface(self.bus.get_object("org.bluez", select),
 				"org.bluez.Adapter")
+		self.bus.add_signal_receiver(self.device_found,
+				dbus_interface="org.bluez.Adapter",
+				signal_name="DeviceFound")
+		self.bus.add_signal_receiver(self.property_changed,
+				dbus_interface="org.bluez.Adapter",
+				signal_name="PropertyChanged")
+
+	def set_discoverable(self):
+		self.adapter.SetProperty('Discoverable', dbus.Boolean(1))
+		print 'Adapter set to General Discoverable mode...'
+
+		cls = self.adapter.GetProperties()['Class']
+		if cls != 0x4a0914:
+			print 'WARNING: device class is not Health (0x4a0914). This test'\
+			      ' might fail. Try \'sudo hciconfig <IFACE> class 0x4a0914\''
+			print cls
 
 	def select_device(self):
 		devices = self.adapter.ListDevices()
@@ -233,6 +262,51 @@ class HDPAutoPTS:
 				break
 
 		self.pairing = False
+
+	def delete_pairing(self):
+		print 'Deleting pairing with %s' % self.device_bdaddr
+		try:
+			device = self.adapter.FindDevice(self.device_bdaddr)
+			if device:
+				self.adapter.RemoveDevice(device)
+		except:
+			pass
+		print 'Pairing deleted. Input the PIN number whenever requested.'
+
+	def device_found(self, addr, props):
+		""" Receives DeviceFound signals, used for discovery.
+		"""
+		if not self.discovering:
+			return
+
+		if addr == self.device_bdaddr:
+			print 'Device found! Confirm on PTS that it was found to continue.'
+			self.discovering = False
+			self.device_found = True
+		else:
+			print 'Found device', addr, 'ignoring...'
+
+	def discover(self):
+		print 'Discovering device...'
+		self.discovering = True
+		self.adapter.StartDiscovery()
+
+		# Block cmd input until finished discovering or timeout (10s)
+		slept = 0
+		while self.discovering:
+			time.sleep(1)
+			slept += 1
+			if slept >= 15:
+				break
+
+		print 'Discovering timed out. Next test will be ready to execute.'
+
+	def property_changed(self, name, value):
+		if name == 'Discovering' and not value:
+			self.discovering = False
+			if self.device_found:
+				print 'Finished discovery, device was found. Confirm on PTS if'\
+					  ' you haven\'t already.'
 
 	def pair_reply(self, device):
 		print 'Finished pairing with', device
@@ -318,6 +392,7 @@ class HDPAutoPTS:
 		test_idx = self.tests.index(self.test)
 		if test_idx + 1 == len(self.tests):
 			print 'Done!'
+			raw_input('Hit enter to exit.')
 			self.mainloop.quit()
 		else:
 			self.test = self.tests[test_idx + 1]
@@ -376,7 +451,6 @@ def list_tests():
 			print '[Namespace [%s.%s]]' % (gname, sname)
 			for test_name in s.keys():
 				print test_name
-		print '\n'
 	sys.exit(0)
 
 
