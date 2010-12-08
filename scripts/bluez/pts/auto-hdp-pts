@@ -89,8 +89,8 @@ class PairAgent(dbus.service.Object):
 					in_signature="os", out_signature="")
 	def Authorize(self, device, uuid):
 		print "Authorize (%s, %s)" % (device, uuid)
-		authorize = raw_input("Authorize connection (yes/no): ")
-		if (authorize == "yes"):
+		authorize = raw_input("Authorize connection (Yes/no): ")
+		if (authorize.lower() == "yes"):
 			return
 		raise Rejected("Connection rejected by user")
 
@@ -117,8 +117,8 @@ class PairAgent(dbus.service.Object):
 					in_signature="ou", out_signature="")
 	def RequestConfirmation(self, device, passkey):
 		print "RequestConfirmation (%s, %d)" % (device, passkey)
-		confirm = raw_input("Confirm passkey (yes/no): ")
-		if (confirm == "yes"):
+		confirm = raw_input("Confirm passkey (Yes/no): ")
+		if (confirm.lower() == "yes"):
 			return
 		raise Rejected("Passkey doesn't match")
 
@@ -126,8 +126,8 @@ class PairAgent(dbus.service.Object):
 					in_signature="s", out_signature="")
 	def ConfirmModeChange(self, mode):
 		print "ConfirmModeChange (%s)" % (mode)
-		authorize = raw_input("Authorize mode change (yes/no): ")
-		if (authorize == "yes"):
+		authorize = raw_input("Authorize mode change (Yes/no): ")
+		if (authorize.lower() == "yes"):
 			return
 		raise Rejected("Mode change by user")
 
@@ -370,7 +370,7 @@ class HDPAutoPTS:
 		ioctl(src, termios.FIONREAD, available)
 		ch = src.read(available.value)
 
-		if ch.startswith('no'):# == 'y\n':
+		if ch.lower().startswith('no'):
 			self.skip()
 		else:
 			self.run()
@@ -386,7 +386,7 @@ class HDPAutoPTS:
 			self.next_text()
 		else:
 			self.cmd = cmds[cmd_idx + 1]
-			print 'Execute command %s ? (yes/no)' % self.cmd
+			print 'Execute command %s ? (Yes/no)' % self.cmd
 
 	def next_text(self):
 		test_idx = self.tests.index(self.test)
@@ -396,7 +396,7 @@ class HDPAutoPTS:
 			self.mainloop.quit()
 		else:
 			self.test = self.tests[test_idx + 1]
-			print 'Run test %s ? (yes/no)' % self.test[0]
+			print 'Run test %s ? (Yes/no)' % self.test[0]
 
 		self.cmd = None
 
@@ -404,12 +404,12 @@ class HDPAutoPTS:
 		if not self.test:
 			self.test = self.tests[0]
 			self.cmd = None
-			print 'Run test %s ? (yes/no)' % self.test[0]
+			print 'Run test %s ? (Yes/no)' % self.test[0]
 			return
 
 		if not self.cmd:
 			self.cmd = self.test[1][0]
-			print 'Execute command %s ? (yes/no)' % self.cmd
+			print 'Execute command %s ? (Yes/no)' % self.cmd
 			return
 
 		try:
