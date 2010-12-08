@@ -140,7 +140,7 @@ class PairAgent(dbus.service.Object):
 class HDPAutoPTS:
 	""" Runs an interactive prompt for automatically test BlueZ against PTS.
 	"""
-	def __init__(self, tests, mainloop):
+	def __init__(self, bdaddr, tests, mainloop):
 		self.tests = tests
 		self.mainloop = mainloop
 
@@ -157,7 +157,7 @@ class HDPAutoPTS:
 		self.channels = []
 		self.device = None
 		self.app = None
-		self.device_bdaddr = '00:80:98:E7:31:E1'
+		self.device_bdaddr = bdaddr
 		self.select_adapter()
 
 		self.test = None
@@ -439,7 +439,7 @@ def get_tests(fname):
 
 def usage():
 	print 'Usage: %s --list\t(list tests)' % sys.argv[0]
-	print '       %s infile\t(run tests listed on infile)' % sys.argv[0]
+	print '       %s <PTS dongle bdaddr> <infile>\t(run tests listed on infile)' % sys.argv[0]
 	sys.exit(0)
 
 def list_tests():
@@ -452,19 +452,32 @@ def list_tests():
 			print '\n'.join(tests)
 	sys.exit(0)
 
+def check_bdaddr(addr):
+	if addr.count(':') == 5 and \
+		not [c for c in addr.replace(':', '') if c.lower() > 'f']:
+		return addr
 
 if __name__ == '__main__':
-	if len(sys.argv) != 2:
+	if len(sys.argv) < 2:
 		usage()
+	elif len(sys.argv) == 2:
+		{'--list': list_tests, \
+		 '--help': usage,}.get(sys.argv[1], usage)()
 	else:
-		{'--list': list_tests,
-		 '--help': usage,}.get(sys.argv[1], lambda: 1)()
+		pass
 
-	if not os.path.exists(sys.argv[1]):
-		print 'Input file %s does not exist.' % sys.argv[1]
+	bdaddr = check_bdaddr(sys.argv[1])
+	infile = sys.argv[2]
+
+	if not bdaddr:
+		print 'Invalid broadcast address:', sys.argv[1]
 		sys.exit(0)
 
-	tests = get_tests(sys.argv[1])
+	if not os.path.exists(infile):
+		print 'Input file %s does not exist.' % infile
+		sys.exit(0)
+
+	tests = get_tests(infile)
 
 	if not tests:
 		print 'Could not match any tests on input with our list.'
@@ -474,7 +487,7 @@ if __name__ == '__main__':
 
 	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 	mainloop = gobject.MainLoop()
-	suite = HDPAutoPTS(tests, mainloop)
+	suite = HDPAutoPTS(bdaddr, tests, mainloop)
 
 	try:
 		mainloop.run()
