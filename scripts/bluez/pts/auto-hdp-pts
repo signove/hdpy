@@ -428,8 +428,6 @@ def get_tests(fname):
 	names = [l.replace('\n', '') for l in open(fname, 'r').readlines() if not
 			l.startswith('[')]
 
-	print 'Matching selected tests...'
-
 	for g in groups.values():
 		for s in g.values():
 			for test_name, test in s.items():
@@ -437,7 +435,6 @@ def get_tests(fname):
 					tests.append((test_name, test))
 
 	tests.sort()
-	print 'Tests matched:', ', '.join([t[0] for t in tests])
 	return tests
 
 def usage():
@@ -465,10 +462,16 @@ if __name__ == '__main__':
 		print 'Input file %s does not exist.' % sys.argv[1]
 		sys.exit(0)
 
-	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-
-	mainloop = gobject.MainLoop()
 	tests = get_tests(sys.argv[1])
+
+	if not tests:
+		print 'Could not match any tests on input with our list.'
+		sys.exit(0)
+
+	print 'Tests matched:', ', '.join([t[0] for t in tests])
+
+	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+	mainloop = gobject.MainLoop()
 	suite = HDPAutoPTS(tests, mainloop)
 
 	try:
