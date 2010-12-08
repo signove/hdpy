@@ -446,8 +446,10 @@ def list_tests():
 	for gname, g in groups.items():
 		for sname, s in g.items():
 			print '[Namespace [%s.%s]]' % (gname, sname)
-			for test_name in s.keys():
-				print test_name
+
+			tests = s.keys()
+			tests.sort()
+			print '\n'.join(tests)
 	sys.exit(0)
 
 
