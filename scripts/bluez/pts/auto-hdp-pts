@@ -275,7 +275,7 @@ class HDPAutoPTS:
 		self.test = None
 		self.cmd_idx = -1
 
-		self.device_found = 0
+		self._device_found = False
 		self.discovering = False
 
 	def select_adapter(self):
@@ -394,7 +394,7 @@ class HDPAutoPTS:
 		if addr == self.device_bdaddr:
 			print 'Device found! Confirm on PTS that it was found to continue.'
 			self.discovering = False
-			self.device_found = True
+			self._device_found = True
 		else:
 			print 'Found device', addr, 'ignoring...'
 
@@ -416,7 +416,7 @@ class HDPAutoPTS:
 	def property_changed(self, name, value):
 		if name == 'Discovering' and not value:
 			self.discovering = False
-			if self.device_found:
+			if self._device_found:
 				print 'Finished discovery, device was found. Confirm on PTS if'\
 					  ' you haven\'t already.'
 
