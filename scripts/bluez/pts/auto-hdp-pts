@@ -162,6 +162,21 @@ hdp_src_hct = { 'TC_SRC_HCT_BV_01_I': ( 'create_app_source',
 				#						'destroy_app')
 			}
 
+"""
+Notes (HDP.SRC.DE)
+==================
+
+PICS flags for enabling tests (set to True)
+-------------------------------------------
+
+- TC_SRC_DE_BV_01_I:
+	- TSPC_HDP_7_1 (Source: Supports Initiation of Echo Test (O))
+"""
+hdp_src_de = {	'TC_SRC_DE_BV_01_I': (	'create_app_source',
+										'echo', # no need to create a channel
+										'destroy_app'),
+				'TC_SRC_DE_BV_02_I': (	'create_app_source',
+										'destroy_app') }
 
 hdp_snk_con = { 'TC_SNK_CON_BV_01_I': ( 'create_app_sink',
 										'destroy_app'),
@@ -235,7 +250,8 @@ hdp_snk_suites = {'SNK_CON': hdp_snk_con,
 
 hdp_src_suites = {'SRC_CON': hdp_src_con,
 				  'SRC_CC': hdp_src_cc,
-				  'SRC_HCT': hdp_src_hct}
+				  'SRC_HCT': hdp_src_hct,
+				  'SRC_DE': hdp_src_de}
 
 
 groups = {'SRC': hdp_src_suites,
@@ -448,6 +464,12 @@ class HDPAutoPTS:
 		print "Connecting to", select
 		self.device = dbus.Interface(self.bus.get_object("org.bluez", select),
 						"org.bluez.HealthDevice")
+
+	def echo(self):
+		print 'Echoing...'
+		self.select_device()
+		ans = self.device.Echo()
+		print 'Echo answer was', ans
 
 	def pair(self):
 		print 'Pairing..'
