@@ -98,11 +98,19 @@ hdp_snk_hct = { 'TC_SNK_HCT_BV_01_I': (	'create_app_sink',
 				#'TC_SNK_HCT_BV_07_C': ( 'create_app_sink',
 				#						'destroy_app') }
 
+hdp_snk_de = { 	#'TC_SNK_DE_BV_01_I': (	'create_app_sink',
+				#						'create_channel_any',
+				#						'destroy_channel',
+				#						'destroy_app'),
+				'TC_SNK_DE_BV_02_I': (	'create_app_sink',
+										'destroy_app') }
+
 hdp_src_suites = {}
 
 hdp_snk_suites = {'SNK_CON': hdp_snk_con,
 				  'SNK_CC': hdp_snk_cc,
-				  'SNK_HCT': hdp_snk_hct}
+				  'SNK_HCT': hdp_snk_hct,
+				  'SNK_DE': hdp_snk_de}
 
 groups = {'SRC': hdp_src_suites,
 		  'SNK': hdp_snk_suites}
