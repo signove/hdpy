@@ -88,7 +88,9 @@ hdp_snk_cc = { 	'TC_SNK_CC_BV_01_C': ( 	'create_app_sink',
 hdp_snk_hct = { 'TC_SNK_HCT_BV_01_I': (	'create_app_sink',
 										'create_channel_any',
 										'destroy_channel',
-										'destroy_app') }
+										'destroy_app'),
+				'TC_SNK_HCT_BV_02_I': ( 'create_app_sink',
+										'destroy_app')}
 
 hdp_src_suites = {}
 
