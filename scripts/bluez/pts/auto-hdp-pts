@@ -413,12 +413,12 @@ class HDPAutoPTS:
 
 		if cmd_idx + 1 == len(cmds):
 			print 'Test finished'
-			self.next_text()
+			self.next_test()
 		else:
 			self.cmd = cmds[cmd_idx + 1]
 			print 'Execute command %s ? (Yes/no)' % self.cmd
 
-	def next_text(self):
+	def next_test(self):
 		test_idx = self.tests.index(self.test)
 		if test_idx + 1 == len(self.tests):
 			print 'Done!'
@@ -452,7 +452,7 @@ class HDPAutoPTS:
 	def skip(self):
 		self.cmd = None
 		print 'Bailing out test'
-		self.next_text()
+		self.next_test()
 
 def get_tests(fname):
 	tests = []
