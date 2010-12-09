@@ -363,7 +363,6 @@ class HDPAutoPTS:
 				print 'Select: ',
 				cmd = sys.stdin.readline()
 				if cmd == '\n':
-					print
 					break
 				pos = int(cmd) - 1
 				if pos < 0:
@@ -374,6 +373,8 @@ class HDPAutoPTS:
 				print "Wrong selection, choose a device from the list."
 			except KeyboardInterrupt:
 				sys.exit()
+
+		print
 		print 'Selected adapter', sel
 
 		self.adapter = dbus.Interface(self.bus.get_object("org.bluez", sel),
@@ -403,14 +404,11 @@ class HDPAutoPTS:
 			sys.exit()
 
 		print "Select a device [%s]:" % (devices[0])
-		i = 1
 		for dev in devices:
-			print "%d. %s" % (i, dev)
-			i = i + 1
+			print "%d. %s" % (devices.index(dev) + 1, dev)
 
-		set = None
 		select = devices[0]
-		while set == None:
+		while True:
 			try:
 				print 'Select: ',
 				cmd = sys.stdin.readline()
@@ -420,12 +418,13 @@ class HDPAutoPTS:
 				if pos < 0:
 					raise TypeError
 				select = devices[pos]
-				set = True
+				break
 			except (TypeError, IndexError, ValueError):
 				print "Wrong selection, try again: ",
 			except KeyboardInterrupt:
 				sys.exit()
 
+		print
 		print "Connecting to", select
 		self.device = dbus.Interface(self.bus.get_object("org.bluez", select),
 						"org.bluez.HealthDevice")
@@ -571,9 +570,6 @@ class HDPAutoPTS:
 		chan = dbus.Interface(self.bus.get_object("org.bluez", channel),
 						"org.bluez.HealthChannel")
 		chan.Release()
-
-	def list_channels(self):
-		print '\n'.join(self.channels)
 
 	def create_channel_any(self):
 		self.create_channel("Any")
