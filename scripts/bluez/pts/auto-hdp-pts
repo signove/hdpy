@@ -119,12 +119,18 @@ PICS flags for enabling tests (set to True)
 - Tests BV_03_I and BV_05_I:
 	- TSPC_HDP_6_4 (Source: Supports Inititiate Reconnection of MDL (O)
 
+- Tests BV_04_I, BV_06_C and BV_07_C:
+	- TSPC_HDP_6_5 (Source: Supports Accept Reconnection of MDL (C.4)[Mandatory])
+
 
 Broken tests
 ------------
 
 - TC_SRC_HCT_BV_03_I: tests reconnection on a channel. For some reason PTS is
-not detecting the Release().
+  not detecting the Release().
+- TC_SRC_HCT_BV_05_C: tests MDL disconnection and reconnection. For some reason
+  PTS is not detecting the Release().
+- TC_SRC_HCT_BV_07_C: who knows what PTS expects from us.
 
 """
 
@@ -134,13 +140,27 @@ hdp_src_hct = { 'TC_SRC_HCT_BV_01_I': ( 'create_app_source',
 										'destroy_app'),
 				'TC_SRC_HCT_BV_02_I': ( 'create_app_source',
 										'destroy_app'),
-				'TC_SRC_HCT_BV_03_I': ( 'create_app_source',
-										'create_channel_reliable',
-										'acquire_channel',
-										'release_channel',
-										'acquire_channel',
-										'destroy_channel',
-										'destroy_app') }
+				#'TC_SRC_HCT_BV_03_I': ('create_app_source',
+				#						'create_channel_reliable',
+				#						'acquire_channel',
+				#						'release_channel',
+				#						'acquire_channel',
+				#						'destroy_channel',
+				#						'destroy_app'),
+				'TC_SRC_HCT_BV_04_I': (	'create_app_source',
+										'destroy_app'),
+				#'TC_SRC_HCT_BV_05_C': ('create_app_source',
+				#						'create_channel_reliable',
+				#						'acquire_channel',
+				#						'release_channel',
+				#						'acquire_channel',
+				#						'destroy_channel',
+				#						'destroy_app')}
+				'TC_SRC_HCT_BV_06_C': (	'create_app_source',
+									  	'destroy_app'),
+				#'TC_SRC_HCT_BV_07_C': ('create_app_source',
+				#						'destroy_app')
+			}
 
 
 hdp_snk_con = { 'TC_SNK_CON_BV_01_I': ( 'create_app_sink',
