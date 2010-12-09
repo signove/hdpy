@@ -266,10 +266,33 @@ hdp_snk_de = { 	#'TC_SNK_DE_BV_01_I': (	'create_app_sink',
 				'TC_SNK_DE_BV_02_I': (	'create_app_sink',
 										'destroy_app') }
 
+"""
+Notes (HDP.SNK.DEP)
+===================
+
+PICS flags for enabling tests (set to True)
+-------------------------------------------
+
+- TC_SNK_DEP_BV_03_I and TC_SNK_DEP_BV_04_I:
+	- TSPC_HDP_13_5 (Sink: Supports IEEE 11073-20601 Manager Role (C.1))
+
+Broken tests
+------------
+
+- All tests require an "associate request", which ATM is unknown.
+
+"""
+hdp_snk_dep = {	#'TC_SNK_DEP_BV_03_I': ('create_app_sink',
+				#						'destroy_app'),
+				#'TC_SNK_DEP_BV_04_I': ('create_app_sink',
+				#						'destroy_app')
+				}
+
 hdp_snk_suites = {'SNK_CON': hdp_snk_con,
 				  'SNK_CC': hdp_snk_cc,
 				  'SNK_HCT': hdp_snk_hct,
-				  'SNK_DE': hdp_snk_de}
+				  'SNK_DE': hdp_snk_de,
+				  'SNK_DEP': hdp_snk_dep}
 
 hdp_src_suites = {'SRC_CON': hdp_src_con,
 				  'SRC_CC': hdp_src_cc,
