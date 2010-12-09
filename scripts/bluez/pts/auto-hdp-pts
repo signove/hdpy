@@ -92,7 +92,12 @@ hdp_snk_hct = { 'TC_SNK_HCT_BV_01_I': (	'create_app_sink',
 				'TC_SNK_HCT_BV_02_I': ( 'create_app_sink',
 										'destroy_app'),
 				'TC_SNK_HCT_BV_04_I': ( 'create_app_sink',
+										'destroy_app'),
+				'TC_SNK_HCT_BV_06_C': ( 'create_app_sink',
 										'destroy_app')}
+				#'TC_SNK_HCT_BV_07_C': ( 'create_app_sink',
+				#						'destroy_app') }
+
 hdp_src_suites = {}
 
 hdp_snk_suites = {'SNK_CON': hdp_snk_con,
