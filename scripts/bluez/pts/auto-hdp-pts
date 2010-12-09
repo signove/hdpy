@@ -321,11 +321,22 @@ class HDPAutoPTS:
 	""" Runs an interactive prompt for automatically test BlueZ against PTS.
 	"""
 	def __init__(self, bdaddr, tests, mainloop):
-		self.tests = tests
-		self.mainloop = mainloop
-
 		glib.io_add_watch(sys.stdin, glib.IO_IN | glib.IO_PRI, self.tick)
 
+		self.mainloop = mainloop
+		self.device_bdaddr = bdaddr
+
+		# Test context
+		self.app = None
+		self.device = None
+		self.channels = []
+
+		# Test suite context
+		self.tests = tests
+		self.test = None
+		self.cmd_idx = -1
+		self._device_found = False
+		self.discovering = False
 
 		self.bus = dbus.SystemBus()
 		self.manager = dbus.Interface(self.bus.get_object("org.bluez", "/"),
@@ -334,47 +345,38 @@ class HDPAutoPTS:
 				"/org/bluez"), "org.bluez.HealthManager")
 		self.agent = PairAgent(self.bus, '/test/agent', self)
 
-		self.channels = []
-		self.device = None
-		self.app = None
-		self.device_bdaddr = bdaddr
 		self.select_adapter()
 
-		self.test = None
-		self.cmd_idx = -1
-
-		self._device_found = False
-		self.discovering = False
-
 	def select_adapter(self):
-		select = self.manager.DefaultAdapter()
+		""" Prompts user to select the adapter used for tests.
+		"""
+		sel = self.manager.DefaultAdapter()
 		adapters = self.manager.ListAdapters()
 
-		print "Select an adapter [%s]:" % (select)
-		i = 1
-		for ad in adapters:
-			print "\t%d. %s" % (i, ad)
-			i = i + 1
+		print "Select an adapter [%s]:" % sel 
 
-		set = None
-		while set == None:
+		for ad in adapters:
+			print "\t%d. %s" % (adapters.index(ad) + 1, ad)
+
+		while True:
 			try:
 				print 'Select: ',
 				cmd = sys.stdin.readline()
 				if cmd == '\n':
-					print '\n'
+					print
 					break
 				pos = int(cmd) - 1
 				if pos < 0:
 					raise TypeError
-				select = adapters[pos]
-				set = True
+				sel = adapters[pos]
+				break
 			except (TypeError, IndexError, ValueError):
 				print "Wrong selection, choose a device from the list."
 			except KeyboardInterrupt:
 				sys.exit()
+		print 'Selected adapter', sel
 
-		self.adapter = dbus.Interface(self.bus.get_object("org.bluez", select),
+		self.adapter = dbus.Interface(self.bus.get_object("org.bluez", sel),
 				"org.bluez.Adapter")
 		self.bus.add_signal_receiver(self.device_found,
 				dbus_interface="org.bluez.Adapter",
@@ -606,6 +608,10 @@ class HDPAutoPTS:
 			print 'Execute command %s ? (Yes/no)' % self.cmd
 
 	def next_test(self):
+		if not self.test:
+			self.mainloop.quit()
+			return
+
 		test_idx = self.tests.index(self.test)
 		if test_idx + 1 == len(self.tests):
 			print 'Done!'
@@ -708,6 +714,7 @@ if __name__ == '__main__':
 	suite = HDPAutoPTS(bdaddr, tests, mainloop)
 
 	try:
+		print 'Enter test suite? (Yes/no)'
 		mainloop.run()
 	except KeyboardInterrupt:
 		print 'Bye'
