@@ -178,8 +178,11 @@ hdp_src_hct = { 'TC_SRC_HCT_BV_01_I': ( 'create_app_source',
 										'destroy_app'),
 				'TC_SRC_HCT_BV_06_C': (	'create_app_source',
 									  	'destroy_app'),
-				#'TC_SRC_HCT_BV_07_C': ('create_app_source',
-				#						'destroy_app')
+				'TC_SRC_HCT_BV_07_C': (	'create_app_source_reliable',
+									  	'create_channel_reliable',
+										'send_data',
+										'destroy_channel',
+										'destroy_app')
 			}
 
 """
@@ -275,9 +278,12 @@ hdp_snk_hct = { 'TC_SNK_HCT_BV_01_I': (	'create_app_sink',
 				'TC_SNK_HCT_BV_04_I': ( 'create_app_sink',
 										'destroy_app'),
 				'TC_SNK_HCT_BV_06_C': ( 'create_app_sink',
-										'destroy_app')}
-				#'TC_SNK_HCT_BV_07_C': ( 'create_app_sink',
-				#						'destroy_app') }
+										'destroy_app'),
+				'TC_SNK_HCT_BV_07_C': ( 'create_app_sink',
+										'create_channel_any',
+										'send_data',
+										'destroy_channel',
+										'destroy_app') }
 
 hdp_snk_de = { 	'TC_SNK_DE_BV_01_I': (	'create_app_sink',
 							'echo',
@@ -663,6 +669,17 @@ class HDPAutoPTS:
 
 	def schedule_disconnection(self):
 		glib.timeout_add(3000, self.toggle_dc, self.channels[-1])
+
+	def send_data(self):
+		if len(self.channels) == 0:
+			return
+
+		channel = self.channels[-1]
+		chan = dbus.Interface(self.bus.get_object("org.bluez", channel),
+						"org.bluez.HealthChannel")
+		fd = chan.Acquire()
+		fd = fd.take()
+		fd.write('Hello PTS')
 
 	def create_channel(self, type):
 		self.select_device()
