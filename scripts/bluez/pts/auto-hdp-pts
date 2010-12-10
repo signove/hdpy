@@ -127,8 +127,8 @@ hdp_src_cc = { 	'TC_SRC_CC_BV_01_C': (	'create_app_source',
 										'destroy_channel',
 										'destroy_channel',
 										'destroy_app'),
-				#'TC_SRC_CC_BV_09_C': (	'create_app_source',
-				#						'destroy_app'),
+				'TC_SRC_CC_BV_09_C': (	'create_app_source_streaming',
+										'destroy_app'),
 				'TC_SRC_CC_BI_12_C': ( 	'create_app_source',
 										'destroy_app') }
 
@@ -431,6 +431,7 @@ class HDPAutoPTS:
 
 		self.mainloop = mainloop
 		self.device_bdaddr = bdaddr
+		self.data_type = 4103
 
 		# Test context
 		self.app = None
@@ -522,7 +523,6 @@ class HDPAutoPTS:
 			odev = dbus.Interface(self.bus.get_object("org.bluez", dev),
 							"org.bluez.Device")
 			addr = odev.GetProperties()["Address"].lower()
-			print addr
 			if self.device_bdaddr == addr:
 				select = dev
 				break
@@ -609,17 +609,30 @@ class HDPAutoPTS:
 		print 'Failed to pair,', error
 		self.pairing = False
 
-	def create_app(self, role):
-		self.app = self.hdp_manager.CreateApplication(
-				{"DataType": dbus.types.UInt16(4103),
-				 "Role": role})
-		print 'Created app', self.app
+	def create_app(self, data_type, role, chanpref=''):
+		if not self.hdp_manager:
+			return False
+
+		conf = {'DataType': dbus.types.UInt16(data_type),
+				'Role': role}
+
+		if chanpref in ['Any', 'Reliable', 'Streaming']:
+			conf['ChannelType'] = chanpref
+
+		self.app = self.hdp_manager.CreateApplication(conf)
+		return self.app
+
+	def create_app_source_streaming(self):
+		return self.create_app(self.data_type, 'Source', 'Streaming')
+
+	def create_app_source_reliable(self):
+		return self.create_app(self.data_type, 'Source', 'Reliable')
 
 	def create_app_sink(self):
-		self.create_app('sink')
+		return self.create_app(self.data_type, 'Sink')
 
 	def create_app_source(self):
-		self.create_app('source')
+		return self.create_app(self.data_type, 'Source')
 
 	def destroy_app(self):
 		print 'Destroying app'
