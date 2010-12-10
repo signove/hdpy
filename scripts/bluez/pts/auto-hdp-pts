@@ -283,10 +283,9 @@ hdp_snk_hct = { 'TC_SNK_HCT_BV_01_I': (	'create_app_sink',
 				#'TC_SNK_HCT_BV_07_C': ( 'create_app_sink',
 				#						'destroy_app') }
 
-hdp_snk_de = { 	#'TC_SNK_DE_BV_01_I': (	'create_app_sink',
-				#						'create_channel_any',
-				#						'destroy_channel',
-				#						'destroy_app'),
+hdp_snk_de = { 	'TC_SNK_DE_BV_01_I': (	'create_app_sink',
+							'echo',
+										'destroy_app'),
 				'TC_SNK_DE_BV_02_I': (	'create_app_sink',
 										'destroy_app') }
 
