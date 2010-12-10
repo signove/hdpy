@@ -164,13 +164,11 @@ hdp_src_hct = { 'TC_SRC_HCT_BV_01_I': ( 'create_app_source',
 										'destroy_app'),
 				'TC_SRC_HCT_BV_02_I': ( 'create_app_source',
 										'destroy_app'),
-				#'TC_SRC_HCT_BV_03_I': ('create_app_source',
-				#						'create_channel_reliable',
-				#						'acquire_channel',
-				#						'release_channel',
-				#						'acquire_channel',
-				#						'destroy_channel',
-				#						'destroy_app'),
+				'TC_SRC_HCT_BV_03_I': ( 'create_app_source_reliable',
+										'create_channel_reliable',
+										'schedule_disconnection',
+										'destroy_channel',
+										'destroy_app'),
 				'TC_SRC_HCT_BV_04_I': (	'create_app_source',
 										'destroy_app'),
 				#'TC_SRC_HCT_BV_05_C': ('create_app_source',
@@ -638,6 +636,35 @@ class HDPAutoPTS:
 		print 'Destroying app'
 		self.hdp_manager.DestroyApplication(self.app)
 		self.app = None
+
+	def toggle_dc(self, channel):
+		channel = dbus.Interface(self.bus.get_object("org.bluez", channel),
+						"org.bluez.HealthChannel")
+		channel.Release()
+		glib.timeout_add(3000, self.toggle_dc_2, channel)
+		return False
+
+	def toggle_dc_2(self, channel):
+		retries = 3
+		while retries > 0:
+			try:
+				fd = channel.Acquire()
+			except:
+				print 'Acquire() failed, retrying'
+			retries -= 1
+		glib.timeout_add(3000, self.toggle_dc_3, channel, fd)
+		return False
+
+	def toggle_dc_3(self, channel, fd):
+		os.close(fd.take())
+
+		try:
+			channel.Release()
+		except:
+			print 'Release failed (probably channel is gone)'
+
+	def schedule_disconnection(self):
+		glib.timeout_add(3000, self.toggle_dc, self.channels[-1])
 
 	def create_channel(self, type):
 		self.select_device()
