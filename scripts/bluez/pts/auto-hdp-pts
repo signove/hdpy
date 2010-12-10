@@ -43,6 +43,30 @@ from hdp.dummy_ieee10404 import parse_message_str
 
 # PTS suite specs
 
+# FIXME the order should be the PTS 'natural', which is not always
+# achieved by a simple alphanumeric sort. I suggest adding a character
+# in each key and filtering it out when the actual test name is needed.
+# This guarantees the arbitrary, desired order.
+
+# FIXME sometimes destroy_channel causes a 'Bailing out test' and not
+# destroying the application. This MAY be the cause of some funny
+# problems. Also, failing upon channel destruction is more or less
+# expected in some tests, because PTS default config is to take initiative
+# in destroying channels. I suggest you create a 'destroy_channel_whatever'
+# and use it in tests where PTS gives Pass veredict but it is spitting an
+# error at IUT side. (No point in yelling errors where PTS finds none!)
+
+# FIXME what is the point of asking create_app every time? I think that
+# it should happen as soon as we enter the test. Destroy_app may be asked
+# about, because it effectively ceases communication.
+
+# FIXME in test SRC_DE_BV_01_I, it is nice to show some warning like
+# PRESS OK AT PTS SIDE RIGHT NOW (after firing Echo), because if you
+# don't do in a short time (5 secs) Echo times out at IUT side and test fails.
+
+# FIXME I am missing a "rewind" feature in prompt, like I did in MCAP.
+# What if I want to repeat a test?
+
 hdp_src_con = { 'TC_SRC_CON_BV_01_I': ( 'create_app_source',
 										'destroy_app'),
 				'TC_SRC_CON_BV_02_I': ( 'set_discoverable', ),
@@ -436,12 +460,20 @@ class HDPAutoPTS:
 		sel = self.manager.DefaultAdapter()
 		adapters = self.manager.ListAdapters()
 
+		if not adapters:
+			print "No adapters, test can not be run"
+			sys.exit(1)
+
 		print "Select an adapter [%s]:" % sel 
 
 		for ad in adapters:
 			print "\t%d. %s" % (adapters.index(ad) + 1, ad)
 
 		while True:
+			if len(adapters) <= 1:
+				sel = adapters[0]
+				break
+
 			try:
 				print 'Select: ',
 				cmd = sys.stdin.readline()
@@ -481,31 +513,23 @@ class HDPAutoPTS:
 
 	def select_device(self):
 		devices = self.adapter.ListDevices()
+		select = None
 
 		if len(devices) == 0:
 			print "No devices available"
 			sys.exit()
 
-		print "Select a device [%s]:" % (devices[0])
 		for dev in devices:
-			print "%d. %s" % (devices.index(dev) + 1, dev)
-
-		select = devices[0]
-		while True:
-			try:
-				print 'Select: ',
-				cmd = sys.stdin.readline()
-				if cmd == '\n':
-					break
-				pos = int(cmd) - 1
-				if pos < 0:
-					raise TypeError
-				select = devices[pos]
+			odev = dbus.Interface(self.bus.get_object("org.bluez", dev),
+							"org.bluez.Device")
+			addr = odev.GetProperties()["Address"].lower()
+			print addr
+			if self.device_bdaddr == addr:
+				select = dev
 				break
-			except (TypeError, IndexError, ValueError):
-				print "Wrong selection, try again: ",
-			except KeyboardInterrupt:
-				sys.exit()
+		else:
+			print "PTS device not found"
+			sys.exit()
 
 		print
 		print "Connecting to", select
@@ -737,6 +761,8 @@ def get_tests(fname):
 	names = [l.replace('\n', '') for l in open(fname, 'r').readlines() if not
 			l.startswith('[')]
 
+	# FIXME final 'tests' should obey the original order in file
+	# Suggest generating a list from dicts and then checking tests in natural order
 	for g in groups.values():
 		for s in g.values():
 			for test_name, test in s.items():
@@ -754,6 +780,7 @@ def usage():
 def list_tests():
 	for gname, g in groups.items():
 		for sname, s in g.items():
+			print
 			print '[Namespace [%s.%s]]' % (gname, sname)
 
 			tests = s.keys()
@@ -775,7 +802,7 @@ if __name__ == '__main__':
 	else:
 		pass
 
-	bdaddr = check_bdaddr(sys.argv[1])
+	bdaddr = check_bdaddr(sys.argv[1].lower())
 	infile = sys.argv[2]
 
 	if not bdaddr:
