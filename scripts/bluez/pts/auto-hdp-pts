@@ -525,25 +525,26 @@ class HDPAutoPTS:
 		while True:
 			if len(adapters) <= 1:
 				sel = adapters[0]
+				print 'Auto-selected adapter %s.' % sel
 				break
 
 			try:
 				print 'Select: ',
 				cmd = sys.stdin.readline()
 				if cmd == '\n':
+					print
 					break
 				pos = int(cmd) - 1
 				if pos < 0:
 					raise TypeError
 				sel = adapters[pos]
+				print
+				print 'Selected adapter', sel
 				break
 			except (TypeError, IndexError, ValueError):
 				print "Wrong selection, choose a device from the list."
 			except KeyboardInterrupt:
 				sys.exit()
-
-		print
-		print 'Selected adapter', sel
 
 		self.adapter = dbus.Interface(self.bus.get_object("org.bluez", sel),
 				"org.bluez.Adapter")
@@ -823,7 +824,7 @@ class HDPAutoPTS:
 		else:
 			self.cmd_idx += 1
 			self.cmd = cmds[self.cmd_idx]
-			print 'Execute command %s ? (Yes/no)' % self.cmd
+			print 'Execute command %s ? (Yes/no) [Yes]' % self.cmd
 
 	def next_test(self):
 		if not self.test:
@@ -832,29 +833,29 @@ class HDPAutoPTS:
 
 		test_idx = self.tests.index(self.test)
 		if test_idx + 1 == len(self.tests):
-			print 'Finished all tests listed on file.')
-			opt = raw_input('Do you want to start over? (Yes/no)')
+			print 'Finished all tests listed on file.'
+			opt = raw_input('Do you want to start over? (Yes/no) [Yes]\n')
 			if opt.lower().startswith('no'):
 				self.mainloop.quit()
 			else:
 				self.test = self.tests[0]
-				print 'Run test %s (Yes/no)' % self.test[0]
+				print 'Enter test %s (Yes/no) [Yes]' % self.test[0]
 		else:
 			self.test = self.tests[test_idx + 1]
-			print 'Run test %s ? (Yes/no)' % self.test[0]
+			print 'Enter test %s ? (Yes/no) [Yes]' % self.test[0]
 
 		self.cmd = None
 
 	def run(self):
 		if not self.test:
 			self.test = self.tests[0]
-			print 'Run test %s ? (Yes/no)' % self.test[0]
+			print 'Enter test %s ? (Yes/no) [Yes]' % self.test[0]
 			return
 
 		if not self.cmd:
 			self.cmd = self.test[1][0]
 			self.cmd_idx = 0
-			print 'Execute command %s ? (Yes/no)' % self.cmd
+			print 'Execute command %s ? (Yes/no) [Yes]' % self.cmd
 			return
 
 		try:
@@ -867,7 +868,7 @@ class HDPAutoPTS:
 	def skip(self):
 		self.cmd_idx = 0
 		self.cmd = None
-		print 'Bailing out test'
+		print 'Exiting test %s' % self.test[0]
 		self.next_test()
 
 def get_tests(fname):
@@ -933,14 +934,14 @@ if __name__ == '__main__':
 		print 'Could not match any tests on input with our list.'
 		sys.exit(0)
 
-	print 'Tests matched:', ', '.join([t[0] for t in tests])
+	print 'Current test suite: [', ', '.join([t[0] for t in tests]), ']'
 
 	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 	mainloop = gobject.MainLoop()
 	suite = HDPAutoPTS(bdaddr, tests, mainloop)
 
 	try:
-		print 'Enter test suite? (Yes/no)'
+		print 'Enter test suite? (Yes/no) [Yes]'
 		mainloop.run()
 	except KeyboardInterrupt:
 		print 'Bye'
