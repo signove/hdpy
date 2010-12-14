@@ -443,7 +443,8 @@ class HDPAutoPTS:
 		# Test suite context
 		self.tests = tests
 		self.test = None
-		self.cmd_idx = -1
+		self.cmd = None
+		self.cmd_idx = 0
 		self._device_found = False
 		self.discovering = False
 
@@ -761,13 +762,14 @@ class HDPAutoPTS:
 
 	def next_cmd(self):
 		cmds = self.test[1]
-		cmd_idx = cmds.index(self.cmd)
 
-		if cmd_idx + 1 == len(cmds):
+		if self.cmd_idx + 1 == len(cmds):
 			print 'Test finished'
+			self.cmd_idx = 0
 			self.next_test()
 		else:
-			self.cmd = cmds[cmd_idx + 1]
+			self.cmd_idx += 1
+			self.cmd = cmds[self.cmd_idx]
 			print 'Execute command %s ? (Yes/no)' % self.cmd
 
 	def next_test(self):
@@ -789,12 +791,12 @@ class HDPAutoPTS:
 	def run(self):
 		if not self.test:
 			self.test = self.tests[0]
-			self.cmd = None
 			print 'Run test %s ? (Yes/no)' % self.test[0]
 			return
 
 		if not self.cmd:
 			self.cmd = self.test[1][0]
+			self.cmd_idx = 0
 			print 'Execute command %s ? (Yes/no)' % self.cmd
 			return
 
@@ -806,6 +808,7 @@ class HDPAutoPTS:
 			self.skip()
 
 	def skip(self):
+		self.cmd_idx = 0
 		self.cmd = None
 		print 'Bailing out test'
 		self.next_test()
