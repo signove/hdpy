@@ -168,11 +168,6 @@ PICS flags for enabling tests (set to True)
 
 Broken tests
 ------------
-
-- TC_SRC_HCT_BV_03_I: tests reconnection on a channel. For some reason PTS is
-  not detecting the Release().
-- TC_SRC_HCT_BV_05_C: tests MDL disconnection and reconnection. For some reason
-  PTS is not detecting the Release().
 - TC_SRC_HCT_BV_07_C: who knows what PTS expects from us.
 
 """
