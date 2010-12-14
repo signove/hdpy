@@ -43,11 +43,6 @@ from hdp.dummy_ieee10404 import parse_message_str
 
 # PTS suite specs
 
-# FIXME the order should be the PTS 'natural', which is not always
-# achieved by a simple alphanumeric sort. I suggest adding a character
-# in each key and filtering it out when the actual test name is needed.
-# This guarantees the arbitrary, desired order.
-
 # FIXME sometimes destroy_channel causes a 'Bailing out test' and not
 # destroying the application. This MAY be the cause of some funny
 # problems. Also, failing upon channel destruction is more or less
@@ -876,15 +871,17 @@ def get_tests(fname):
 	names = [l.replace('\n', '') for l in open(fname, 'r').readlines() if not
 			l.startswith('[')]
 
-	# FIXME final 'tests' should obey the original order in file
-	# Suggest generating a list from dicts and then checking tests in natural order
+	raw_tests = {}
 	for g in groups.values():
 		for s in g.values():
 			for test_name, test in s.items():
 				if test_name in names:
-					tests.append((test_name, test))
+					raw_tests[test_name] = test
 
-	tests.sort()
+	for name in names:
+		if name in raw_tests:
+			tests.append((name, raw_tests[name]))
+
 	return tests
 
 def usage():
@@ -899,7 +896,13 @@ def list_tests():
 			print '[Namespace [%s.%s]]' % (gname, sname)
 
 			tests = s.keys()
-			tests.sort()
+			def test_sorter(a, b):
+				if 'bi' in b.lower():
+					return -1
+				elif 'bi' in a.lower():
+					return 1
+				return cmp(a, b)
+			tests.sort(test_sorter)
 			print '\n'.join(tests)
 	sys.exit(0)
 
