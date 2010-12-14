@@ -60,9 +60,6 @@ from hdp.dummy_ieee10404 import parse_message_str
 # it should happen as soon as we enter the test. Destroy_app may be asked
 # about, because it effectively ceases communication.
 
-# FIXME I am missing a "rewind" feature in prompt, like I did in MCAP.
-# What if I want to repeat a test?
-
 """
 Notes (HDP.SRC.CON)
 ===================
@@ -835,9 +832,13 @@ class HDPAutoPTS:
 
 		test_idx = self.tests.index(self.test)
 		if test_idx + 1 == len(self.tests):
-			print 'Done!'
-			raw_input('Hit enter to exit.')
-			self.mainloop.quit()
+			print 'Finished all tests listed on file.')
+			opt = raw_input('Do you want to start over? (Yes/no)')
+			if opt.lower().startswith('no'):
+				self.mainloop.quit()
+			else:
+				self.test = self.tests[0]
+				print 'Run test %s (Yes/no)' % self.test[0]
 		else:
 			self.test = self.tests[test_idx + 1]
 			print 'Run test %s ? (Yes/no)' % self.test[0]
