@@ -283,24 +283,55 @@ hdp_snk_cc = { 	'TC_SNK_CC_BV_01_C': ( 	'create_app_sink',
 				'TC_SNK_CC_BI_11_C': (	'create_app_sink',
 										'destroy_app')}
 
+"""
+Notes (HDP.SNK.HCT)
+===================
+
+PICS flags for enabling tests (set to True)
+-------------------------------------------
+
+- TC_SNK_HCT_BV_03_I and TC_SNK_HCT_BV_05_C
+	- TSPC_HDP_12_4 (Sink: SUpports Initiate Reconnection of MDL (O))
+
+"""
 hdp_snk_hct = { 'TC_SNK_HCT_BV_01_I': (	'create_app_sink',
 										'create_channel_any',
 										'destroy_channel',
 										'destroy_app'),
 				'TC_SNK_HCT_BV_02_I': ( 'create_app_sink',
 										'destroy_app'),
+				'TC_SNK_HCT_BV_03_I': ( 'create_app_sink',
+										'create_channel_any',
+										'schedule_disconnection',
+										'destroy_channel',
+										'destroy_app'),
 				'TC_SNK_HCT_BV_04_I': ( 'create_app_sink',
 										'destroy_app'),
-				'TC_SNK_HCT_BV_06_C': ( 'create_app_sink',
-										'destroy_app'),
-				'TC_SNK_HCT_BV_07_C': ( 'create_app_sink',
+				'TC_SNK_HCT_BV_05_C': ( 'create_app_sink',
 										'create_channel_any',
-										'send_data',
+										'schedule_disconnection',
 										'destroy_channel',
-										'destroy_app') }
+										'destroy_app'),
+				'TC_SNK_HCT_BV_06_C': ( 'create_app_sink',
+										'destroy_app')
+				#'TC_SNK_HCT_BV_07_C': ( 'create_app_sink',
+				#						'create_channel_any',
+				#						'send_data',
+				#						'destroy_channel',
+				#						'destroy_app') 
+			}
 
+"""
+Notes (HDP.SNK.DE)
+==================
+
+PICS flags for enabling tests (set to True)
+-------------------------------------------
+- TC_SNK_DE_BV_01_I
+	- TSPC_HDP_13_1 (Sink: Supports Initiation of Echo Test (O))
+"""
 hdp_snk_de = { 	'TC_SNK_DE_BV_01_I': (	'create_app_sink',
-							'echo',
+										'echo',
 										'destroy_app'),
 				'TC_SNK_DE_BV_02_I': (	'create_app_sink',
 										'destroy_app') }
@@ -311,14 +342,12 @@ Notes (HDP.SNK.DEP)
 
 PICS flags for enabling tests (set to True)
 -------------------------------------------
-
 - TC_SNK_DEP_BV_03_I and TC_SNK_DEP_BV_04_I:
 	- TSPC_HDP_13_5 (Sink: Supports IEEE 11073-20601 Manager Role (C.1))
 
 Broken tests
 ------------
-
-- All tests require an "associate request", which ATM is unknown.
+- Missing IEEE stack to be released
 
 """
 hdp_snk_dep = {	#'TC_SNK_DEP_BV_03_I': ('create_app_sink',
