@@ -575,7 +575,7 @@ class HDPAutoPTS:
 		if not self.discovering:
 			return
 
-		if addr == self.device_bdaddr:
+		if addr.lower() == self.device_bdaddr:
 			print 'Device found! Confirm on PTS that it was found to continue.'
 			self.discovering = False
 			self._device_found = True
