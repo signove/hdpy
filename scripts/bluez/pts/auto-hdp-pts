@@ -67,6 +67,25 @@ from hdp.dummy_ieee10404 import parse_message_str
 # FIXME I am missing a "rewind" feature in prompt, like I did in MCAP.
 # What if I want to repeat a test?
 
+"""
+Notes (HDP.SRC.CON)
+===================
+
+PICS flags for enabling tests (set to True)
+-------------------------------------------
+- TC_SRC_CON_BV_01_I
+	- TSPC_HDP_4_1 (Source: Supports advertisement of HDP Service Record)
+
+- TC_SRC_CON_BV_07_I
+	- TSPC_HDP_2_7 (Source: Supports General Inquiry (C.5))
+
+- TC_SRC_CON_BV_09_I
+	- TSPC_HDP_2_9 (Source: Supports Initiation of Bonding (O))
+
+- TC_SRC_CON_BV_10_I
+	- TSPC_HDP_2_11 (Source: Supports use of Health Class of Device (O))
+
+"""
 hdp_src_con = { 'TC_SRC_CON_BV_01_I': ( 'create_app_source',
 										'destroy_app'),
 				'TC_SRC_CON_BV_02_I': ( 'set_discoverable', ),
@@ -615,7 +634,7 @@ class HDPAutoPTS:
 	def device_found(self, addr, props):
 		""" Receives DeviceFound signals, used for discovery.
 		"""
-		if not self.discovering:
+		if not self.discovering or self._device_found:
 			return
 
 		if addr.lower() == self.device_bdaddr:
@@ -641,6 +660,9 @@ class HDPAutoPTS:
 		print 'Discovering timed out. Next test will be ready to execute.'
 
 	def property_changed(self, name, value):
+		if not self.discovering:
+			return
+
 		if name == 'Discovering' and not value:
 			self.discovering = False
 			if self._device_found:
