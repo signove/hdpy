@@ -60,10 +60,6 @@ from hdp.dummy_ieee10404 import parse_message_str
 # it should happen as soon as we enter the test. Destroy_app may be asked
 # about, because it effectively ceases communication.
 
-# FIXME in test SRC_DE_BV_01_I, it is nice to show some warning like
-# PRESS OK AT PTS SIDE RIGHT NOW (after firing Echo), because if you
-# don't do in a short time (5 secs) Echo times out at IUT side and test fails.
-
 # FIXME I am missing a "rewind" feature in prompt, like I did in MCAP.
 # What if I want to repeat a test?
 
@@ -599,7 +595,7 @@ class HDPAutoPTS:
 		print 'Echoing...'
 		self.select_device()
 		ans = self.device.Echo()
-		print 'Echo answer was', ans
+		print 'Press OK on PTS side now. (Echo answer was %s)' % ans
 
 	def pair(self):
 		print 'Pairing..'
