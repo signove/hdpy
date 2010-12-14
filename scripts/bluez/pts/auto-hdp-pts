@@ -224,6 +224,20 @@ hdp_src_dep = { #'TC_SRC_DEP_BV_01_I': ( 'create_app_source',
 				}
 
 
+"""
+Notes (HDP.SNK.CON)
+===================
+
+PICS flags for enabling tests (set to True)
+-------------------------------------------
+
+- TC_SNK_CON_BV_09_I
+	- TSPC_HDP_8_9 (Sink: Supports Initiation of Bonding (O))
+
+- TC_SNK_CON_BV_10_I
+	- TSPC_HDP_8_11 (Sink: Supports use of Health Class of Device (O))
+"""
+
 hdp_snk_con = { 'TC_SNK_CON_BV_01_I': ( 'create_app_sink',
 										'destroy_app'),
 				'TC_SNK_CON_BV_02_I': ( 'create_app_sink',
