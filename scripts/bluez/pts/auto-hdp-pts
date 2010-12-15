@@ -554,11 +554,12 @@ class HDPAutoPTS:
 		self.adapter.SetProperty('Discoverable', dbus.Boolean(1))
 		print 'Adapter set to General Discoverable mode...'
 
-		cls = self.adapter.GetProperties()['Class']
+		cls = int(self.adapter.GetProperties()['Class'])
 		if cls != 0x4a0914:
-			print 'WARNING: device class is not Health (0x4a0914). This test'\
-			      ' might fail. Try \'sudo hciconfig <IFACE> class 0x4a0914\''
-			print cls
+			print 'Make sure that device class is not Health (0x4a0914).' \
+			      'Configure with \'sudo hciconfig <IFACE> class 0x4a0914\'' \
+			      'Check with \'sudo hciconfig -a\''
+			print "0x%x" % cls
 
 	def select_device(self):
 		devices = self.adapter.ListDevices()
