@@ -1,0 +1,13 @@
+Note that scripts under this folder do NOT use HDPy stack; they connect
+to BlueZ HDP implementation (that can be found in normal tree), or to 
+the "apocryph" MCAP plug-in (*)
+
+These scripts are here mostly for convenience, because they
+use a couple features from HDPy modules, and because we were
+lazy to create a separate project just to hold these scripts :)
+
+
+(*) The MCAP plugin can can be found at http://gitorious.org/bluez-epx,
+abranch "pts". It gives direct access to BlueZ MCAP protocol implementation,
+but it is NOT meant for production use; it is a means to test MCAP
+(using PTS or other tools).
