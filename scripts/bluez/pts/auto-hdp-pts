@@ -556,7 +556,7 @@ class HDPAutoPTS:
 
 		cls = int(self.adapter.GetProperties()['Class'])
 		if cls != 0x4a0914:
-			print 'Make sure that device class is not Health (0x4a0914).' \
+			print 'Make sure that device class is Health (0x4a0914).' \
 			      'Configure with \'sudo hciconfig <IFACE> class 0x4a0914\'' \
 			      'Check with \'sudo hciconfig -a\''
 			print "0x%x" % cls
