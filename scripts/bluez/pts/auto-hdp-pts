@@ -152,12 +152,6 @@ PICS flags for enabling tests (set to True)
 
 - Tests BV_04_I, BV_06_C and BV_07_C:
 	- TSPC_HDP_6_5 (Source: Supports Accept Reconnection of MDL (C.4)[Mandatory])
-
-
-Broken tests
-------------
-- TC_SRC_HCT_BV_07_C: who knows what PTS expects from us.
-
 """
 
 hdp_src_hct = { 'TC_SRC_HCT_BV_01_I': ( 'create_app_source',
@@ -181,9 +175,6 @@ hdp_src_hct = { 'TC_SRC_HCT_BV_01_I': ( 'create_app_source',
 				'TC_SRC_HCT_BV_06_C': (	'create_app_source',
 									  	'destroy_app'),
 				'TC_SRC_HCT_BV_07_C': (	'create_app_source_reliable',
-									  	'create_channel_reliable',
-										'send_data',
-										'destroy_channel',
 										'destroy_app')
 			}
 
@@ -315,12 +306,9 @@ hdp_snk_hct = { 'TC_SNK_HCT_BV_01_I': (	'create_app_sink',
 										'destroy_channel',
 										'destroy_app'),
 				'TC_SNK_HCT_BV_06_C': ( 'create_app_sink',
-										'destroy_app')
-				#'TC_SNK_HCT_BV_07_C': ( 'create_app_sink',
-				#						'create_channel_any',
-				#						'send_data',
-				#						'destroy_channel',
-				#						'destroy_app') 
+										'destroy_app'),
+				'TC_SNK_HCT_BV_07_C': ( 'create_app_sink',
+										'destroy_app'),
 			}
 
 """
@@ -352,11 +340,12 @@ Broken tests
 - Missing IEEE stack to be released
 
 """
-hdp_snk_dep = {	#'TC_SNK_DEP_BV_03_I': ('create_app_sink',
-				#						'destroy_app'),
-				#'TC_SNK_DEP_BV_04_I': ('create_app_sink',
-				#						'destroy_app')
-				}
+hdp_snk_dep = {	'TC_SNK_DEP_BV_03_I': ('create_app_sink',
+					'destroy_app'),
+		'TC_SNK_DEP_BV_04_I': ('create_app_sink',
+					'create_channel_any',
+					'destroy_app'),
+		}
 
 hdp_snk_suites = {'SNK_CON': hdp_snk_con,
 				  'SNK_CC': hdp_snk_cc,
