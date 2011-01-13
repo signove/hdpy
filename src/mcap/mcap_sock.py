@@ -50,6 +50,7 @@ import select
 pos = ["omtu", "imtu", "flush_to", "mode", "fcs", "max_tx", "txwin_size"]
 i_mode = pos.index("mode")
 i_fcs = pos.index("fcs")
+i_omtu = pos.index("omtu")
 
 
 def get_options(sock):
@@ -95,6 +96,10 @@ def set_mtu(sock, mtu):
 	return sock.set_l2cap_mtu(mtu)
 
 
+def get_mtu(sock):
+	return get_options(sock)[i_omtu]
+
+
 def get_available_psm(adapter):
 	# Ripped from PyBlueZ source
 
@@ -119,7 +124,7 @@ def set_reliable(s, reliable):
 		set_ertm(s)
 	else:
 		set_streaming(s)
-	print s, get_options(s)
+	# print s, get_options(s)
 
 
 def defer_setup(s):
@@ -166,7 +171,7 @@ def create_data_socket(reliable):
 
 def create_control_listening_socket(btaddr):
 	psm = get_available_psm(btaddr)
-	print "Control socket: PSM %d" % psm
+	# print "Control socket: PSM %d" % psm
 	s = create_control_socket()
 
 	dev_id = bz.hci_devid(btaddr)

@@ -661,6 +661,13 @@ class HealthApplication(MCAPInstance):
 				DBG(1, "MDLConnected: bad MDEP ID received")
 				mdl.close()
 				return
+			# print mdl.mtu
+			if reconn:
+				if channel.mtu and channel.mtu != mdl.mtu:
+					DBG(1, "Tried reconn with different MTU, aborting")
+					mdl.sk.close()
+					mdl.close()
+					return
 
 		if not reconn:
 			channel = self.create_channel(mdl, mdl.acceptor)
@@ -1141,6 +1148,7 @@ class HealthChannel(object):
 		self.mdl = mdl
 		self.acceptor = acceptor
 		self.valid = True
+		self.mtu = mdl.mtu
 
 	def GetProperties(self):
 		if not self.valid:

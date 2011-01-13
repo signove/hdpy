@@ -104,6 +104,8 @@ class MDL(object):
 		self.reliable = reliable
 		self.acceptor = False
 
+		self.mtu = 0
+
 	def close(self):
 		if self.abort():
 			self.state = MCAP_MDL_STATE_CLOSED
@@ -132,13 +134,17 @@ class MDL(object):
 		if not do_accept(sk):
 			return
 
-		set_security(sk)
+		# redundant
+		# set_security(sk)
 		# in kernel 2.6.36 you can not call this at this point
 		# set_reliable(sk, self.reliable)
 		sk.setblocking(True)
 		self.sk = sk
 		self.state = MCAP_MDL_STATE_ACTIVE
 		self.acceptor = True
+
+		time.sleep(0.05) # gimmick to circumvent kernel bug
+		self.mtu = get_options(sk)[i_omtu]
 
 	def connect(self):
 		if self.state != MCAP_MDL_STATE_CLOSED:
@@ -230,7 +236,8 @@ class MCL(object):
 			return
 
 		self.sk = sk
-		set_security(sk)
+		# redundant
+		# set_security(sk)
 		# In kernel 2.6.36 you can not do this again here
 		# set_reliable(sk, True)
 		sk.setblocking(True)
