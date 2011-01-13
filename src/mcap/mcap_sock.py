@@ -129,7 +129,7 @@ def set_reliable(s, reliable):
 
 def defer_setup(s):
 	if DEFER_SETUP:
-		s.setsockopt(bz.SOL_BLUETOOTH, bz.BT_DEFER_SETUP, 1)
+		s.setsockopt(bz.SOL_BLUETOOTH, bz.BT_DEFER_SETUP, 30)
 
 
 def do_accept(s):
