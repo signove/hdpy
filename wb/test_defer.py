@@ -1,8 +1,9 @@
+#!/usr/bin/env python
 # -*- coding: utf-8
 
 ENABLE_ERTM = True
 SECURITY = True
-DC_MTU = 512
+DC_MTU = 250
 DEFER_SETUP = True
 
 import bluetooth
@@ -27,6 +28,7 @@ pos = ["omtu", "imtu", "flush_to", "mode", "fcs", "max_tx", "txwin_size"]
 i_mode = pos.index("mode")
 i_fcs = pos.index("fcs")
 i_omtu = pos.index("omtu")
+i_imtu = pos.index("imtu")
 
 
 def get_options(sock):
@@ -69,7 +71,10 @@ def set_streaming(sock):
 
 
 def set_mtu(sock, mtu):
-	return sock.set_l2cap_mtu(mtu)
+	options = get_options(sock)
+	options[i_omtu] = mtu
+	options[i_imtu] = mtu
+	set_options(sock, options)
 
 
 def get_mtu(sock):
@@ -192,7 +197,7 @@ def initiator(target):
 					print "Connection failed"
 			else:
 				# server is not supposed to send data, but...
-				data = sk.read(4096)
+				data = sk.recv(4096)
 
 		if random.random() < 0.3 or (not pending and not conns):
 			# create new connection
@@ -208,7 +213,7 @@ def initiator(target):
 
 		for sk in conns:
 			if random.random() > 0.5:
-				sk.write("a" * (int(random.random() * 10) + 1))
+				sk.send("a" * (int(random.random() * 10) + 1))
 			
 
 def acceptor(psm):
@@ -216,13 +221,11 @@ def acceptor(psm):
 	clients = []
 	print "Options", get_options(s)
 	while True:
-		r, w, x = select.select([s] + clients, [], [], 10)
-		if not r:
-			print "MARK", time.time()
+		r, w, x = select.select([s] + clients, [], [], 0)
 		for sk in r:
 			if sk is s:
 				print "New connection"
-				new = s.accept()
+				new, addr = s.accept()
 				if not do_accept(new):
 					continue
 				time.sleep(0.1) # trick
@@ -231,8 +234,8 @@ def acceptor(psm):
 				clients.append(new)
 				
 			else:
-				data = sk.read(4096)
-				print "Read %d bytes from %s" % (len(read), sk)
+				data = sk.recv(4096)
+				print "Read %d bytes from %s" % (len(data), sk)
 				if len(data) <= 0:
 					sk.close()
 					clients.remove(sk)
