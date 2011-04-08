@@ -46,6 +46,7 @@ assoc_resp_msg = (
 	0x00, 0x00, 0x00, 0x00, #optionList.count = 0 | optionList.length = 0
 	)
 
+release_response = (0xe5, 0x00, 0x00, 0x02, 0x00, 0x00)
 
 def parse_message(msg):
 	resp = ()
@@ -70,6 +71,10 @@ def parse_message(msg):
 			)
 		print '\nSpO2 Level: %d, Beats/second: %d\n' % \
 			(int(msg[35]), int(msg[49]))
+
+	elif int(msg[0]) == 0xe4 or int(msg[0]) == 0xe5:
+		print "IEEE release requested %x" % int(msg[0])
+		resp = release_response
 
 	return resp
 
