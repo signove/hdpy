@@ -51,6 +51,8 @@ release_response = (0xe5, 0x00, 0x00, 0x02, 0x00, 0x00)
 def parse_message(msg):
 	resp = ()
 
+	print "IEEE opcode received: %x" % int(msg[0])
+
 	if int(msg[0]) == 0xe2:
 		print 'IEEE association request'
 		resp = assoc_resp_msg
@@ -73,7 +75,6 @@ def parse_message(msg):
 			(int(msg[35]), int(msg[49]))
 
 	elif int(msg[0]) == 0xe4 or int(msg[0]) == 0xe5:
-		print "IEEE release requested %x" % int(msg[0])
 		resp = release_response
 
 	return resp

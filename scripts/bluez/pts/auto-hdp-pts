@@ -39,7 +39,7 @@ import dbus.service
 from fcntl import ioctl
 from ctypes import c_long
 
-from hdp.dummy_ieee10404 import parse_message_str
+from hdp.dummy_ieee10404 import *
 
 # PTS suite specs
 
@@ -210,11 +210,21 @@ Broken tests
 
 - All tests require an "associate request", which ATM is unknown.
 """
-hdp_src_dep = { #'TC_SRC_DEP_BV_01_I': ( 'create_app_source',
-				#						'destroy_app'),
-				#'TC_SRC_DEP_BV_02_I': ( 'create_app_source',
-				#						'destroy_app')
-				}
+hdp_src_dep = {'TC_SRC_DEP_BV_01_I': ( 'create_app_source',
+					'acquire_channel',
+					'send_assoc',
+					'send_config',
+					'send_sample',
+					'send_dissoc',
+					'destroy_app'),
+		'TC_SRC_DEP_BV_02_I': ( 'create_app_source',
+					'acquire_channel',
+					'send_assoc',
+					'send_config',
+					'send_sample',
+					'send_dissoc',
+					'destroy_app')
+		}
 
 
 """
@@ -341,9 +351,12 @@ Broken tests
 
 """
 hdp_snk_dep = {	'TC_SNK_DEP_BV_03_I': ('create_app_sink',
+					'create_channel_any',
+					'acquire_channel',
 					'destroy_app'),
 		'TC_SNK_DEP_BV_04_I': ('create_app_sink',
 					'create_channel_any',
+					'acquire_channel',
 					'destroy_app'),
 		}
 
@@ -366,7 +379,10 @@ groups = {'SRC': hdp_src_suites,
 
 watch_bitmap = glib.IO_IN | glib.IO_ERR | glib.IO_HUP | glib.IO_NVAL
 
-def data_received(sk, evt):
+def data_received_src(sk, evt):
+	data_received(sk, evt, mode=1)
+
+def data_received(sk, evt, mode=0):
 	data = None
 	if evt & glib.IO_IN:
 		try:
@@ -374,11 +390,14 @@ def data_received(sk, evt):
 		except IOError:
 			data = ""
 		if data:
-			print "Data received"
-			response = parse_message_str(data)
-			if response:
-				sk.send(response)
-				print "Response sent"
+			if not mode:
+				print "Data received (sink mode)"
+				response = parse_message_str(data)
+				if response:
+					sk.send(response)
+					print "Response sent"
+			else:
+				print "Data received (src mode)"
 
 	more = (evt == glib.IO_IN and data)
 
@@ -473,6 +492,7 @@ class HDPAutoPTS:
 		self.app = None
 		self.device = None
 		self.channels = []
+		self.sk = None
 
 		# Test suite context
 		self.tests = tests
@@ -538,6 +558,13 @@ class HDPAutoPTS:
 		self.bus.add_signal_receiver(self.property_changed,
 				dbus_interface="org.bluez.Adapter",
 				signal_name="PropertyChanged")
+		self.bus.add_signal_receiver(self.channel_connected,
+			signal_name="ChannelConnected",
+			bus_name="org.bluez",
+			path_keyword="device",
+			interface_keyword="interface",
+			dbus_interface="org.bluez.HealthDevice")
+
 
 	def set_discoverable(self):
 		self.adapter.SetProperty('Discoverable', dbus.Boolean(1))
@@ -721,6 +748,23 @@ class HDPAutoPTS:
 		fd = fd.take()
 		fd.write('Hello PTS')
 
+	def send_assoc(self):
+		if not self.sk:
+			print "No socket to send data"
+			return
+		self.sk.send(make_assoc_str())
+
+	def send_config(self):
+		# FIXME implement
+		pass
+
+	def send_sample(self):
+		self.sk.send(make_sample_str())
+
+	def send_dissoc(self):
+		# FIXME implement
+		pass
+
 	def create_channel(self, type):
 		self.select_device()
 		try:
@@ -729,6 +773,13 @@ class HDPAutoPTS:
 		except dbus.exceptions.DBusException, e:
 			print 'Failed to create channel. You might have selected the' \
 				' wrong device or the test already passed, check PTS.', e
+
+	def channel_connected(self, channel, interface, device):
+		print "Channel connected signal"
+		if channel not in self.channels:
+			self.device = device
+			self.channels.append(channel)
+			print "	...appended"
 
 	def destroy_channel(self, channel=None):
 		if not self.device or not self.channels:
@@ -742,8 +793,12 @@ class HDPAutoPTS:
 		self.device.DestroyChannel(channel)
 		self.channels.remove(channel)
 
-	def acquire_channel(self, channel=None):
+	def acquire_channel_src(self, channel=None):
+		acquire_channel(self, channel, 1)
+
+	def acquire_channel(self, channel=None, mode=0):
 		if not self.device or not self.channels:
+			print "No channel to acquire"
 			return
 
 		if not channel:
@@ -757,15 +812,20 @@ class HDPAutoPTS:
 		fd = fd.take()
 
 		# encapsulate numericfd in Python socket object
-		sk = socket.fromfd(fd, socket.AF_UNIX, socket.SOCK_STREAM)
+		self.sk = socket.fromfd(fd, socket.AF_UNIX, socket.SOCK_STREAM)
 
 		# fromfd() does dup() so we need to close the original
 		os.close(fd)
 
 		print "FD acquired"
-		glib.io_add_watch(sk, watch_bitmap, data_received)
+		if mode:
+			cb = data_received_src
+		else:
+			cb = data_received
+		glib.io_add_watch(self.sk, watch_bitmap, cb)
 
 	def release_channel(self, channel=None):
+		self.sk = None
 		if not self.device or not self.channels:
 			return
 
