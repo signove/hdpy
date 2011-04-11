@@ -211,16 +211,19 @@ Broken tests
 - All tests require an "associate request", which ATM is unknown.
 """
 hdp_src_dep = {'TC_SRC_DEP_BV_01_I': ( 'create_app_source',
-					'acquire_channel',
+					'acquire_channel_src',
 					'send_assoc',
 					'send_config',
 					'send_sample',
 					'send_dissoc',
 					'destroy_app'),
 		'TC_SRC_DEP_BV_02_I': ( 'create_app_source',
-					'acquire_channel',
+					'acquire_channel_src',
 					'send_assoc',
 					'send_config',
+					'send_sample',
+					'send_dissoc',
+					'send_assoc',
 					'send_sample',
 					'send_dissoc',
 					'destroy_app')
@@ -394,7 +397,7 @@ def is_unknown_config(data):
 watch_bitmap = glib.IO_IN | glib.IO_ERR | glib.IO_HUP | glib.IO_NVAL
 
 def data_received_src(sk, evt):
-	data_received(sk, evt, mode=1)
+	return data_received(sk, evt, mode=1)
 
 def data_received(sk, evt, mode=0):
 	data = None
@@ -772,15 +775,13 @@ class HDPAutoPTS:
 		self.sk.send(make_assoc_str())
 
 	def send_config(self):
-		# FIXME implement
-		pass
+		self.sk.send(make_config_str())
 
 	def send_sample(self):
 		self.sk.send(make_sample_str())
 
 	def send_dissoc(self):
-		# FIXME implement
-		pass
+		self.sk.send(make_release_req_str())
 
 	def create_channel(self, type):
 		self.select_device()
@@ -811,7 +812,7 @@ class HDPAutoPTS:
 		self.channels.remove(channel)
 
 	def acquire_channel_src(self, channel=None):
-		acquire_channel(self, channel, 1)
+		self.acquire_channel(channel, 1)
 
 	def acquire_channel(self, channel=None, mode=0):
 		if not self.device or not self.channels:
