@@ -351,10 +351,12 @@ Broken tests
 
 """
 hdp_snk_dep = {	'TC_SNK_DEP_BV_03_I': ('create_app_sink',
+					'set_unknown_config',
 					'create_channel_any',
 					'acquire_channel',
 					'destroy_app'),
 		'TC_SNK_DEP_BV_04_I': ('create_app_sink',
+					'set_unknown_config',
 					'create_channel_any',
 					'acquire_channel',
 					'destroy_app'),
@@ -376,6 +378,18 @@ hdp_src_suites = {'SRC_CON': hdp_src_con,
 groups = {'SRC': hdp_src_suites,
 		  'SNK': hdp_snk_suites}
 
+# Dictates if we report to the other side that IEEE configuration is unknown
+unknown_config = False
+
+def set_unknown_config():
+	global unknown_config
+	unknown_config = True
+
+def is_unknown_config(data):
+	global unknown_config
+	res = unknown_config
+	unknown_config = False # next time, it is not unknown anymore
+	return res
 
 watch_bitmap = glib.IO_IN | glib.IO_ERR | glib.IO_HUP | glib.IO_NVAL
 
@@ -392,7 +406,7 @@ def data_received(sk, evt, mode=0):
 		if data:
 			if not mode:
 				print "Data received (sink mode)"
-				response = parse_message_str(data)
+				response = parse_message_str(data, is_unknown_config(data))
 				if response:
 					sk.send(response)
 					print "Response sent"
@@ -747,6 +761,9 @@ class HDPAutoPTS:
 		fd = chan.Acquire()
 		fd = fd.take()
 		fd.write('Hello PTS')
+
+	def set_unknown_config(self):
+		set_unknown_config()
 
 	def send_assoc(self):
 		if not self.sk:
