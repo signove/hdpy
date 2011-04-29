@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # A & D blood pressure
+# Collaborated by Piyapong Khumrin
 
 import sys
 import os

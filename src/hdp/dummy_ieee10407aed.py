@@ -22,7 +22,7 @@
 # Signove at contact@signove.com.
 #######################################################################
 
-# Additional collaboration from  ปิยพงษ์ คำริน
+# Additional collaboration from  ปิยพงษ์ คำริน (Piyapong Khumrin)
 # for A&D device
 
 #From IEEE Standard 11073-10404 page 62
