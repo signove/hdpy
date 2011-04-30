@@ -1,0 +1,37 @@
+Format: 1.8
+Date: Sat, 30 Apr 2011 13:00:00 -0300
+Source: dbus-python
+Binary: python-dbus python-dbus-dbg python-dbus-doc
+Architecture: source all i386
+Version: 0.83.2-2
+Distribution: natty
+Urgency: low
+Maintainer: Ubuntu Core Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Changed-By: Elvis Pfutzenreuter <epx@signove.com>
+Description: 
+ python-dbus - simple interprocess messaging system (Python interface)
+ python-dbus-dbg - Debug build of the D-Bus Python interface
+ python-dbus-doc - Documentation for the D-Bus Python interface
+Changes: 
+ dbus-python (0.83.2-2) natty; urgency=low
+ .
+   * Recompiled in Natty
+Checksums-Sha1: 
+ ff4cbcc166586587d639ee9dbf48de649b0f17f9 1080 dbus-python_0.83.2-2.dsc
+ 648875239fd855f07d4074a3764d7b9a2941ab00 1559587 dbus-python_0.83.2-2.tar.gz
+ 9ee1c77e643090181b8457514d6e4b4fda0f3c80 328242 python-dbus-doc_0.83.2-2_all.deb
+ 7ed58e6b74b9428a80b90d20a0afa9ad81926959 147482 python-dbus_0.83.2-2_i386.deb
+ 55fcf0ec7431331a98be091089cb6f967da8cc3b 414316 python-dbus-dbg_0.83.2-2_i386.deb
+Checksums-Sha256: 
+ be47ab19fc07861fad3a51475a67bf896d2d1f5efe961fc625e9c0893ab6420a 1080 dbus-python_0.83.2-2.dsc
+ 6370e4ccc6d9449bc40c93eed8cf9840ed851bedc0e4255918b2d62daa234f76 1559587 dbus-python_0.83.2-2.tar.gz
+ ed1e54565832e3c5a953d6b1e78b22cf8ad9ccf0623e49ea3367ec4ee84ecb8a 328242 python-dbus-doc_0.83.2-2_all.deb
+ 9e047f22ec73b60a7fafc9a8754412d1ee010d51282c1662a52718bbbb41892e 147482 python-dbus_0.83.2-2_i386.deb
+ 3a5fd3adbbce480956f07e7b5cf50892d0bb8e798261f06587fcdde0510e9403 414316 python-dbus-dbg_0.83.2-2_i386.deb
+Files: 
+ cce2c533ecc910087387678df5e7b88e 1080 devel optional dbus-python_0.83.2-2.dsc
+ c111f3b00da0cb5017f2375921ced495 1559587 devel optional dbus-python_0.83.2-2.tar.gz
+ 1835be94408ebe62de273e292766cede 328242 doc optional python-dbus-doc_0.83.2-2_all.deb
+ 10b00aac0f5def5a58a019c89888080f 147482 python optional python-dbus_0.83.2-2_i386.deb
+ e3e71ba49c98bd01172440ed0de05e4e 414316 python extra python-dbus-dbg_0.83.2-2_i386.deb
+Original-Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
