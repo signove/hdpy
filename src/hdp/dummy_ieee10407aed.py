@@ -22,7 +22,7 @@
 # Signove at contact@signove.com.
 #######################################################################
 
-# Additional collaboration from  ปิยพงษ์ คำริน (Piyapong Khumrin)
+# Additional collaboration from  Piyapong
 # for A&D device
 
 #From IEEE Standard 11073-10404 page 62
@@ -82,22 +82,32 @@ def parse_message(msg):
 			0x00, 0x00, #event-reply-info.length = 0
 			)
 
-		if int(msg[3]) == 0x30:
-			systolic = int(msg[39])
-			diastolic = int(msg[41])
-			MAP = int(msg[43])
+		if int(msg[36]) == 0x00 and int(msg[37]) == 0x06 and int(msg[38]) == 0x00:
+                        l = int(msg[27])
+                        for n in range(l):
+                            systolic = int(msg[29+(22*n)+9+1])
+                            diastolic = int(msg[29+(22*n)+9+3])
+                            MAP = int(msg[29+(22*n)+9+5])
+                            date = '%x%x:%x:%x' % (msg[29+(22*n)+9+6],msg[29+(22*n)+9+7],msg[29+(22*n)+9+8],msg[29+(22*n)+9+9])
+                            time = '%x:%x:%x:%x' % (msg[29+(22*n)+9+10],msg[29+(22*n)+9+11],msg[29+(22*n)+9+12],msg[29+(22*n)+9+13])
 
-			print 'Systolic: %d, Diastolic %d' % (systolic, diastolic)
- 			print 'MAP: %d\n' % (MAP)
-			print 'Date: %x%x-%x-%x' % (msg[44], msg[45], msg[46], msg[47])
-			print 'Time: %x:%x:%x:%x\n' % (msg[48], msg[49], msg[50], msg[51])
+                            print 'Systolic: %d, Diastolic: %d' % (systolic, diastolic)
+                            print 'MAP: %d\n' % (MAP)
+                            print 'Date: %s' % (date)
+                            print 'Time: %s\n' % (time)
 
-		elif int(msg[3]) == 0x28:
-			bpm = int(msg[35])
+		elif int(msg[32]) == 0x00 and int(msg[33]) == 0x0A and int(msg[34]) == 0x00:
+                        l = int(msg[27])
+                        for n in range(l):
+                            bpm = int(msg[29+(14*n)+5+1])
+                            date = '%x%x:%x:%x' % (msg[29+(14*n)+5+2],msg[29+(14*n)+5+3],msg[29+(14*n)+5+4],msg[29+(14*n)+5+5])
+                            time = '%x:%x:%x:%x' % (msg[29+(14*n)+5+6],msg[29+(14*n)+5+7],msg[29+(14*n)+5+8],msg[29+(14*n)+5+9])
 
-			print 'HR: %d\n' % (bpm)
-			print 'Date: %x%x-%x-%x' % (msg[36], msg[37], msg[38], msg[39])
-			print 'Time: %x:%x:%x:%x\n' % (msg[40], msg[41], msg[42], msg[43])
+                            print 'HR: %d\n' % (bpm)
+                            print 'Date: %s' % (date)
+                            print 'Time: %s\n' % (time)
+                else:
+                    print 'Cannot detect pattern'
 
 		#for index in range(len(msg)):
 			#print 'msg[%x] = %x\n' % (index, int(msg[index]))

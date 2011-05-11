@@ -22,7 +22,7 @@
 # Signove at contact@signove.com.
 #######################################################################
 
-# Additional collaboration from  ปิยพงษ์ คำริน (Piyapong Khumrin)
+# Additional collaboration from  Piyapong
 # for A&D device
 
 #From IEEE Standard 11073-10404 page 62
@@ -81,12 +81,15 @@ def parse_message(msg):
 			0x0d, 0x1d, #event-type = MDC_NOTI_SCAN_REPORT_FIXED
 			0x00, 0x00, #event-reply-info.length = 0
 		)
-		
-		weight = (16 * 16 * int(msg[42]) + int(msg[43])) / 100.0
-		print 'Weight: %g,' % (weight)
-
-		print '\nDate: %x%x-%x-%x' % (msg[48], msg[49], msg[50], msg[51])
-		print 'Time: %x:%x:%x:%x' % (msg[52], msg[53], msg[54], msg[55])
+		if int(msg[39]) == 0x04 and int(msg[40]) == 0xFE and int(msg[41]) == 0x00:
+                    l = int(msg[27])
+                    for n in range(l):
+                        weight = '%g' % ((16 * 16 * int(msg[29+(32*n)+12+1]) + int(msg[29+(32*n)+12+2])) / 100.0)
+                        date = '%x%x:%x:%x' % (msg[29+(32*n)+12+7],msg[29+(32*n)+12+8],msg[29+(32*n)+12+9],msg[29+(32*n)+12+10])
+                        time = '%x:%x:%x:%x' % (msg[29+(32*n)+12+11],msg[29+(32*n)+12+12],msg[29+(32*n)+12+13],msg[29+(32*n)+12+14])
+                        print 'Weight: %s' % (weight)
+                        print 'Date: %s' % (date)
+                        print 'Time: %s\n' % (time)
 
 		#for index in range(len(msg)):
 			#print 'msg[%x] = %x\n' % (index, int(msg[index]))
