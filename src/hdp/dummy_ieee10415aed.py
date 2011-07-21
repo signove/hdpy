@@ -22,7 +22,7 @@
 # Signove at contact@signove.com.
 #######################################################################
 
-# Additional collaboration from  Piyapong
+# Additional collaboration from  ปิยพงษ์ คำริน
 # for A&D device
 
 #From IEEE Standard 11073-10404 page 62
@@ -82,14 +82,25 @@ def parse_message(msg):
 			0x00, 0x00, #event-reply-info.length = 0
 		)
 		if int(msg[39]) == 0x04 and int(msg[40]) == 0xFE and int(msg[41]) == 0x00:
-                    l = int(msg[27])
-                    for n in range(l):
-                        weight = '%g' % ((16 * 16 * int(msg[29+(32*n)+12+1]) + int(msg[29+(32*n)+12+2])) / 100.0)
-                        date = '%x%x:%x:%x' % (msg[29+(32*n)+12+7],msg[29+(32*n)+12+8],msg[29+(32*n)+12+9],msg[29+(32*n)+12+10])
-                        time = '%x:%x:%x:%x' % (msg[29+(32*n)+12+11],msg[29+(32*n)+12+12],msg[29+(32*n)+12+13],msg[29+(32*n)+12+14])
-                        print 'Weight: %s' % (weight)
-                        print 'Date: %s' % (date)
-                        print 'Time: %s\n' % (time)
+			l = int(msg[27])
+			for n in range(l):
+				weight = '%g' % ((16 * 16 * int(msg[29+(32*n)+12+1]) + int(msg[29+(32*n)+12+2])) / 100.0)
+				date = '%x%x:%x:%x' % (msg[29+(32*n)+12+7],msg[29+(32*n)+12+8],msg[29+(32*n)+12+9],msg[29+(32*n)+12+10])
+				time = '%x:%x:%x:%x' % (msg[29+(32*n)+12+11],msg[29+(32*n)+12+12],msg[29+(32*n)+12+13],msg[29+(32*n)+12+14])
+				print 'Weight(kg): %s,' % (weight)
+				print 'Date: %s' % (date)
+				print 'Time: %s\n' % (time)
+		elif int(msg[39]) == 0x04 and int(msg[40]) == 0xFF and int(msg[41]) == 0x00:
+			l = int(msg[27])
+			for n in range(l):
+				weight = '%g' % ((16 * 16 * int(msg[29+(32*n)+12+1]) + int(msg[29+(32*n)+12+2])) / 10.0)
+				date = '%x%x:%x:%x' % (msg[29+(32*n)+12+7],msg[29+(32*n)+12+8],msg[29+(32*n)+12+9],msg[29+(32*n)+12+10])
+				time = '%x:%x:%x:%x' % (msg[29+(32*n)+12+11],msg[29+(32*n)+12+12],msg[29+(32*n)+12+13],msg[29+(32*n)+12+14])
+				print 'Weight(lb): %s,' % (weight)
+				print 'Date: %s' % (date)
+				print 'Time: %s\n' % (time)
+		else:
+			print 'Cannot detect pattern'
 
 		#for index in range(len(msg)):
 			#print 'msg[%x] = %x\n' % (index, int(msg[index]))
